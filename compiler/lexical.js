@@ -594,6 +594,9 @@ function compile(regex) {
 
 module.exports = {
     compile,
+    key_chars,
     base_64,
     word_char,
+    catch_all,
+    catch_all_without_semicolon,
 }

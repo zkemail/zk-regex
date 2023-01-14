@@ -2,7 +2,7 @@ const fs = require("fs").promises;
 const assert = require("assert")
 const lexical = require('./lexical')
 
-async function generateCircuit(regex) {
+async function generateCircuit(regex, circuitPath = './') {
     const graph_json = lexical.compile(regex)
     const N = graph_json.length;
 
@@ -180,7 +180,7 @@ async function generateCircuit(regex) {
         let tpl = await (await fs.readFile(`${__dirname}/tpl.circom`)).toString()
         tpl = tpl.replace('TEMPLATE_NAME_PLACEHOLDER', 'Regex')
         tpl = tpl.replace('COMPILED_CONTENT_PLACEHOLDER', lines.join('\n\t'))
-        tpl = tpl.replace(/CIRCUIT_FOLDER/g, '../../circuits')
+        tpl = tpl.replace(/CIRCUIT_FOLDER/g, circuitPath)
         tpl = tpl.replace(/\t/g, ' '.repeat(4))
     
         await fs.writeFile('test/circuits/regex_compiler.circom', tpl);

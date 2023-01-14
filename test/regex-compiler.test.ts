@@ -9,7 +9,7 @@ describe("regex compiler tests", function () {
     let circuit: any;
     before(async function () {
         let regex = `email was meant for @${generator.word_char}+`;
-        await generator.generateCircuit(regex)
+        await generator.generateCircuit(regex, '../../circuits')
         circuit = await wasm_tester(
             path.join(__dirname, "circuits", "test_regex_compiler.circom"),
             {recompile: true, output: `${__dirname}/../build/`}

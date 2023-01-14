@@ -267,6 +267,7 @@ template Regex (msg_bytes) {
     signal states_count[num_bytes];
     var count = 0;
 
+    //counting the matches by deterining the start positions of the matches
     check_cur[0] = IsEqual();
     check_cur[0].in[0] <== 0;
     check_cur[0].in[1] <== 1;
