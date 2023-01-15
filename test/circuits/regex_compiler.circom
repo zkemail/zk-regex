@@ -254,35 +254,40 @@ template Regex (msg_bytes) {
         and[28][i].b <== eq[22][i].out;
         states[i+1][22] <== and[28][i].out;
     }
-
     signal output reveal[num_bytes];
     for (var i = 0; i < num_bytes; i++) {
         reveal[i] <== in[i] * states[i+1][1];
     }
+    
 
-    signal output matches[num_bytes][3];
-
-    component check_cur[num_bytes];
-    component check_start[num_bytes];
-    signal states_count[num_bytes];
+    // lengths to be consistent with states signal
+    component check_cur[num_bytes + 1];
+    component check_start[num_bytes + 1];
+    signal states_count[num_bytes + 1];
     var count = 0;
 
-    //counting the matches by deterining the start positions of the matches
-    check_cur[0] = IsEqual();
-    check_cur[0].in[0] <== 0;
-    check_cur[0].in[1] <== 1;
-    
-    for (var i = 1; i < num_bytes; i++) {
-        check_cur[i] = IsEqual();
-        check_cur[i].in[0] <== states[i][1];
-        check_cur[i].in[1] <== 1;
+    // counting the matches by deterining the start positions of the matches
+    // note that the valid index of states signal starts from 1
+    for (var i = 0; i < num_bytes; i++) {
+        if (i == 0) {
+            check_cur[i] = IsEqual();
+            check_cur[i].in[0] <== states[1][1];
+            check_cur[i].in[1] <== 1;
 
-        check_start[i] = AND();
-        check_start[i].a <== check_cur[i].out;
-        check_start[i].b <== 1 - check_cur[i-1].out;
-        count += check_start[i].out;
+            count += states[1][1];
+        }
+        else {
+            check_cur[i] = IsEqual();
+            check_cur[i].in[0] <== states[i + 1][1];
+            check_cur[i].in[1] <== 1;
 
-        states_count[i] <== states[i][1] * count;
+            check_start[i] = AND();
+            check_start[i].a <== check_cur[i].out;
+            check_start[i].b <== 1 - check_cur[i-1].out;
+
+            count += check_start[i].out;
+        }
+        states_count[i] <== states[i + 1][1] * count;
     }
 
     out <== count;

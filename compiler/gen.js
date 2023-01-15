@@ -174,7 +174,14 @@ async function generateCircuit(regex, circuitPath = './') {
 
     init_code.push("");
 
-    lines = [...declarations, ...init_code, ...lines];
+    const reveal_code = [];
+    reveal_code.push("signal output reveal[num_bytes];");
+    reveal_code.push("for (var i = 0; i < num_bytes; i++) {");
+    reveal_code.push("\treveal[i] <== in[i] * states[i+1][1];");
+    reveal_code.push("}");
+    reveal_code.push("");
+
+    lines = [...declarations, ...init_code, ...lines, ...reveal_code];
 
     try {
         let tpl = await (await fs.readFile(`${__dirname}/tpl.circom`)).toString()

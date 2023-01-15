@@ -27,10 +27,10 @@ describe("regex compiler tests", function () {
     it('search twitter account', async function() {
         let witness = await circuit.calculateWitness({msg: in_body_padded});
         const signals = await circuit.getJSONOutput('main', witness);
-        for (let i = 29; i <= 33; i++) {
+        for (let i = 28; i <= 32; i++) {
             expect(signals.main.states_count[i]).to.equal(1n)
         }
-        for (let i = 68; i <= 72; i++) {
+        for (let i = 67; i <= 71; i++) {
             expect(signals.main.states_count[i]).to.equal(2n)
         }
         expect(signals.main.out).to.equal(2n)
