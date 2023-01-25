@@ -1,9 +1,19 @@
 const fs = require("fs").promises;
 const path = require("path")
+const regexpTree = require('regexp-tree');
 const assert = require("assert")
 const lexical = require('./lexical')
 
 async function generateCircuit(regex, circuitLibPath) {
+    const ast = regexpTree.parse(`/${regex}/`);
+    regexpTree.traverse(ast, {
+        '*': function({node}) {
+            if (node.type === "CharacterClass") {
+                throw new Error('CharacterClass not supported')
+            }
+        },
+    });
+
     const graph_json = lexical.compile(regex)
     const N = graph_json.length;
 

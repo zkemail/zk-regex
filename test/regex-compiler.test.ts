@@ -71,4 +71,21 @@ describe("regex compiler tests", function () {
             });
         });
     })
+
+    describe('exceptions', () => {
+        it('character class not supported', async () => {
+            try {
+                await generator.generateCircuit(
+                    '[a-z]',
+                    '../circuits'
+                )
+            }
+            catch (e: any) {
+                expect(e.message).to.equal('CharacterClass not supported')
+                return
+            }
+
+            expect.fail('should have thrown')
+        });
+    });
 });

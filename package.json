@@ -29,7 +29,8 @@
   "homepage": "https://github.com/zk-email-verify/zk-regex#readme",
   "dependencies": {
     "circomlib": "^2.0.2",
-    "commander": "^10.0.0"
+    "commander": "^10.0.0",
+    "regexp-tree": "^0.1.24"
   },
   "devDependencies": {
     "@types/chai": "^4.3.0",
