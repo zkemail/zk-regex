@@ -1,8 +1,9 @@
 const fs = require("fs").promises;
+const path = require("path")
 const assert = require("assert")
 const lexical = require('./lexical')
 
-async function generateCircuit(regex, circuitPath = './') {
+async function generateCircuit(regex, circuitLibPath) {
     const graph_json = lexical.compile(regex)
     const N = graph_json.length;
 
@@ -53,6 +54,7 @@ async function generateCircuit(regex, circuitPath = './') {
 
             if (new Set([...uppercase].filter((x) => vals.has(x))).size === uppercase.size) {
                 vals = new Set([...vals].filter((x) => !uppercase.has(x)));
+                lines.push(`\t//UPPERCASE`);
                 lines.push(`\tlt[${lt_i}][i] = LessThan(8);`);
                 lines.push(`\tlt[${lt_i}][i].in[0] <== 64;`);
                 lines.push(`\tlt[${lt_i}][i].in[1] <== in[i];`);
@@ -71,6 +73,7 @@ async function generateCircuit(regex, circuitPath = './') {
             }
             if (new Set([...lowercase].filter((x) => vals.has(x))).size === lowercase.size) {
                 vals = new Set([...vals].filter((x) => !lowercase.has(x)));
+                lines.push(`\t//lowercase`);
                 lines.push(`\tlt[${lt_i}][i] = LessThan(8);`);
                 lines.push(`\tlt[${lt_i}][i].in[0] <== 96;`);
                 lines.push(`\tlt[${lt_i}][i].in[1] <== in[i];`);
@@ -89,6 +92,7 @@ async function generateCircuit(regex, circuitPath = './') {
             }
             if (new Set([...digits].filter((x) => vals.has(x))).size === digits.size) {
                 vals = new Set([...vals].filter((x) => !digits.has(x)));
+                lines.push(`\t//digits`);
                 lines.push(`\tlt[${lt_i}][i] = LessThan(8);`);
                 lines.push(`\tlt[${lt_i}][i].in[0] <== 47;`);
                 lines.push(`\tlt[${lt_i}][i].in[1] <== in[i];`);
@@ -107,6 +111,7 @@ async function generateCircuit(regex, circuitPath = './') {
             }
             for (let c of vals) {
                 assert.strictEqual(c.length, 1);
+                lines.push(`\t//${c}`);
                 lines.push(`\teq[${eq_i}][i] = IsEqual();`);
                 lines.push(`\teq[${eq_i}][i].in[0] <== in[i];`);
                 lines.push(`\teq[${eq_i}][i].in[1] <== ${c.charCodeAt(0)};`);
@@ -187,10 +192,12 @@ async function generateCircuit(regex, circuitPath = './') {
         let tpl = await (await fs.readFile(`${__dirname}/tpl.circom`)).toString()
         tpl = tpl.replace('TEMPLATE_NAME_PLACEHOLDER', 'Regex')
         tpl = tpl.replace('COMPILED_CONTENT_PLACEHOLDER', lines.join('\n\t'))
-        tpl = tpl.replace(/CIRCUIT_FOLDER/g, circuitPath)
+        tpl = tpl.replace(/CIRCUIT_FOLDER/g, circuitLibPath || `../circuits`)
         tpl = tpl.replace(/\t/g, ' '.repeat(4))
     
-        await fs.writeFile('test/circuits/regex_compiler.circom', tpl);
+        const outputPath = `${__dirname}/../build/compiled.circom`;
+        await fs.writeFile(outputPath, tpl);
+        console.log(`Circuit compiled to ${path.normalize(outputPath)}`);
     } catch (error) {
         console.log(error)
     }

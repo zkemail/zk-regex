@@ -7,7 +7,8 @@
     "test": "test"
   },
   "scripts": {
-    "test": "NODE_OPTIONS=--max_old_space_size=56000 mocha --timeout 600000 -r ts-node/register 'test/**/*.ts'"
+    "test": "NODE_OPTIONS=--max_old_space_size=56000 mocha --timeout 600000 -r ts-node/register 'test/**/*.ts'",
+    "compile": "node compiler/cli.js compile"
   },
   "repository": {
     "type": "git",
@@ -27,7 +28,8 @@
   },
   "homepage": "https://github.com/zk-email-verify/zk-regex#readme",
   "dependencies": {
-    "circomlib": "^2.0.2"
+    "circomlib": "^2.0.2",
+    "commander": "^10.0.0"
   },
   "devDependencies": {
     "@types/chai": "^4.3.0",

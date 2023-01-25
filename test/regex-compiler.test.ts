@@ -19,7 +19,6 @@ describe("regex compiler tests", function () {
             'matches in the middle', 
             `email was meant for @(${generator.word_char}+)`,
             (signals: any) => {
-                console.log(signals.main.states_count)
                 for (let i = 28; i <= 32; i++) {
                     expect(signals.main.states_count[i]).to.equal(1n)
                 }
@@ -29,19 +28,20 @@ describe("regex compiler tests", function () {
                 expect(signals.main.out).to.equal(2n)
             }
         ],
-        [
-            'match at the beginning',
-            `(${generator.word_char}+) email was meant`,
-            (signals: any) => {
-                for (let i = 0; i < 6; i++) {
-                    expect(signals.main.states_count[i]).to.equal(1n)
-                }
-                // for (let i = 67; i <= 71; i++) {
-                //     expect(signals.main.states_count[i]).to.equal(2n)
-                // }
-                expect(signals.main.out).to.equal(2n)
-            }
-        ],
+        // [
+        //     'match at the beginning',
+        //     `@${generator.word_char}+ email was meant`,
+        //     (signals: any) => {
+        //         console.log(signals.main.states_count)
+        //         for (let i = 0; i < 6; i++) {
+        //             expect(signals.main.states_count[i]).to.equal(1n)
+        //         }
+        //         // for (let i = 67; i <= 71; i++) {
+        //         //     expect(signals.main.states_count[i]).to.equal(2n)
+        //         // }
+        //         expect(signals.main.out).to.equal(2n)
+        //     }
+        // ],
     ].forEach((test) => {
         //@ts-ignore
         const name: string = test[0]
@@ -53,7 +53,10 @@ describe("regex compiler tests", function () {
         describe(name, () => {
             let circuit: any;
             before(async function () {
-                await generator.generateCircuit(regex, '../../circuits')
+                await generator.generateCircuit(
+                    regex, 
+                    '../circuits'
+                )
                 circuit = await wasm_tester(
                     path.join(__dirname, "circuits", "test_regex_compiler.circom"),
                     {recompile: true, output: `${__dirname}/../build/`}

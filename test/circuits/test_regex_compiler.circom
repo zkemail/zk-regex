@@ -1,6 +1,6 @@
 pragma circom 2.0.2;
 
-include "regex_compiler.circom";
+include "../../build/compiled.circom";
 
 component main { 
     public [ 
