@@ -207,7 +207,7 @@ async function generateCircuit(regex, circuitLibPath) {
     
         const outputPath = `${__dirname}/../build/compiled.circom`;
         await fs.writeFile(outputPath, tpl);
-        console.log(`Circuit compiled to ${path.normalize(outputPath)}`);
+        process.env.DEBUG && console.log(`Circuit compiled to ${path.normalize(outputPath)}`);
     } catch (error) {
         console.log(error)
     }

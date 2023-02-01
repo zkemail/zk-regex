@@ -4,6 +4,7 @@ include "../../build/compiled.circom";
 
 component main { 
     public [ 
-        msg
+        msg,
+        match_idx
     ] 
-} = Regex(1536);
+} = Regex(1536, 44);

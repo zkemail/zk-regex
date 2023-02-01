@@ -16,37 +16,44 @@ describe("regex compiler tests", function () {
 
     [
         [
-            'matches in the middle', 
-            `email was meant for @(${generator.word_char}+)`,
+            '1st match in the middle', 
+            [`email was meant for @(${generator.word_char}+)`, 1],
             (signals: any) => {
-                for (let i = 28; i <= 32; i++) {
-                    expect(signals.main.states_count[i]).to.equal(1n)
-                }
-                for (let i = 67; i <= 71; i++) {
-                    expect(signals.main.states_count[i]).to.equal(2n)
+                const to_reveal = 'katat'.split('').map((x: any) => BigInt(x.charCodeAt(0)))
+                for (let m in signals.main.reveal_shifted) {
+                    const index = signals.main.reveal_shifted[m]
+                    const last_pos = index.length - 1
+                    if (to_reveal[m as any]) {
+                        expect(index[last_pos]).to.equal(to_reveal[m as any])
+                    }
                 }
                 expect(signals.main.out).to.equal(2n)
+                expect(signals.main.start_idx).to.equal(28n)
             }
         ],
-        // [
-        //     'match at the beginning',
-        //     `@${generator.word_char}+ email was meant`,
-        //     (signals: any) => {
-        //         console.log(signals.main.states_count)
-        //         for (let i = 0; i < 6; i++) {
-        //             expect(signals.main.states_count[i]).to.equal(1n)
-        //         }
-        //         // for (let i = 67; i <= 71; i++) {
-        //         //     expect(signals.main.states_count[i]).to.equal(2n)
-        //         // }
-        //         expect(signals.main.out).to.equal(2n)
-        //     }
-        // ],
+        [
+            '2nd match in the middle', 
+            [`email was meant for @(${generator.word_char}+)`, 2],
+            (signals: any) => {
+                const to_reveal = 'katat'.split('').map((x: any) => BigInt(x.charCodeAt(0)))
+                for (let m in signals.main.reveal_shifted) {
+                    const index = signals.main.reveal_shifted[m]
+                    const last_pos = index.length - 1
+                    if (to_reveal[m as any]) {
+                        expect(index[last_pos]).to.equal(to_reveal[m as any])
+                    }
+                }
+                expect(signals.main.out).to.equal(2n)
+                expect(signals.main.start_idx).to.equal(67n)
+            }
+        ],
     ].forEach((test) => {
         //@ts-ignore
         const name: string = test[0]
         //@ts-ignore
-        const regex: string = test[1]
+        const regex: string = test[1][0]
+        //@ts-ignore
+        const match_idx: number = test[1][1]
         //@ts-ignore
         const checkSignals: Function = test[2]
 
@@ -59,12 +66,12 @@ describe("regex compiler tests", function () {
                 )
                 circuit = await wasm_tester(
                     path.join(__dirname, "circuits", "test_regex_compiler.circom"),
-                    {recompile: true, output: `${__dirname}/../build/`}
+                    {recompile: true, output: `${__dirname}/../build/`, O: 0}
                 );
             });
         
             it('checks witness', async function() {
-                let witness = await circuit.calculateWitness({msg: in_body_padded});
+                let witness = await circuit.calculateWitness({msg: in_body_padded, match_idx});
                 const signals = await circuit.getJSONOutput('main', witness);
                 checkSignals(signals)
                 await circuit.checkConstraints(witness);

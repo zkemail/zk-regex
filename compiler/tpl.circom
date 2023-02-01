@@ -2,9 +2,13 @@ pragma circom 2.0.3;
 
 include "CIRCUIT_FOLDER/regex_helpers.circom";
 
-template TEMPLATE_NAME_PLACEHOLDER (msg_bytes) {
+template TEMPLATE_NAME_PLACEHOLDER (msg_bytes, reveal_bytes) {
     signal input msg[msg_bytes];
+    signal input match_idx;
+    signal output start_idx;
     signal output out;
+
+    signal output reveal_shifted[reveal_bytes][msg_bytes];
 
     var num_bytes = msg_bytes;
     signal in[num_bytes];
@@ -14,35 +18,63 @@ template TEMPLATE_NAME_PLACEHOLDER (msg_bytes) {
 
     COMPILED_CONTENT_PLACEHOLDER
 
-    // lengths to be consistent with states signal
-    component check_cur[num_bytes + 1];
-    component check_start[num_bytes + 1];
-    signal states_count[num_bytes + 1];
+    // a flag to indicate the start position of the match
+    var start_index = 0;
+    // for counting the number of matches
     var count = 0;
 
-    // counting the matches by deterining the start positions of the matches
-    // note that the valid index of states signal starts from 1
+    // lengths to be consistent with states signal
+    component check_start[num_bytes + 1];
+    component check_match[num_bytes + 1];
+    component check_matched_start[num_bytes + 1];
+    component matched_idx_eq[msg_bytes];
+
     for (var i = 0; i < num_bytes; i++) {
         if (i == 0) {
-            check_cur[i] = IsEqual();
-            check_cur[i].in[0] <== states[1][1];
-            check_cur[i].in[1] <== 1;
-
             count += states[1][1];
         }
         else {
-            check_cur[i] = IsEqual();
-            check_cur[i].in[0] <== states[i + 1][1];
-            check_cur[i].in[1] <== 1;
-
             check_start[i] = AND();
-            check_start[i].a <== check_cur[i].out;
-            check_start[i].b <== 1 - check_cur[i-1].out;
+            check_start[i].a <== states[i + 1][1];
+            check_start[i].b <== 1 - states[i][1];
 
             count += check_start[i].out;
+
+            check_match[i] = IsEqual();
+            check_match[i].in[0] <== count;
+            check_match[i].in[1] <== match_idx;
+
+            check_matched_start[i] = AND();
+            check_matched_start[i].a <== check_match[i].out;
+            check_matched_start[i].b <== check_start[i].out;
+            start_index += check_matched_start[i].out * i;
         }
-        states_count[i] <== states[i + 1][1] * count;
+
+        matched_idx_eq[i] = IsEqual();
+        matched_idx_eq[i].in[0] <== states[i + 1][1] * count;
+        matched_idx_eq[i].in[1] <== match_idx;
+    }
+
+    component match_start_idx[msg_bytes];
+    for (var i = 0; i < msg_bytes; i++) {
+        match_start_idx[i] = IsEqual();
+        match_start_idx[i].in[0] <== i;
+        match_start_idx[i].in[1] <== start_index;
+    }
+
+    signal reveal_match[msg_bytes];
+    for (var i = 0; i < msg_bytes; i++) {
+        reveal_match[i] <== matched_idx_eq[i].out * reveal[i];
+    }
+
+    for (var j = 0; j < reveal_bytes; j++) {
+        reveal_shifted[j][j] <== 0;
+        for (var i = j + 1; i < msg_bytes; i++) {
+            // This shifts matched string back to the beginning. 
+            reveal_shifted[j][i] <== reveal_shifted[j][i - 1] + match_start_idx[i-j].out * reveal_match[i];
+        }
     }
 
     out <== count;
+    start_idx <== start_index;
 }
