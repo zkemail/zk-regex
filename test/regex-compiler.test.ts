@@ -19,14 +19,8 @@ describe("regex compiler tests", function () {
             '1st match in the middle', 
             [`email was meant for @(${generator.word_char}+)`, 1],
             (signals: any) => {
-                const to_reveal = 'katat'.split('').map((x: any) => BigInt(x.charCodeAt(0)))
-                for (let m in signals.main.reveal_shifted) {
-                    const index = signals.main.reveal_shifted[m]
-                    const last_pos = index.length - 1
-                    if (to_reveal[m as any]) {
-                        expect(index[last_pos]).to.equal(to_reveal[m as any])
-                    }
-                }
+                const expected_reveal = 'katat'.split('').map((x: any) => BigInt(x.charCodeAt(0)))
+                assert_reveal(signals, expected_reveal);
                 expect(signals.main.out).to.equal(2n)
                 expect(signals.main.start_idx).to.equal(28n)
             }
@@ -35,14 +29,8 @@ describe("regex compiler tests", function () {
             '2nd match in the middle', 
             [`email was meant for @(${generator.word_char}+)`, 2],
             (signals: any) => {
-                const to_reveal = 'katat'.split('').map((x: any) => BigInt(x.charCodeAt(0)))
-                for (let m in signals.main.reveal_shifted) {
-                    const index = signals.main.reveal_shifted[m]
-                    const last_pos = index.length - 1
-                    if (to_reveal[m as any]) {
-                        expect(index[last_pos]).to.equal(to_reveal[m as any])
-                    }
-                }
+                const expected_reveal = 'katat'.split('').map((x: any) => BigInt(x.charCodeAt(0)))
+                assert_reveal(signals, expected_reveal);
                 expect(signals.main.out).to.equal(2n)
                 expect(signals.main.start_idx).to.equal(67n)
             }
@@ -96,3 +84,12 @@ describe("regex compiler tests", function () {
         });
     });
 });
+
+function assert_reveal(signals: any, expected_reveal: bigint[]) {
+    for (let m in signals.main.reveal_shifted) {
+        const value = signals.main.reveal_shifted[m];
+        if (expected_reveal[m as any]) {
+            expect(value).to.equal(expected_reveal[m as any]);
+        }
+    }
+}
