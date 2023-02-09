@@ -7,10 +7,10 @@ program
     .description("A sample CLI program")
 
 program
-    .command("compile <regex>")
+    .command("compile <regex> <circuit_name>")
     .description("Compile a regular expression into circom circuits")
-    .action((regex) => {
-        generator.generateCircuit(regex)
+    .action((regex, circuit_name) => {
+        generator.generateCircuit(regex, undefined, circuit_name)
     });
 
 program.on("command:*", () => {

@@ -4,7 +4,7 @@ const regexpTree = require('regexp-tree');
 const assert = require("assert")
 const lexical = require('./lexical')
 
-async function generateCircuit(regex, circuitLibPath) {
+async function generateCircuit(regex, circuitLibPath, circuitName) {
     const ast = regexpTree.parse(`/${regex}/`);
     regexpTree.traverse(ast, {
         '*': function({node}) {
@@ -200,14 +200,14 @@ async function generateCircuit(regex, circuitLibPath) {
 
     try {
         let tpl = await (await fs.readFile(`${__dirname}/tpl.circom`)).toString()
-        tpl = tpl.replace('TEMPLATE_NAME_PLACEHOLDER', 'Regex')
+        tpl = tpl.replace('TEMPLATE_NAME_PLACEHOLDER', circuitName || 'Regex')
         tpl = tpl.replace('COMPILED_CONTENT_PLACEHOLDER', lines.join('\n\t'))
         tpl = tpl.replace(/CIRCUIT_FOLDER/g, circuitLibPath || `../circuits`)
         tpl = tpl.replace(/\t/g, ' '.repeat(4))
     
-        const outputPath = `${__dirname}/../build/compiled.circom`;
+        const outputPath = `${__dirname}/../build/${ circuitName || 'compiled'}.circom`;
         await fs.writeFile(outputPath, tpl);
-        process.env.DEBUG && console.log(`Circuit compiled to ${path.normalize(outputPath)}`);
+        process.env.VERBOSE && console.log(`Circuit compiled to ${path.normalize(outputPath)}`);
     } catch (error) {
         console.log(error)
     }
