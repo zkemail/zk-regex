@@ -2,11 +2,12 @@ pragma circom 2.0.3;
 
 include "CIRCUIT_FOLDER/regex_helpers.circom";
 
-template TEMPLATE_NAME_PLACEHOLDER (msg_bytes, reveal_bytes) {
+template TEMPLATE_NAME_PLACEHOLDER (msg_bytes, reveal_bytes, group_idx) {
     signal input msg[msg_bytes];
     signal input match_idx;
     signal output start_idx;
-    signal output out;
+    signal output group_match_count;
+    signal output entire_count;
 
     signal reveal_shifted_intermediate[reveal_bytes][msg_bytes];
     signal output reveal_shifted[reveal_bytes];
@@ -32,18 +33,18 @@ template TEMPLATE_NAME_PLACEHOLDER (msg_bytes, reveal_bytes) {
 
     for (var i = 0; i < num_bytes; i++) {
         if (i == 0) {
-            count += states[1][1];
+            count += states[1][match_group_indexes[group_idx]];
         }
         else {
             check_start[i] = AND();
-            check_start[i].a <== states[i + 1][1];
-            check_start[i].b <== 1 - states[i][1];
+            check_start[i].a <== states[i + 1][match_group_indexes[group_idx]];
+            check_start[i].b <== 1 - states[i][match_group_indexes[group_idx]];
 
             count += check_start[i].out;
 
             check_match[i] = IsEqual();
             check_match[i].in[0] <== count;
-            check_match[i].in[1] <== match_idx;
+            check_match[i].in[1] <== match_idx + 1;
 
             check_matched_start[i] = AND();
             check_matched_start[i].a <== check_match[i].out;
@@ -52,8 +53,8 @@ template TEMPLATE_NAME_PLACEHOLDER (msg_bytes, reveal_bytes) {
         }
 
         matched_idx_eq[i] = IsEqual();
-        matched_idx_eq[i].in[0] <== states[i + 1][1] * count;
-        matched_idx_eq[i].in[1] <== match_idx;
+        matched_idx_eq[i].in[0] <== states[i + 1][match_group_indexes[group_idx]] * count;
+        matched_idx_eq[i].in[1] <== match_idx + 1;
     }
 
     component match_start_idx[msg_bytes];
@@ -77,6 +78,6 @@ template TEMPLATE_NAME_PLACEHOLDER (msg_bytes, reveal_bytes) {
         reveal_shifted[j] <== reveal_shifted_intermediate[j][msg_bytes - 1];
     }
 
-    out <== count;
+    group_match_count <== count;
     start_idx <== start_index;
 }
