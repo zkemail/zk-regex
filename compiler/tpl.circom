@@ -8,7 +8,8 @@ template TEMPLATE_NAME_PLACEHOLDER (msg_bytes, reveal_bytes) {
     signal output start_idx;
     signal output out;
 
-    signal output reveal_shifted[reveal_bytes][msg_bytes];
+    signal reveal_shifted_intermediate[reveal_bytes][msg_bytes];
+    signal output reveal_shifted[reveal_bytes];
 
     var num_bytes = msg_bytes;
     signal in[num_bytes];
@@ -68,11 +69,12 @@ template TEMPLATE_NAME_PLACEHOLDER (msg_bytes, reveal_bytes) {
     }
 
     for (var j = 0; j < reveal_bytes; j++) {
-        reveal_shifted[j][j] <== 0;
+        reveal_shifted_intermediate[j][j] <== 0;
         for (var i = j + 1; i < msg_bytes; i++) {
             // This shifts matched string back to the beginning. 
-            reveal_shifted[j][i] <== reveal_shifted[j][i - 1] + match_start_idx[i-j].out * reveal_match[i];
+            reveal_shifted_intermediate[j][i] <== reveal_shifted_intermediate[j][i - 1] + match_start_idx[i-j].out * reveal_match[i];
         }
+        reveal_shifted[j] <== reveal_shifted_intermediate[j][msg_bytes - 1];
     }
 
     out <== count;
