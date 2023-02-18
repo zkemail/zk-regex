@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "NODE_OPTIONS=--max_old_space_size=56000 mocha --timeout 600000 -r ts-node/register 'test/**/*.ts'",
-    "compile": "node compiler/cli.js compile"
+    "compile": "VERBOSE=1 node compiler/cli.js compile"
   },
   "repository": {
     "type": "git",
