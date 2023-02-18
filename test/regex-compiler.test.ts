@@ -1,3 +1,4 @@
+const fs = require('fs');
 import { expect } from 'chai';
 const path = require('path')
 const circom_tester = require('circom_tester');
@@ -120,6 +121,23 @@ describe("regex compiler tests", function () {
                 //         // expect(signals.main.start_idx).to.equal(67n)
                 //     }
                 // ],
+            ]
+        ],
+        [
+            ['(\r\n|\x80)(to|from):((a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9| |_|.|"|@|-)+<)?(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|_|.|-)+@(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|_|.|-)+>?\r\n', 2],
+            [
+                [
+                    'from to email header',
+                    convertMsg(fs.readFileSync(path.join(__dirname, 'header.fixture.txt'), 'utf8')),
+                    0,
+                    (signals: any) => {
+                        expect(signals.main.entire_count).to.equal(2n)
+                        expect(signals.main.group_match_count).to.equal(2n)
+                        expect(signals.main.start_idx).to.equal(54n)
+                        const expected_reveal = encodeString('verify')
+                        assert_reveal(signals, expected_reveal);
+                    }
+                ],
             ]
         ],
     ]
