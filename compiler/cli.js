@@ -10,6 +10,11 @@ program
     .command("compile <regex> <circuit_name>")
     .description("Compile a regular expression into circom circuits")
     .action((regex, circuit_name) => {
+        regex = regex
+            .replace(/\\n/g, "\n")
+            .replace(/\\r/g, "\r")
+            .replace(/\\x80/g, "\x80")
+
         generator.generateCircuit(regex, undefined, circuit_name)
     });
 
