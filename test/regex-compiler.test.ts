@@ -100,27 +100,6 @@ describe("regex compiler tests", function () {
                 //         assert_reveal(signals, expected_reveal);
                 //     }
                 // ],
-                // [
-                //     'assert body hash', 
-                //     email_inputs.in_padded,
-                //     ['\r\n' +
-                //     'dkim-signature:((a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z)=(0|1|2|3|4|5|6|7|8|9|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|!|"|#|$|%|&|\'|\\(|\\)|\\*|\\+|,|-|.|/|:|<|=|>|\\?|@|[|\\\\|]|^|_|`|{|\\||}|~| |\t|\n' +
-                //     '|\r|\x0B|\f)+; )+bh=(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|\\+|/|=)+; ', 1],
-                //     // ['3(d|e|f)+ 1(a|b) 2(b|c)+ ', 1],
-                //     (signals: any) => {
-                //         // const expected_reveal = 'katat'.split('').map((x: any) => BigInt(x.charCodeAt(0)))
-                //         // assert_reveal(signals, expected_reveal);
-                //         for (let i = 0; i < signals.main.states.length; i++) {
-                //             // console.log(signals.main.states[i][26])
-                //             // console.log(signals.main.states[i][1])
-                //             console.log(signals.main.states[i][28])
-                //         }
-                //         // console.log(JSON.stringify(signals.main.reveal, undefined, 2))
-                //         expect(signals.main.entire_count).to.equal(1n)
-                //         // expect(signals.main.group_match_count).to.equal(1n)
-                //         // expect(signals.main.start_idx).to.equal(67n)
-                //     }
-                // ],
             ]
         ],
         [
@@ -138,6 +117,23 @@ describe("regex compiler tests", function () {
                         assert_reveal(signals, expected_reveal);
                     }
                 ],
+            ]
+        ],
+        [
+            ['dkim-signature:((a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z)=(0|1|2|3|4|5|6|7|8|9|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|!|"|#|$|%|&|\'|\\(|\\)|\\*|\\+|,|-|.|\\/|:|<|=|>|\\?|@|\\[|\\\\|\\]|^|_|`|{|\\||}|~| |\t|\n' +
+            '|\r|\x0B|\f)+; )+bh=(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|\\+|\\/|=)+; ', 2],
+            [
+                [
+                    'assert body hash',
+                    convertMsg("\r\ndkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=twitter.com; s=dkim-201406; t=1671865957; bh=hEMyi6n9V0N6aGtz3lEc6fQBlZRVUok/tkwpRCmrnaa=; h=Date:From:To:Subject:MIME-Version:Content-Type:Message-ID; b="),
+                    0,
+                    (signals: any) => {
+                        expect(signals.main.entire_count).to.equal(1n)
+                        expect(signals.main.group_match_count).to.equal(1n)
+                        const expected_reveal = encodeString('hEMyi6n9V0N6aGtz3lEc6fQBlZRVUok/tkwpRCmrnaa=')
+                        assert_reveal(signals, expected_reveal);
+                    }
+                ]
             ]
         ],
     ]
