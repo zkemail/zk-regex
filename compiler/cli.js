@@ -1,6 +1,7 @@
 const generator = require('../compiler/gen')
 
 const program = require("commander");
+const unescapeJs = require('unescape-js');
 
 program
     .version("0.0.1")
@@ -10,11 +11,7 @@ program
     .command("compile <regex> <circuit_name>")
     .description("Compile a regular expression into circom circuits")
     .action((regex, circuit_name) => {
-        regex = regex
-            .replace(/\\n/g, "\n")
-            .replace(/\\r/g, "\r")
-            .replace(/\\x80/g, "\x80")
-
+        regex = unescapeJs(regex)
         generator.generateCircuit(regex, undefined, circuit_name)
     });
 
