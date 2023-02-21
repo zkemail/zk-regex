@@ -30,7 +30,8 @@
   "dependencies": {
     "circomlib": "^2.0.2",
     "commander": "^10.0.0",
-    "regexp-tree": "^0.1.24"
+    "regexp-tree": "^0.1.24",
+    "unescape-js": "^1.1.4"
   },
   "devDependencies": {
     "@types/chai": "^4.3.0",

@@ -7,4 +7,4 @@ component main {
         msg,
         match_idx
     ] 
-} = Regex(1536, 44);
+} = Regex(1536, 44, 0);
