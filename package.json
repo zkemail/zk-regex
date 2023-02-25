@@ -7,7 +7,8 @@
     "test": "test"
   },
   "scripts": {
-    "test": "NODE_OPTIONS=--max_old_space_size=56000 mocha --timeout 600000 -r ts-node/register 'test/**/*.ts'",
+    "test": "NODE_OPTIONS=--max_old_space_size=56000 mocha --timeout 600000 'test/**/*.js'",
+    "lint": "eslint ./",
     "compile": "VERBOSE=1 node compiler/cli.js compile"
   },
   "repository": {
@@ -30,6 +31,7 @@
   "dependencies": {
     "circomlib": "^2.0.2",
     "commander": "^10.0.0",
+    "eslint": "^8.34.0",
     "regexp-tree": "^0.1.24",
     "unescape-js": "^1.1.4"
   },

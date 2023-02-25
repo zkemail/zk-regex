@@ -23,5 +23,7 @@ jobs:
         run: yarn
       # - name: Create build folder
       #   run: mkdir build
+      - name: Run Linters
+        run: yarn lint
       - name: Run tests
         run: yarn test
