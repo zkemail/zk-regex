@@ -1,30 +1,26 @@
 const fs = require("fs").promises;
-const path = require("path")
-const regexpTree = require('regexp-tree');
-const assert = require("assert")
-const lexical = require('./lexical')
+const path = require("path");
+const regexpTree = require("regexp-tree");
+const assert = require("assert");
+const lexical = require("./lexical");
 
 async function generateCircuit(regex, circuitLibPath, circuitName) {
     const ast = regexpTree.parse(`/${regex}/`);
     regexpTree.traverse(ast, {
-        '*': function({node}) {
+        "*": function ({ node }) {
             if (node.type === "CharacterClass") {
-                throw new Error('CharacterClass not supported')
+                throw new Error("CharacterClass not supported");
             }
         },
     });
 
-    const graph_json = lexical.compile(regex)
+    const graph_json = lexical.compile(regex);
     const N = graph_json.length;
 
     // Outgoing nodes
-    const graph = Array.from({
-        length: N
-    }, () => ({}));
+    const graph = Array.from({ length: N }, () => ({}));
     // Incoming Nodes
-    const rev_graph = Array.from({
-        length: N
-    }, () => []);
+    const rev_graph = Array.from({ length: N }, () => []);
     const accept_nodes = new Set();
 
     for (let i = 0; i < N; i++) {
@@ -128,7 +124,7 @@ async function generateCircuit(regex, circuitLibPath, circuitName) {
                 eq_outputs.push(["eq", eq_i]);
                 eq_i += 1;
             }
-            
+
             lines.push(`\tand[${and_i}][i] = AND();`);
             lines.push(`\tand[${and_i}][i].a <== states[i][${prev_i}];`);
 
@@ -161,9 +157,9 @@ async function generateCircuit(regex, circuitLibPath, circuitName) {
     lines.push("}");
 
     lines.push(`signal final_state_sum[num_bytes+1];`);
-    lines.push(`final_state_sum[0] <== states[0][${N-1}];`);
+    lines.push(`final_state_sum[0] <== states[0][${N - 1}];`);
     lines.push(`for (var i = 1; i <= num_bytes; i++) {`);
-    lines.push(`\tfinal_state_sum[i] <== final_state_sum[i-1] + states[i][${N-1}];`);
+    lines.push(`\tfinal_state_sum[i] <== final_state_sum[i-1] + states[i][${N - 1}];`);
     lines.push(`}`);
     lines.push(`entire_count <== final_state_sum[num_bytes];`);
 
@@ -197,21 +193,21 @@ async function generateCircuit(regex, circuitLibPath, circuitName) {
     init_code.push("");
 
     // construct the match group indexes
-    const node_edges = graph_json.map(
-        node => Object.keys(node.edges).map(key => {
-            return {[key]: node.edges[key]}
+    const node_edges = graph_json.map((node) =>
+        Object.keys(node.edges).map((key) => {
+            return { [key]: node.edges[key] };
         })
-    )
-    const node_edges_flat = node_edges.flat()
+    );
+    const node_edges_flat = node_edges.flat();
 
-    const node_edges_set = new Set()
-    node_edges_flat.forEach(node => {
+    const node_edges_set = new Set();
+    node_edges_flat.forEach((node) => {
         if (JSON.parse(Object.keys(node)[0]).length > 1) {
-            node_edges_set.add(Object.values(node)[0])
+            node_edges_set.add(Object.values(node)[0]);
         }
-    })
-    const match_group_indexes = Array.from(node_edges_set).sort((a, b) => a - b)
-    init_code.push(`var match_group_indexes[${match_group_indexes.length}] = [${match_group_indexes.join(', ')}];`);
+    });
+    const match_group_indexes = Array.from(node_edges_set).sort((a, b) => a - b);
+    init_code.push(`var match_group_indexes[${match_group_indexes.length}] = [${match_group_indexes.join(", ")}];`);
 
     const reveal_code = [];
     reveal_code.push("signal output reveal[num_bytes];");
@@ -222,23 +218,42 @@ async function generateCircuit(regex, circuitLibPath, circuitName) {
 
     lines = [...declarations, ...init_code, ...lines, ...reveal_code];
 
+    const OUTPUT_HALO2 = true;
+    if (OUTPUT_HALO2) {
+        console.log("Logging to halo2 file!");
+
+        const f = fs.createWriteStream("halo2_regex_lookup_js.txt");
+        accept_nodes.forEach((a) => f.write(a + " "));
+        f.write("\n");
+        f.write(match_group_indexes.join(" "));
+        f.write("\n");
+        for (let i = 0; i < N; i++) {
+            const edges = graph_json[i]["edges"];
+            for (let k in edges) {
+                const v = edges[k];
+                for (let val of JSON.parse(k)) {
+                    f.write(`${i} ${v} ${val.charCodeAt(0)}\n`);
+                }
+            }
+        }
+    }
+
     try {
-        let tpl = await (await fs.readFile(`${__dirname}/tpl.circom`)).toString()
-        tpl = tpl.replace('TEMPLATE_NAME_PLACEHOLDER', circuitName || 'Regex')
-        tpl = tpl.replace('COMPILED_CONTENT_PLACEHOLDER', lines.join('\n\t'))
-        tpl = tpl.replace(/CIRCUIT_FOLDER/g, circuitLibPath || `../circuits`)
-        tpl = tpl.replace(/\t/g, ' '.repeat(4))
-    
-        const outputPath = `${__dirname}/../build/${ circuitName || 'compiled'}.circom`;
+        let tpl = await (await fs.readFile(`${__dirname}/tpl.circom`)).toString();
+        tpl = tpl.replace("TEMPLATE_NAME_PLACEHOLDER", circuitName || "Regex");
+        tpl = tpl.replace("COMPILED_CONTENT_PLACEHOLDER", lines.join("\n\t"));
+        tpl = tpl.replace(/CIRCUIT_FOLDER/g, circuitLibPath || `../circuits`);
+        tpl = tpl.replace(/\t/g, " ".repeat(4));
+
+        const outputPath = `${__dirname}/../build/${circuitName || "compiled"}.circom`;
         await fs.writeFile(outputPath, tpl);
         process.env.VERBOSE && console.log(`Circuit compiled to ${path.normalize(outputPath)}`);
     } catch (error) {
-        console.log(error)
+        console.log(error);
     }
 }
 
-
 module.exports = {
     generateCircuit,
-    ...lexical
-}
+    ...lexical,
+};
