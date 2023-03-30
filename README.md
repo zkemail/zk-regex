@@ -1,6 +1,8 @@
 # zk-regex
 
-A library to do regex verification in circom, adapted from the original zk-email. Hopefully will add halo2 soon as well.
+A library to do regex verification in circom, adapted from the original zk-email. Also spits out a halo2 lookup table for [halo2-regex](https://github.com/zkemail/halo2-regex) parsing. Note that you need to add valid accept states and substring definitions yourself. Releasing a tool to do this soon.
+
+We've forked [min-dfa into a UI here](https://mindfa.onrender.com/min_dfa) to create a UI that converts existing regexes with [] support, as well as escapes \_, and the character classes a-z, A-Z, and 0-9. It also shows the DFA states very clearly so you can choose accept states easily. This should make converting regexes into DFA form way cleaner.
 
 ## introduction
 
