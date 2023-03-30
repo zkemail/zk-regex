@@ -220,7 +220,7 @@ async function generateCircuit(regex, circuitLibPath, circuitName) {
 
     const OUTPUT_HALO2 = true;
     if (OUTPUT_HALO2) {
-        console.log('Logging to halo2 file! Note that this file does not ');
+        console.log('Logging to halo2 file! Note that this file is not formatted correctly. For the latest spec, see https://github.com/zkemail/halo2-regex');
         const f = fs.createWriteStream('halo2_regex_lookup_js.txt');
         accept_nodes.forEach((a) => f.write(a + ' '));
         f.write('\n');
