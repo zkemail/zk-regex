@@ -1,4 +1,4 @@
-const fs = require("fs").promises;
+const fs = require("fs");
 const path = require("path");
 const regexpTree = require("regexp-tree");
 const assert = require("assert");
@@ -220,8 +220,7 @@ async function generateCircuit(regex, circuitLibPath, circuitName) {
 
     const OUTPUT_HALO2 = true;
     if (OUTPUT_HALO2) {
-        console.log("Logging to halo2 file!");
-
+        console.log("Logging to halo2 file! Note that this file does not ");
         const f = fs.createWriteStream("halo2_regex_lookup_js.txt");
         accept_nodes.forEach((a) => f.write(a + " "));
         f.write("\n");
@@ -239,14 +238,14 @@ async function generateCircuit(regex, circuitLibPath, circuitName) {
     }
 
     try {
-        let tpl = await (await fs.readFile(`${__dirname}/tpl.circom`)).toString();
+        let tpl = await (await fs.promises.readFile(`${__dirname}/tpl.circom`)).toString();
         tpl = tpl.replace("TEMPLATE_NAME_PLACEHOLDER", circuitName || "Regex");
         tpl = tpl.replace("COMPILED_CONTENT_PLACEHOLDER", lines.join("\n\t"));
         tpl = tpl.replace(/CIRCUIT_FOLDER/g, circuitLibPath || `../circuits`);
         tpl = tpl.replace(/\t/g, " ".repeat(4));
 
         const outputPath = `${__dirname}/../build/${circuitName || "compiled"}.circom`;
-        await fs.writeFile(outputPath, tpl);
+        await fs.promises.writeFile(outputPath, tpl);
         process.env.VERBOSE && console.log(`Circuit compiled to ${path.normalize(outputPath)}`);
     } catch (error) {
         console.log(error);
