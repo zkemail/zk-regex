@@ -1,5 +1,5 @@
+/* eslint-disable no-prototype-builtins */
 /*jslint browser: true*/
-/*global require, exports*/
 
 /**
  * Try parsing simple regular expression to syntax tree.
@@ -141,7 +141,7 @@ function parseRegex(text) {
     let i = 0;
     while (i < text.length) {
         if (text[i] == '\\') {
-            new_text.push([text[i+1]])
+            new_text.push([text[i+1]]);
             i += 2;
         } else {
             new_text.push(text[i]);
@@ -550,7 +550,6 @@ function compile(regex) {
     let dfa = minDfa(nfaToDfa(nfa));
 
     var i,
-        j,
         states = {},
         nodes = [],
         stack = [dfa],
@@ -589,7 +588,7 @@ function compile(regex) {
         graph[nodes[i].nature-1] = curr;
     }
 
-    return graph
+    return graph;
 }
 
 module.exports = {
@@ -599,4 +598,4 @@ module.exports = {
     word_char,
     catch_all,
     catch_all_without_semicolon,
-}
+};
