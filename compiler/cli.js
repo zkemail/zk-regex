@@ -22,6 +22,6 @@ program.on('command:*', () => {
 
 program.parse(process.argv);
 
-if (!process.args.length) {
+if (!process.argv.length) {
     program.help();
 }

@@ -1,5 +1,5 @@
 const fs = require('fs');
-const {expect} = require('chai');
+const { expect } = require('chai');
 const path = require('path');
 const circom_tester = require('circom_tester');
 const generator = require('../compiler/gen');
@@ -120,8 +120,25 @@ describe('regex compiler tests', function () {
             ]
         ],
         [
+            ['(\r\n|\x80)(to|from):([a-zA-Z0-9 _."@-]+<)?[a-zA-Z0-9_.-]+@[a-zA-Z0-9_.-]+>?\r\n', 2],
+            [
+                [
+                    'from to email header',
+                    convertMsg(fs.readFileSync(path.join(__dirname, 'header.fixture.txt'), 'utf8')),
+                    0,
+                    (signals) => {
+                        expect(signals.main.entire_count).to.equal(2n);
+                        expect(signals.main.group_match_count).to.equal(2n);
+                        expect(signals.main.start_idx).to.equal(54n);
+                        const expected_reveal = encodeString('verify');
+                        assert_reveal(signals, expected_reveal);
+                    }
+                ],
+            ]
+        ],
+        [
             ['dkim-signature:((a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z)=(0|1|2|3|4|5|6|7|8|9|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|!|"|#|$|%|&|\'|\\(|\\)|\\*|\\+|,|-|.|\\/|:|<|=|>|\\?|@|\\[|\\\\|\\]|^|_|`|{|\\||}|~| |\t|\n' +
-            '|\r|\x0B|\f)+; )+bh=(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|\\+|\\/|=)+; ', 2],
+                '|\r|\x0B|\f)+; )+bh=(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|\\+|\\/|=)+; ', 2],
             [
                 [
                     'assert body hash',
@@ -147,12 +164,12 @@ describe('regex compiler tests', function () {
             describe(`/${regex}/ > group idx: ${group_idx} > ${testCircomFile}`, () => {
                 before(async function () {
                     await generator.generateCircuit(
-                        regex, 
+                        regex,
                         '../circuits'
                     );
                     circuit = await wasm_tester(
                         path.join(__dirname, 'circuits', testCircomFile),
-                        {recompile: process.env.NO_COMPILE ? false : true, output: `${__dirname}/../build/`, O: 0}
+                        { recompile: process.env.NO_COMPILE ? false : true, output: `${__dirname}/../build/`, O: 0 }
                     );
                 });
                 tests.forEach((test) => {
@@ -160,10 +177,10 @@ describe('regex compiler tests', function () {
                     const content = test[1];
                     const match_idx = test[2];
                     const checkSignals = test[3];
-        
+
                     describe(name, () => {
-                        it('checks witness', async function() {
-                            let witness = await circuit.calculateWitness({msg: content, match_idx});
+                        it('checks witness', async function () {
+                            let witness = await circuit.calculateWitness({ msg: content, match_idx });
                             const signals = await circuit.getJSONOutput('main', witness);
                             checkSignals(signals);
                             await circuit.checkConstraints(witness);
@@ -173,22 +190,6 @@ describe('regex compiler tests', function () {
             });
         });
 
-    describe('exceptions', () => {
-        it('character class not supported', async () => {
-            try {
-                await generator.generateCircuit(
-                    '[a-z]',
-                    '../circuits'
-                );
-            }
-            catch (e) {
-                expect(e.message).to.equal('CharacterClass not supported');
-                return;
-            }
-
-            expect.fail('should have thrown');
-        });
-    });
 });
 
 function encodeString(str) {
