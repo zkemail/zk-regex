@@ -1,6 +1,5 @@
 const fs = require('fs');
 const path = require('path');
-const regexpTree = require('regexp-tree');
 const assert = require('assert');
 const lexical = require('./lexical');
 const regex_to_dfa = require('./regex_to_dfa');
