@@ -1,6 +1,15 @@
 /* eslint-disable no-prototype-builtins */
 /*jslint browser: true*/
 
+// const a2z_nosep = "abcdefghijklmnopqrstuvwxyz";
+// const A2Z_nosep = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+// const a2f_nosep = "abcdef";
+// const A2F_nosep = "ABCDEF";
+// const r0to9_nosep = "0123456789";
+// const escapeMap = { n: "\n", r: "\r", t: "\t", v: "\v", f: "\f" };
+// const whitespace = Object.values(escapeMap);
+// const slash_s = whitespace.join("|");
+
 /**
  * Try parsing simple regular expression to syntax tree.
  *
@@ -26,7 +35,7 @@ function parseRegex(text) {
         var i,
             sub,
             last = 0,
-            node = {'begin': begin, 'end': end},
+            node = { 'begin': begin, 'end': end },
             virNode,
             tempNode,
             stack = 0,
@@ -86,7 +95,7 @@ function parseRegex(text) {
                     if (parts.length === 0) {
                         return 'Error: unexpected * at ' + (begin + i) + '.';
                     }
-                    tempNode = {'begin': parts[parts.length - 1].begin, 'end': parts[parts.length - 1].end + 1};
+                    tempNode = { 'begin': parts[parts.length - 1].begin, 'end': parts[parts.length - 1].end + 1 };
                     tempNode.type = 'star';
                     tempNode.sub = parts[parts.length - 1];
                     parts[parts.length - 1] = tempNode;
@@ -94,10 +103,10 @@ function parseRegex(text) {
                     if (parts.length === 0) {
                         return 'Error: unexpected + at ' + (begin + i) + '.';
                     }
-                    virNode = {'begin': parts[parts.length - 1].begin, 'end': parts[parts.length - 1].end + 1};
+                    virNode = { 'begin': parts[parts.length - 1].begin, 'end': parts[parts.length - 1].end + 1 };
                     virNode.type = 'star';
                     virNode.sub = parts[parts.length - 1];
-                    tempNode = {'begin': parts[parts.length - 1].begin, 'end': parts[parts.length - 1].end + 1};
+                    tempNode = { 'begin': parts[parts.length - 1].begin, 'end': parts[parts.length - 1].end + 1 };
                     tempNode.type = 'cat';
                     tempNode.parts = [parts[parts.length - 1], virNode];
                     parts[parts.length - 1] = tempNode;
@@ -105,24 +114,24 @@ function parseRegex(text) {
                     if (parts.length === 0) {
                         return 'Error: unexpected + at ' + (begin + i) + '.';
                     }
-                    virNode = {'begin': parts[parts.length - 1].begin, 'end': parts[parts.length - 1].end + 1};
+                    virNode = { 'begin': parts[parts.length - 1].begin, 'end': parts[parts.length - 1].end + 1 };
                     virNode.type = 'empty';
                     virNode.sub = parts[parts.length - 1];
-                    tempNode = {'begin': parts[parts.length - 1].begin, 'end': parts[parts.length - 1].end + 1};
+                    tempNode = { 'begin': parts[parts.length - 1].begin, 'end': parts[parts.length - 1].end + 1 };
                     tempNode.type = 'or';
                     tempNode.parts = [parts[parts.length - 1], virNode];
                     parts[parts.length - 1] = tempNode;
                 } else if (text[i] === 'ϵ') {
-                    tempNode = {'begin': begin + i, 'end': begin + i + 1};
+                    tempNode = { 'begin': begin + i, 'end': begin + i + 1 };
                     tempNode.type = 'empty';
                     parts.push(tempNode);
                 } else if (Array.isArray(text[i])) {
-                    tempNode = {'begin': begin + i, 'end': begin + i + 1};
+                    tempNode = { 'begin': begin + i, 'end': begin + i + 1 };
                     tempNode.type = 'text';
                     tempNode.text = text[i][0];
                     parts.push(tempNode);
                 } else {
-                    tempNode = {'begin': begin + i, 'end': begin + i + 1};
+                    tempNode = { 'begin': begin + i, 'end': begin + i + 1 };
                     tempNode.type = 'text';
                     tempNode.text = text[i];
                     parts.push(tempNode);
@@ -141,7 +150,7 @@ function parseRegex(text) {
     let i = 0;
     while (i < text.length) {
         if (text[i] == '\\') {
-            new_text.push([text[i+1]]);
+            new_text.push([text[i + 1]]);
             i += 2;
         } else {
             new_text.push(text[i]);
@@ -166,36 +175,36 @@ function regexToNfa(text) {
             count += 1;
         }
         switch (node.type) {
-        case 'empty':
-            start.edges.push(['ϵ', end]);
-            break;
-        case 'text':
-            start.edges.push([node.text, end]);
-            break;
-        case 'cat':
-            last = start;
-            for (i = 0; i < node.parts.length - 1; i += 1) {
-                temp = {'type': '', 'edges': []};
-                count = generateGraph(node.parts[i], last, temp, count);
-                last = temp;
-            }
-            count = generateGraph(node.parts[node.parts.length - 1], last, end, count);
-            break;
-        case 'or':
-            for (i = 0; i < node.parts.length; i += 1) {
-                tempStart = {'type': '', 'edges': []};
-                tempEnd = {'type': '', 'edges': [['ϵ', end]]};
+            case 'empty':
+                start.edges.push(['ϵ', end]);
+                break;
+            case 'text':
+                start.edges.push([node.text, end]);
+                break;
+            case 'cat':
+                last = start;
+                for (i = 0; i < node.parts.length - 1; i += 1) {
+                    temp = { 'type': '', 'edges': [] };
+                    count = generateGraph(node.parts[i], last, temp, count);
+                    last = temp;
+                }
+                count = generateGraph(node.parts[node.parts.length - 1], last, end, count);
+                break;
+            case 'or':
+                for (i = 0; i < node.parts.length; i += 1) {
+                    tempStart = { 'type': '', 'edges': [] };
+                    tempEnd = { 'type': '', 'edges': [['ϵ', end]] };
+                    start.edges.push(['ϵ', tempStart]);
+                    count = generateGraph(node.parts[i], tempStart, tempEnd, count);
+                }
+                break;
+            case 'star':
+                tempStart = { 'type': '', 'edges': [] };
+                tempEnd = { 'type': '', 'edges': [['ϵ', tempStart], ['ϵ', end]] };
                 start.edges.push(['ϵ', tempStart]);
-                count = generateGraph(node.parts[i], tempStart, tempEnd, count);
-            }
-            break;
-        case 'star':
-            tempStart = {'type': '', 'edges': []};
-            tempEnd = {'type': '', 'edges': [['ϵ', tempStart], ['ϵ', end]]};
-            start.edges.push(['ϵ', tempStart]);
-            start.edges.push(['ϵ', end]);
-            count = generateGraph(node.sub, tempStart, tempEnd, count);
-            break;
+                start.edges.push(['ϵ', end]);
+                count = generateGraph(node.sub, tempStart, tempEnd, count);
+                break;
         }
         if (!end.hasOwnProperty('id')) {
             end.id = count;
@@ -204,8 +213,8 @@ function regexToNfa(text) {
         return count;
     }
     var ast = parseRegex(text),
-        start = {'type': 'start', 'edges': []},
-        accept = {'type': 'accept', 'edges': []};
+        start = { 'type': 'start', 'edges': [] },
+        accept = { 'type': 'accept', 'edges': [] };
     if (typeof ast === 'string') {
         return ast;
     }
@@ -532,20 +541,14 @@ function toNature(col) {
 // '(\r\n|\x80)(to|from):([A-Za-z0-9 _."@-]+<)?[a-zA-Z0-9_.-]+@[a-zA-Z0-9_.]+>?\r\n';
 // let regex = '(\r\n|\x80)(to|from):((a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9| |_|.|"|@|-)+<)?(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|_|.|-)+@(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|_|.|-)+>?\r\n';
 
-const key_chars = '(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z)';
-const catch_all = '(0|1|2|3|4|5|6|7|8|9|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|!|"|#|$|%|&|\'|\\(|\\)|\\*|\\+|,|-|.|/|:|;|<|=|>|\\?|@|[|\\\\|]|^|_|`|{|\\||}|~| |\t|\n|\r|\x0b|\x0c)';
-const catch_all_without_semicolon = '(0|1|2|3|4|5|6|7|8|9|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|!|"|#|$|%|&|\'|\\(|\\)|\\*|\\+|,|-|.|/|:|<|=|>|\\?|@|[|\\\\|]|^|_|`|{|\\||}|~| |\t|\n|\r|\x0b|\x0c)';
-const base_64 = '(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|\\+|/|=)';
-const word_char = '(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|_)';
+// const key_chars = '(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z)';
+// const catch_all = '(0|1|2|3|4|5|6|7|8|9|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|!|"|#|$|%|&|\'|\\(|\\)|\\*|\\+|,|-|.|/|:|;|<|=|>|\\?|@|[|\\\\|]|^|_|`|{|\\||}|~| |\t|\n|\r|\x0b|\x0c)';
+// const catch_all_without_semicolon = '(0|1|2|3|4|5|6|7|8|9|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|!|"|#|$|%|&|\'|\\(|\\)|\\*|\\+|,|-|.|/|:|<|=|>|\\?|@|[|\\\\|]|^|_|`|{|\\||}|~| |\t|\n|\r|\x0b|\x0c)';
+// const base_64 = '(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|\\+|/|=)';
+// const word_char = '(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|_)';
 
 
-function compile(regex) {
-    // let regex = `\r\ndkim-signature:(${key_chars}=${catch_all_without_semicolon}+; )+bh=${base_64}+; `;
-    
-    // console.log(regex);
-    // console.log(Buffer.from(regex).toString('base64'));
-    
-    // let regex = 'hello(0|1|2|3|4|5|6|7|8|9)+world';
+function regexToDfa(regex) {
     let nfa = regexToNfa(regex);
     let dfa = minDfa(nfaToDfa(nfa));
 
@@ -582,20 +585,45 @@ function compile(regex) {
         curr.edges = {};
         for (let j = 0; j < symbols.length; j += 1) {
             if (nodes[i].trans.hasOwnProperty(symbols[j])) {
-                curr.edges[symbols[j]] = nodes[i].trans[symbols[j]].nature-1;
+                curr.edges[symbols[j]] = nodes[i].trans[symbols[j]].nature - 1;
             }
         }
-        graph[nodes[i].nature-1] = curr;
+        graph[nodes[i].nature - 1] = curr;
     }
 
-    return graph;
+    return JSON.stringify(graph);
 }
 
-module.exports = {
-    compile,
-    key_chars,
-    base_64,
-    word_char,
-    catch_all,
-    catch_all_without_semicolon,
-};
+
+function catchAllRegexStr() {
+    return "(0|1|2|3|4|5|6|7|8|9|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|!|\"|#|$|%|&|'|\\(|\\)|\\*|\\+|,|-|.|/|:|;|<|=|>|\\?|@|[|\\\\|]|^|_|`|{|\\||}|~| |\t|\n|\r|\x0b|\x0c)";
+}
+
+function catchAllWithoutRNRegexStr() {
+    return "(0|1|2|3|4|5|6|7|8|9|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|!|\"|#|$|%|&|'|\\(|\\)|\\*|\\+|,|-|.|/|:|;|<|=|>|\\?|@|[|\\\\|]|^|_|`|{|\\||}|~| |\t|\x0b|\x0c)";
+}
+
+function textContextPrefix() {
+    return `Content-Type: text/plain; charset="UTF-8"\r\n\r\n`;
+}
+
+// function formatRegexPrintable(s) {
+//     const escaped_string_json = JSON.stringify(s);
+//     const escaped_string = escaped_string_json.slice(1, escaped_string_json.length - 1);
+//     return escaped_string
+//         .replaceAll("\\\\\\\\", "\\")
+//         .replaceAll("\\\\", "\\")
+//         .replaceAll("/", "\\/")
+//         .replaceAll("\u000b", "\\♥")
+//         .replaceAll("^", "\\^")
+//         .replaceAll("$", "\\$")
+//         .replaceAll("|[|", "|\\[|")
+//         .replaceAll("|]|", "|\\]|")
+//         .replaceAll("|.|", "|\\.|")
+//         .replaceAll("|$|", "|\\$|")
+//         .replaceAll("|^|", "|\\^|");
+// }
+
+// module.exports = {
+//     regexToDfa
+// };

@@ -106,3 +106,7 @@ dist
 .vscode
 build/*
 !build/.placeholder
+
+target
+
+index.node

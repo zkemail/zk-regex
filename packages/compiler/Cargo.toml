@@ -1,0 +1,38 @@
+[package]
+name = "zk-regex-compiler"
+version = "0.1.0"
+authors = ["Sora Suegami"]
+license = "MIT"
+edition = "2018"
+# exclude = ["index.node"]
+
+[[bin]]
+name = "zk-regex"
+path = "src/bin/compiler.rs"
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tabbycat = { version = "0.1", features = ["attributes"], optional = true }
+fancy-regex = "0.11.0"
+petgraph = "0.6.3"
+graph-cycles = "0.1.0"
+thiserror = "1.0.40"
+serde_json = "1.0.95"
+serde = { version = "1.0.159", features = ["derive"] }
+js-sandbox = { version = "0.2.0-rc.1", git = "https://github.com/Bromeon/js-sandbox.git", rev = "cd256ef" }
+itertools = "0.10.3"
+clap = { version = "=4.2.1", features = ["derive"] }
+
+[dependencies.neon]
+version = "0.10"
+default-features = false
+features = ["napi-6"]
+optional = true
+
+[features]
+default = ["node"]
+node = ["neon"]
