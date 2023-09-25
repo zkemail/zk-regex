@@ -8,8 +8,7 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "yarn workspaces -pt run test",
-    "lint": "eslint ./"
+    "test": "yarn workspaces -pt run test"
   },
   "repository": {
     "type": "git",
