@@ -110,3 +110,4 @@ build/*
 target
 
 index.node
+Cargo.lock
