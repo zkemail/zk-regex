@@ -4,11 +4,8 @@ pub mod circom;
 pub mod halo2;
 pub mod js_caller;
 
-#[cfg(feature = "node")]
 pub mod node;
-#[cfg(feature = "node")]
 use crate::node::*;
-#[cfg(feature = "node")]
 use neon;
 
 use crate::js_caller::*;
@@ -462,7 +459,7 @@ pub(crate) fn add_graph_nodes(
     Ok(())
 }
 
-#[cfg(feature = "node")]
+#[cfg(feature = "export_neon_main")]
 #[neon::main]
 fn main(mut cx: neon::prelude::ModuleContext) -> neon::prelude::NeonResult<()> {
     cx.export_function("genFromDecomposed", gen_from_decomposed_node)?;

@@ -4,6 +4,7 @@ pub mod padding;
 use extract_substrs::extract_substr_idxes_node;
 use padding::pad_string_node;
 
+#[cfg(feature = "export_neon_main")]
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("extractSubstrIdxes", extract_substr_idxes_node)?;
