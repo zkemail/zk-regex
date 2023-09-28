@@ -1,20 +1,13 @@
 const fs = require('fs');
 const path = require('path');
-const regexpTree = require('regexp-tree');
 const assert = require('assert');
 const lexical = require('./lexical');
+const regex_to_dfa = require('./regex_to_dfa');
+
 
 async function generateCircuit(regex, circuitLibPath, circuitName) {
-    const ast = regexpTree.parse(`/${regex}/`);
-    regexpTree.traverse(ast, {
-        '*': function ({ node }) {
-            if (node.type === 'CharacterClass') {
-                throw new Error('CharacterClass not supported');
-            }
-        },
-    });
 
-    const graph_json = lexical.compile(regex);
+    const graph_json = JSON.parse(regex_to_dfa.regexToGraph(regex_to_dfa.regexToMinDFASpec(regex)));
     const N = graph_json.length;
 
     // Outgoing nodes

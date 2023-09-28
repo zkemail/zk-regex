@@ -141,7 +141,9 @@ function parseRegex(text) {
     let i = 0;
     while (i < text.length) {
         if (text[i] == '\\') {
-            new_text.push([text[i+1]]);
+            const escapeMap = { n: '\n', r: '\r', t: '\t', v: '\v', f: '\f', '^': String.fromCharCode(128) };
+            const char = text[i + 1];
+            new_text.push([escapeMap[char] || char]);
             i += 2;
         } else {
             new_text.push(text[i]);
@@ -152,11 +154,11 @@ function parseRegex(text) {
 }
 
 /**
- * Convert regular expression to nondeterministic finite automaton.
- *
- * @param {string} text @see parseRegex()
- * @return {object|string}
- */
+* Convert regular expression to nondeterministic finite automaton.
+*
+* @param {string} text @see parseRegex()
+* @return {object|string}
+*/
 function regexToNfa(text) {
     'use strict';
     function generateGraph(node, start, end, count) {
@@ -214,11 +216,11 @@ function regexToNfa(text) {
 }
 
 /**
- * Convert nondeterministic finite automaton to deterministic finite automaton.
- *
- * @param {object} nfa @see regexToNfa(), the function assumes that the given NFA is valid.
- * @return {object} dfa Returns the first element of the DFA.
- */
+* Convert nondeterministic finite automaton to deterministic finite automaton.
+*
+* @param {object} nfa @see regexToNfa(), the function assumes that the given NFA is valid.
+* @return {object} dfa Returns the first element of the DFA.
+*/
 function nfaToDfa(nfa) {
     'use strict';
     function getClosure(nodes) {
@@ -237,6 +239,11 @@ function nfaToDfa(nfa) {
         }
         while (stack.length > 0) {
             top = stack.pop();
+            // If top is of type string and starts with "Error" then return error
+            if (typeof top === 'string' && top[0] === 'E') {
+                console.log(top);
+                continue;
+            }
             for (i = 0; i < top.edges.length; i += 1) {
                 if (top.edges[i][0] === 'ϵ') {
                     if (closure.indexOf(top.edges[i][1]) < 0) {
@@ -325,11 +332,11 @@ function nfaToDfa(nfa) {
 }
 
 /**
- * Convert the DFA to its minimum form using Hopcroft's algorithm.
- *
- * @param {object} dfa @see nfaToDfa(), the function assumes that the given DFA is valid.
- * @return {object} dfa Returns the first element of the minimum DFA.
- */
+* Convert the DFA to its minimum form using Hopcroft's algorithm.
+*
+* @param {object} dfa @see nfaToDfa(), the function assumes that the given DFA is valid.
+* @return {object} dfa Returns the first element of the minimum DFA.
+*/
 function minDfa(dfa) {
     'use strict';
     function getReverseEdges(start) {
@@ -514,88 +521,9 @@ function minDfa(dfa) {
     return buildMinNfa(dfa, partitions, idMap, revEdges);
 }
 
-function toNature(col) {
-    var i,
-        j,
-        base = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-        result = 0;
-    if ('1' <= col[0] && col[0] <= '9') {
-        result = parseInt(col, 10);
-    } else {
-        for (i = 0, j = col.length - 1; i < col.length; i += 1, j -= 1) {
-            result += Math.pow(base.length, j) * (base.indexOf(col[i]) + 1);
-        }
-    }
-    return result;
+if (typeof require === 'function') {
+    exports.parseRegex = parseRegex;
+    exports.regexToNfa = regexToNfa;
+    exports.nfaToDfa = nfaToDfa;
+    exports.minDfa = minDfa;
 }
-
-// '(\r\n|\x80)(to|from):([A-Za-z0-9 _."@-]+<)?[a-zA-Z0-9_.-]+@[a-zA-Z0-9_.]+>?\r\n';
-// let regex = '(\r\n|\x80)(to|from):((a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9| |_|.|"|@|-)+<)?(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|_|.|-)+@(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|_|.|-)+>?\r\n';
-
-const key_chars = '(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z)';
-const catch_all = '(0|1|2|3|4|5|6|7|8|9|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|!|"|#|$|%|&|\'|\\(|\\)|\\*|\\+|,|-|.|/|:|;|<|=|>|\\?|@|[|\\\\|]|^|_|`|{|\\||}|~| |\t|\n|\r|\x0b|\x0c)';
-const catch_all_without_semicolon = '(0|1|2|3|4|5|6|7|8|9|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|!|"|#|$|%|&|\'|\\(|\\)|\\*|\\+|,|-|.|/|:|<|=|>|\\?|@|[|\\\\|]|^|_|`|{|\\||}|~| |\t|\n|\r|\x0b|\x0c)';
-const base_64 = '(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|\\+|/|=)';
-const word_char = '(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|_)';
-
-
-function compile(regex) {
-    // let regex = `\r\ndkim-signature:(${key_chars}=${catch_all_without_semicolon}+; )+bh=${base_64}+; `;
-    
-    // console.log(regex);
-    // console.log(Buffer.from(regex).toString('base64'));
-    
-    // let regex = 'hello(0|1|2|3|4|5|6|7|8|9)+world';
-    let nfa = regexToNfa(regex);
-    let dfa = minDfa(nfaToDfa(nfa));
-
-    var i,
-        states = {},
-        nodes = [],
-        stack = [dfa],
-        symbols = [],
-        top;
-
-    while (stack.length > 0) {
-        top = stack.pop();
-        if (!states.hasOwnProperty(top.id)) {
-            states[top.id] = top;
-            top.nature = toNature(top.id);
-            nodes.push(top);
-            for (i = 0; i < top.edges.length; i += 1) {
-                if (top.edges[i][0] !== 'ϵ' && symbols.indexOf(top.edges[i][0]) < 0) {
-                    symbols.push(top.edges[i][0]);
-                }
-                stack.push(top.edges[i][1]);
-            }
-        }
-    }
-    nodes.sort(function (a, b) {
-        return a.nature - b.nature;
-    });
-    symbols.sort();
-
-    let graph = [];
-    for (let i = 0; i < nodes.length; i += 1) {
-        let curr = {};
-        curr.type = nodes[i].type;
-        curr.edges = {};
-        for (let j = 0; j < symbols.length; j += 1) {
-            if (nodes[i].trans.hasOwnProperty(symbols[j])) {
-                curr.edges[symbols[j]] = nodes[i].trans[symbols[j]].nature-1;
-            }
-        }
-        graph[nodes[i].nature-1] = curr;
-    }
-
-    return graph;
-}
-
-module.exports = {
-    compile,
-    key_chars,
-    base_64,
-    word_char,
-    catch_all,
-    catch_all_without_semicolon,
-};
