@@ -1,0 +1,20 @@
+{
+    "max_byte_size": 64,
+    "parts": [
+        {
+            "is_public": false,
+            "regex_def": "a:",
+            "max_size": 2
+        },
+        {
+            "is_public": true,
+            "regex_def": "[^abcdefghijklmnopqrstuvwxyz]+",
+            "max_size": 128
+        },
+        {
+            "is_public": false,
+            "regex_def": ".",
+            "max_size": 1
+        }
+    ]
+}

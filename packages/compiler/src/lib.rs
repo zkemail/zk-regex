@@ -144,10 +144,7 @@ impl DecomposedRegexConfig {
             if config.is_public {
                 public_config_indexes.push(idx);
             }
-            let this_regex = config
-                .regex_def
-                .replace("^", "\\^")
-                .replace("[^", "[\u{ff}");
+            let this_regex = config.regex_def.replace("^", "\\^").replace("[^", "[");
             if idx == 0 {
                 part_regexes.push(Regex::new(&this_regex)?);
             } else {
@@ -450,13 +447,21 @@ pub(crate) fn add_graph_nodes(
                     continue;
                 }
             }
-            let key_list: Vec<String> = serde_json::from_str(&key)?;
+            let key_list: Vec<String> = serde_json::from_str::<Vec<String>>(&key)?
+                .iter()
+                .filter(|s| s.as_str() != "\u{ff}")
+                .cloned()
+                .collect_vec();
             // let mut key_str = String::new();
             // for key_char in key_list.iter() {
             //     // println!("key_char {}", key_char);
             //     assert!(key_char.len() == 1);
             //     // key_str += key_char;
             // }
+            // println!("key_list {:?}", key_list);
+            if key_list.len() == 0 {
+                continue;
+            }
             assert_eq!(key_list[0].as_bytes().len(), 1);
             graph.add_edge(
                 NodeIndex::from(next_node),

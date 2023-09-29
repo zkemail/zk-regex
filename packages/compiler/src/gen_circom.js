@@ -68,22 +68,20 @@ function genCircomAllstr(graph_json, template_name) {
     lines.push(`\t\tstate_changed[i] = MultiOR(${N - 1});`);
     for (let i = 1; i < N; i++) {
         const outputs = [];
-        let is_negates = [];
+        // let is_negates = [];
         for (let prev_i of Object.keys(rev_graph[i])) {
             const k = rev_graph[i][prev_i];
             const eq_outputs = [];
             let vals = new Set(k);
-            // let is_negate = false;
+            let is_negate = false;
             if (vals.has(0xff)) {
                 vals.delete(0xff);
-                is_negates.push(true);
-            } else {
-                is_negates.push(false);
+                is_negate = true;
             }
             if (vals.size === 0) {
                 continue;
             }
-            if (is_negates[is_negates.length - 1] === true) {
+            if (is_negate === true) {
                 for (let another_i = 1; another_i < N; another_i++) {
                     if (i === another_i) {
                         continue;
@@ -156,13 +154,21 @@ function genCircomAllstr(graph_json, template_name) {
             lines.push(`\t\tand[${and_i}][i] = AND();`);
             lines.push(`\t\tand[${and_i}][i].a <== states[i][${prev_i}];`);
             if (eq_outputs.length === 1) {
-                lines.push(`\t\tand[${and_i}][i].b <== ${eq_outputs[0][0]}[${eq_outputs[0][1]}][i].out;`);
+                if (is_negate) {
+                    lines.push(`\t\tand[${and_i}][i].b <== 1 - ${eq_outputs[0][0]}[${eq_outputs[0][1]}][i].out;`);
+                } else {
+                    lines.push(`\t\tand[${and_i}][i].b <== ${eq_outputs[0][0]}[${eq_outputs[0][1]}][i].out;`);
+                }
             } else if (eq_outputs.length > 1) {
                 lines.push(`\t\tmulti_or[${multi_or_i}][i] = MultiOR(${eq_outputs.length});`);
                 for (let output_i = 0; output_i < eq_outputs.length; output_i++) {
                     lines.push(`\t\tmulti_or[${multi_or_i}][i].in[${output_i}] <== ${eq_outputs[output_i][0]}[${eq_outputs[output_i][1]}][i].out;`);
                 }
-                lines.push(`\t\tand[${and_i}][i].b <== multi_or[${multi_or_i}][i].out;`);
+                if (is_negate) {
+                    lines.push(`\t\tand[${and_i}][i].b <== 1 - multi_or[${multi_or_i}][i].out;`);
+                } else {
+                    lines.push(`\t\tand[${and_i}][i].b <== multi_or[${multi_or_i}][i].out;`);
+                }
                 multi_or_i += 1
             }
 
@@ -171,19 +177,11 @@ function genCircomAllstr(graph_json, template_name) {
         }
 
         if (outputs.length === 1) {
-            if (is_negates[0]) {
-                lines.push(`\t\tstates[i+1][${i}] <== 1 - and[${outputs[0]}][i].out;`);
-            } else {
-                lines.push(`\t\tstates[i+1][${i}] <== and[${outputs[0]}][i].out;`);
-            }
+            lines.push(`\t\tstates[i+1][${i}] <== and[${outputs[0]}][i].out;`);
         } else if (outputs.length > 1) {
             lines.push(`\t\tmulti_or[${multi_or_i}][i] = MultiOR(${outputs.length});`);
             for (let output_i = 0; output_i < outputs.length; output_i++) {
-                if (is_negates[output_i]) {
-                    lines.push(`\t\tmulti_or[${multi_or_i}][i].in[${output_i}] <== 1 - and[${outputs[output_i]}][i].out;`);
-                } else {
-                    lines.push(`\t\tmulti_or[${multi_or_i}][i].in[${output_i}] <== and[${outputs[output_i]}][i].out;`);
-                }
+                lines.push(`\t\tmulti_or[${multi_or_i}][i].in[${output_i}] <== and[${outputs[output_i]}][i].out;`);
             }
             lines.push(`\t\tstates[i+1][${i}] <== multi_or[${multi_or_i}][i].out;`);
             multi_or_i += 1
