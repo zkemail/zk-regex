@@ -64,7 +64,7 @@ pub enum SoldityType {
 #[derive(Debug, Clone)]
 pub struct RegexAndDFA {
     pub max_byte_size: usize,
-    pub all_regex: String,
+    // pub all_regex: String,
     pub dfa_val: Vec<Value>,
     pub substrs_defs: SubstrsDefs,
 }
@@ -92,7 +92,7 @@ impl DecomposedRegexConfig {
         let substrs_defs = self.extract_substr_ids(&dfa_val)?;
         Ok(RegexAndDFA {
             max_byte_size: self.max_byte_size,
-            all_regex,
+            // all_regex,
             dfa_val,
             substrs_defs,
         })
@@ -100,7 +100,7 @@ impl DecomposedRegexConfig {
 
     pub fn extract_substr_ids(&self, dfa_val: &[Value]) -> Result<SubstrsDefs, CompilerError> {
         let part_configs = &self.parts;
-        let mut graph = Graph::<bool, String, Directed, usize>::with_capacity(0, 0);
+        let mut graph = Graph::<bool, char, Directed, usize>::with_capacity(0, 0);
         let max_state = get_max_state(dfa_val)?;
         add_graph_nodes(dfa_val, &mut graph, None, max_state)?;
         let accepted_state = get_accepted_state(dfa_val).ok_or(JsCallerError::NoAcceptedState)?;
@@ -113,7 +113,7 @@ impl DecomposedRegexConfig {
         for state in 0..=max_state {
             let node = NodeIndex::from(state);
             if let Some(edge) = graph.find_edge(node, node) {
-                let str = graph.edge_weight(edge).unwrap().as_str();
+                let str = graph.edge_weight(edge).unwrap().to_string();
                 let bytes = str.as_bytes();
                 self_nodes_char.insert(node.index(), bytes[0]);
             }
@@ -144,12 +144,15 @@ impl DecomposedRegexConfig {
             if config.is_public {
                 public_config_indexes.push(idx);
             }
+            let this_regex = config
+                .regex_def
+                .replace("^", "\\^")
+                .replace("[^", "[\u{ff}");
             if idx == 0 {
-                let regex_def = config.regex_def.replace("^", "\\^");
-                part_regexes.push(Regex::new(&regex_def)?);
+                part_regexes.push(Regex::new(&this_regex)?);
             } else {
                 let pre_regex = part_regexes[idx - 1].to_string();
-                part_regexes.push(Regex::new(&(pre_regex + &config.regex_def))?);
+                part_regexes.push(Regex::new(&(pre_regex + &this_regex))?);
             }
         }
         let num_public_parts = public_config_indexes.len();
@@ -171,8 +174,8 @@ impl DecomposedRegexConfig {
                 .collect::<Result<Vec<EdgeIndex<usize>>, CompilerError>>()?;
             let string_vec = edges
                 .iter()
-                .map(|edge| graph.edge_weight(*edge).unwrap().as_str())
-                .collect::<Vec<&str>>();
+                .map(|edge| graph.edge_weight(*edge).unwrap().to_string())
+                .collect::<Vec<String>>();
             let path_states = path
                 .into_iter()
                 .rev()
@@ -299,7 +302,7 @@ impl RegexAndDFA {
 
         Ok(RegexAndDFA {
             max_byte_size,
-            all_regex: regex_str.to_string(),
+            // all_regex: regex_str.to_string(),
             dfa_val,
             substrs_defs,
         })
@@ -420,7 +423,7 @@ pub(crate) fn get_max_state(dfa_val: &[Value]) -> Result<usize, JsCallerError> {
 
 pub(crate) fn add_graph_nodes(
     dfa_val: &[Value],
-    graph: &mut Graph<bool, String, Directed, usize>,
+    graph: &mut Graph<bool, char, Directed, usize>,
     last_max_state: Option<usize>,
     next_max_state: usize,
 ) -> Result<(), JsCallerError> {
@@ -448,12 +451,18 @@ pub(crate) fn add_graph_nodes(
                 }
             }
             let key_list: Vec<String> = serde_json::from_str(&key)?;
-            let mut key_str = String::new();
-            for key_char in key_list.iter() {
-                assert!(key_char.len() == 1);
-                key_str += key_char;
-            }
-            graph.add_edge(NodeIndex::from(next_node), NodeIndex::from(i), key_str);
+            // let mut key_str = String::new();
+            // for key_char in key_list.iter() {
+            //     // println!("key_char {}", key_char);
+            //     assert!(key_char.len() == 1);
+            //     // key_str += key_char;
+            // }
+            assert_eq!(key_list[0].as_bytes().len(), 1);
+            graph.add_edge(
+                NodeIndex::from(next_node),
+                NodeIndex::from(i),
+                key_list[0].as_bytes()[0] as char,
+            );
         }
     }
     Ok(())

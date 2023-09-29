@@ -21,10 +21,10 @@ enum Commands {
         decomposed_regex_path: String,
         #[arg(short, long)]
         halo2_dir_path: Option<String>,
-        #[arg(long)]
+        #[arg(short, long)]
         circom_file_path: Option<String>,
-        #[arg(long)]
-        circom_template_name: Option<String>,
+        #[arg(short, long)]
+        template_name: Option<String>,
         #[arg(short, long)]
         gen_substrs: Option<bool>,
     },
@@ -53,14 +53,14 @@ fn main() {
             decomposed_regex_path,
             halo2_dir_path,
             circom_file_path,
-            circom_template_name,
+            template_name,
             gen_substrs,
         } => {
             gen_from_decomposed(
                 &decomposed_regex_path,
                 halo2_dir_path.as_ref().map(|s| s.as_str()),
                 circom_file_path.as_ref().map(|s| s.as_str()),
-                circom_template_name.as_ref().map(|s| s.as_str()),
+                template_name.as_ref().map(|s| s.as_str()),
                 gen_substrs,
             );
         }

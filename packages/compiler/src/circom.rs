@@ -21,7 +21,7 @@ impl RegexAndDFA {
         template_name: &str,
         gen_substrs: bool,
     ) -> Result<(), CompilerError> {
-        let all_regex = String::new();
+        // let all_regex = String::new();
         let circom = gen_circom_allstr(&self.dfa_val, template_name)?;
         if gen_substrs {
             self.add_substrs_constraints(circom_path, circom)?;

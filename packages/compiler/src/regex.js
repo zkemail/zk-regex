@@ -55,9 +55,9 @@ function parseRegex(text) {
                     }
                     parts.push(sub);
                     last = i + 1;
-                } else if (text[i] === '(') {
+                } else if (text[i] === '(' || text[i] === '[') {
                     stack += 1;
-                } else if (text[i] === ')') {
+                } else if (text[i] === ')' || text[i] === ']') {
                     stack -= 1;
                 }
             }
@@ -81,7 +81,34 @@ function parseRegex(text) {
                         i += 1;
                     }
                     if (stack !== 0) {
-                        return 'Error: missing right bracket for ' + (begin + last) + '.';
+                        return 'Error: missing right parentheses for ' + (begin + last) + '.';
+                    }
+                    i -= 1;
+                    sub = parseSub(text.slice(last, i), begin + last, begin + i, true);
+                    if (typeof sub === 'string') {
+                        return sub;
+                    }
+                    sub.begin -= 1;
+                    sub.end += 1;
+                    parts.push(sub);
+                } else if (text[i] === '[') {
+                    last = i + 1;
+                    i += 1;
+                    if (text[i] === '^') {
+                        text[i] = '\u{ff}';
+                    }
+                    stack = 1;
+                    // let new_text = "";
+                    while (i < text.length && stack !== 0) {
+                        if (text[i] === ']') {
+                            stack -= 1;
+                        }
+                        // new_text += text[i];
+                        // new_text += '|';
+                        i += 1;
+                    }
+                    if (stack !== 0) {
+                        return 'Error: missing right brakets for ' + (begin + last) + '.';
                     }
                     i -= 1;
                     sub = parseSub(text.slice(last, i), begin + last, begin + i, true);
@@ -137,6 +164,7 @@ function parseRegex(text) {
                     parts.push(tempNode);
                 }
             }
+            // console.log(`parts ${JSON.stringify(parts)}`);
             if (parts.length === 1) {
                 return parts[0];
             }
@@ -146,16 +174,50 @@ function parseRegex(text) {
         return node;
     }
 
+    let char;
     let new_text = [];
     let i = 0;
+    let is_in_brancket = false;
     while (i < text.length) {
+        char = text[i];
         if (text[i] == '\\') {
-            new_text.push([text[i + 1]]);
-            i += 2;
+            char = [text[i + 1]];
+            // new_text.push([text[i + 1]]);
+            i += 1;
+        }
+
+        if (char === '[') {
+            if (is_in_brancket) {
+                return `Error: unexpected [ at ${i}.`;
+            }
+            is_in_brancket = true;
+            new_text.push(char);
+            i += 1;
+        } else if (char === ']') {
+            if (!is_in_brancket) {
+                return `Error: unexpected ] at ${i}.`;
+            }
+            is_in_brancket = false;
+            new_text.pop();
+            new_text.push(char);
+            i += 1;
+        } else if (is_in_brancket) {
+            if (!Array.isArray(char) && ['(', ')', '[', '*', '+', '?', 'ϵ'].includes(char)) {
+                return 'Error: unexpected ' + char + ' at ' + i + '.';
+            }
+            if (char === '^' && text[i - 1] !== '[') {
+                return 'Error: unexpected ^ at ' + i + '.';
+            }
+            new_text.push(char);
+            new_text.push('|');
+            i += 1;
         } else {
             new_text.push(text[i]);
             i += 1;
         }
+    }
+    if (is_in_brancket) {
+        return `Error: missing right brakets.`;
     }
     return parseSub(new_text, 0, new_text.length, true);
 }
@@ -551,7 +613,6 @@ function toNature(col) {
 function regexToDfa(regex) {
     let nfa = regexToNfa(regex);
     let dfa = minDfa(nfaToDfa(nfa));
-
     var i,
         states = {},
         nodes = [],
@@ -577,7 +638,6 @@ function regexToDfa(regex) {
         return a.nature - b.nature;
     });
     symbols.sort();
-
     let graph = [];
     for (let i = 0; i < nodes.length; i += 1) {
         let curr = {};
@@ -590,6 +650,7 @@ function regexToDfa(regex) {
         }
         graph[nodes[i].nature - 1] = curr;
     }
+    // console.log(`graph: ${JSON.stringify(graph, null, 2)}`);
 
     return JSON.stringify(graph);
 }
