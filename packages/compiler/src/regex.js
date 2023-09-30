@@ -223,11 +223,11 @@ function parseRegex(text) {
 }
 
 /**
- * Convert regular expression to nondeterministic finite automaton.
- *
- * @param {string} text @see parseRegex()
- * @return {object|string}
- */
+* Convert regular expression to nondeterministic finite automaton.
+*
+* @param {string} text @see parseRegex()
+* @return {object|string}
+*/
 function regexToNfa(text) {
     'use strict';
     function generateGraph(node, start, end, count) {
@@ -285,11 +285,11 @@ function regexToNfa(text) {
 }
 
 /**
- * Convert nondeterministic finite automaton to deterministic finite automaton.
- *
- * @param {object} nfa @see regexToNfa(), the function assumes that the given NFA is valid.
- * @return {object} dfa Returns the first element of the DFA.
- */
+* Convert nondeterministic finite automaton to deterministic finite automaton.
+*
+* @param {object} nfa @see regexToNfa(), the function assumes that the given NFA is valid.
+* @return {object} dfa Returns the first element of the DFA.
+*/
 function nfaToDfa(nfa) {
     'use strict';
     function getClosure(nodes) {
@@ -308,6 +308,11 @@ function nfaToDfa(nfa) {
         }
         while (stack.length > 0) {
             top = stack.pop();
+            // If top is of type string and starts with "Error" then return error
+            if (typeof top === 'string' && top[0] === 'E') {
+                console.log(top);
+                continue;
+            }
             for (i = 0; i < top.edges.length; i += 1) {
                 if (top.edges[i][0] === 'ϵ') {
                     if (closure.indexOf(top.edges[i][1]) < 0) {
@@ -396,11 +401,11 @@ function nfaToDfa(nfa) {
 }
 
 /**
- * Convert the DFA to its minimum form using Hopcroft's algorithm.
- *
- * @param {object} dfa @see nfaToDfa(), the function assumes that the given DFA is valid.
- * @return {object} dfa Returns the first element of the minimum DFA.
- */
+* Convert the DFA to its minimum form using Hopcroft's algorithm.
+*
+* @param {object} dfa @see nfaToDfa(), the function assumes that the given DFA is valid.
+* @return {object} dfa Returns the first element of the minimum DFA.
+*/
 function minDfa(dfa) {
     'use strict';
     function getReverseEdges(start) {
