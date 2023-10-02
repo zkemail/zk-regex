@@ -9,16 +9,27 @@ const apis = require("../../apis");
 const option = {
     include: path.join(__dirname, "../../../node_modules")
 };
+const compiler = require("../../compiler");
 
 jest.setTimeout(120000);
 describe("Negate Regex", () => {
+    let circuit;
+    beforeAll(async () => {
+        compiler.genFromDecomposed(path.join(__dirname, "./circuits/negate1.json"), {
+            circomFilePath: path.join(__dirname, "../circuits/negate1_regex.circom"),
+            templateName: "Negate1Regex",
+            genSubstrs: true
+        });
+        circuit = await wasm_tester(path.join(__dirname, "./circuits/test_negate1_regex.circom"), option);
+    });
+
     it("case 1 with regex 1", async () => {
         const input = "a: ABCDEFG XYZ.";
         const paddedStr = apis.padString(input, 64);
         const circuitInputs = {
             msg: paddedStr,
         };
-        const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_negate1_regex.circom"), option);
+        // const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_negate1_regex.circom"), option);
         const witness = await circuit.calculateWitness(circuitInputs);
         await circuit.checkConstraints(witness);
         // console.log(witness);
@@ -42,7 +53,7 @@ describe("Negate Regex", () => {
         const circuitInputs = {
             msg: paddedStr,
         };
-        const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_negate1_regex.circom"), option);
+        // const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_negate1_regex.circom"), option);
         const witness = await circuit.calculateWitness(circuitInputs);
         await circuit.checkConstraints(witness);
         // console.log(witness);
@@ -66,7 +77,7 @@ describe("Negate Regex", () => {
         const circuitInputs = {
             msg: paddedStr,
         };
-        const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_negate1_regex.circom"), option);
+        // const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_negate1_regex.circom"), option);
         const witness = await circuit.calculateWitness(circuitInputs);
         await circuit.checkConstraints(witness);
         // console.log(witness);
@@ -90,11 +101,11 @@ describe("Negate Regex", () => {
         const circuitInputs = {
             msg: paddedStr,
         };
-        const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_negate1_regex.circom"), option);
+        // const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_negate1_regex.circom"), option);
         const witness = await circuit.calculateWitness(circuitInputs);
         await circuit.checkConstraints(witness);
-        console.log(witness);
-        console.log(paddedStr);
+        // console.log(witness);
+        // console.log(paddedStr);
         expect(1n).toEqual(witness[1]);
         const revealedIdx = [[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]];
         for (let substr_idx = 0; substr_idx < 1; ++substr_idx) {

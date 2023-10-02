@@ -98,13 +98,10 @@ function parseRegex(text) {
                         text[i] = '\u{ff}';
                     }
                     stack = 1;
-                    // let new_text = "";
                     while (i < text.length && stack !== 0) {
                         if (text[i] === ']') {
                             stack -= 1;
                         }
-                        // new_text += text[i];
-                        // new_text += '|';
                         i += 1;
                     }
                     if (stack !== 0) {
@@ -212,7 +209,7 @@ function parseRegex(text) {
             new_text.push('|');
             i += 1;
         } else {
-            new_text.push(text[i]);
+            new_text.push(char);
             i += 1;
         }
     }

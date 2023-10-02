@@ -52,6 +52,16 @@ impl RegexAndDFA {
             circom += &format!("\tsignal output reveal{}[msg_bytes];\n", idx);
             circom += "\tfor (var i = 0; i < msg_bytes; i++) {\n";
             circom += &format!("\t\tis_substr{}[i][0] <== 0;\n", idx);
+            let mut defs = defs.iter().collect::<Vec<&(usize, usize)>>();
+            defs.sort_by(|a, b| {
+                let start_cmp = a.0.cmp(&b.0);
+                let end_cmp = a.1.cmp(&b.1);
+                if start_cmp == std::cmp::Ordering::Equal {
+                    end_cmp
+                } else {
+                    start_cmp
+                }
+            });
             for (j, (cur, next)) in defs.iter().enumerate() {
                 circom += &format!(
                     "\t\tis_substr{}[i][{}] <== is_substr{}[i][{}] + ",
