@@ -144,7 +144,43 @@ impl DecomposedRegexConfig {
             if config.is_public {
                 public_config_indexes.push(idx);
             }
-            let this_regex = config.regex_def.replace("^", "\\^").replace("[^", "[");
+            let mut this_regex = config.regex_def.to_string();
+            if let Some(mut idx) = this_regex.find("[^") {
+                let mut new_regex = this_regex[0..idx].to_string();
+                new_regex += "[";
+                idx += 2;
+                let end = this_regex.find("]").unwrap();
+                let mut chars_in_brancket = vec![];
+                while idx < end {
+                    let char = this_regex.chars().nth(idx).unwrap();
+                    if char == '\\' {
+                        chars_in_brancket
+                            .push(format!("\\{}", this_regex.chars().nth(idx + 1).unwrap()));
+                        idx += 2;
+                    } else {
+                        chars_in_brancket.push(char.to_string());
+                        idx += 1;
+                    }
+                }
+                for code in 0..255 {
+                    let code_char = char::from_u32(code).unwrap();
+                    let mut code_str = code_char.to_string();
+                    if [
+                        '(', ')', '*', '+', '.', '?', '[', '\\', ']', '^', '`', '|', '-',
+                    ]
+                    .contains(&code_char)
+                    {
+                        code_str = format!("\\{}", code_char);
+                    }
+                    if chars_in_brancket.contains(&code_str) {
+                        continue;
+                    }
+                    new_regex += &code_str;
+                }
+                new_regex += &this_regex[end..].to_string();
+                this_regex = new_regex;
+            }
+            this_regex = this_regex.replace("^", "\\^");
             if idx == 0 {
                 part_regexes.push(Regex::new(&this_regex)?);
             } else {
@@ -254,7 +290,10 @@ impl DecomposedRegexConfig {
         let index_ends = part_regexes
             .iter()
             .map(|regex| {
+                // println!("regex {}", regex);
+                // println!("concat_str {}", concat_str);
                 let found = regex.find(&concat_str).unwrap().unwrap();
+                // println!("found {:?}", found);
                 if found.start() == found.end() {
                     found.end() + 1
                 } else {
@@ -458,15 +497,25 @@ pub(crate) fn add_graph_nodes(
             //     assert!(key_char.len() == 1);
             //     // key_str += key_char;
             // }
-            // println!("key_list {:?}", key_list);
             if key_list.len() == 0 {
                 continue;
             }
-            assert_eq!(key_list[0].as_bytes().len(), 1);
+            let mut key = None;
+            for key_idx in 0..key_list.len() {
+                let char = key_list[key_idx].chars().nth(0).unwrap();
+                if (char as u8) < 10 || (char as u8) > 127 {
+                    continue;
+                }
+                if key_list[key_idx].as_bytes().len() == 1 {
+                    key = Some(char);
+                    break;
+                }
+            }
+            // assert_eq!(key_list[key_idx].as_bytes().len(), 1);
             graph.add_edge(
                 NodeIndex::from(next_node),
                 NodeIndex::from(i),
-                key_list[0].as_bytes()[0] as char,
+                key.expect("there is no representative character."),
             );
         }
     }

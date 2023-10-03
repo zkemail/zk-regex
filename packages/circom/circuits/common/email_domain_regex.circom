@@ -8,7 +8,7 @@ template EmailDomainRegex(msg_bytes) {
 
 	var num_bytes = msg_bytes+1;
 	signal in[num_bytes];
-	in[0]<==128;
+	in[0]<==255;
 	for (var i = 0; i < msg_bytes; i++) {
 		in[i+1] <== msg[i];
 	}

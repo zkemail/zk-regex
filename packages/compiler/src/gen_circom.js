@@ -1,5 +1,6 @@
 function genCircomAllstr(graph_json, template_name) {
     const N = graph_json.length;
+    // console.log(JSON.stringify(graph_json, null, 2));
     // const graph = Array(N).fill({});
     const rev_graph = [];
     const to_init_graph = [];
@@ -17,10 +18,10 @@ function genCircomAllstr(graph_json, template_name) {
                 const index = rev_graph[v][i].indexOf(94);
                 if (index !== -1) {
                     init_going_state = v;
-                    rev_graph[v][i][index] = 128;
+                    rev_graph[v][i][index] = 255;
                 }
                 for (let j = 0; j < rev_graph[v][i].length; j++) {
-                    if (rev_graph[v][i][j] == 128) {
+                    if (rev_graph[v][i][j] == 255) {
                         continue;
                     }
                     to_init_graph[v].push(rev_graph[v][i][j]);
@@ -59,78 +60,103 @@ function genCircomAllstr(graph_json, template_name) {
     let lines = [];
     lines.push("\tfor (var i = 0; i < num_bytes; i++) {");
 
-    const uppercase = new Set(Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ").map(c => c.charCodeAt()));
-    const lowercase = new Set(Array.from("abcdefghijklmnopqrstuvwxyz").map(c => c.charCodeAt()));
-    const digits = new Set(Array.from("0123456789").map(c => c.charCodeAt()));
-    const symbols1 = new Set([":", ";", "<", "=", ">", "?", "@"].map(c => c.charCodeAt()));
-    const symbols2 = new Set(["[", "\\", "]", "^", "_", "`"].map(c => c.charCodeAt()));
-    const symbols3 = new Set(["{", "|", "}", "~"].map(c => c.charCodeAt()));
+    // const uppercase = new Set(Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ").map(c => c.charCodeAt()));
+    // const lowercase = new Set(Array.from("abcdefghijklmnopqrstuvwxyz").map(c => c.charCodeAt()));
+    // const digits = new Set(Array.from("0123456789").map(c => c.charCodeAt()));
+    // const symbols1 = new Set([":", ";", "<", "=", ">", "?", "@"].map(c => c.charCodeAt()));
+    // const symbols2 = new Set(["[", "\\", "]", "^", "_", "`"].map(c => c.charCodeAt()));
+    // const symbols3 = new Set(["{", "|", "}", "~"].map(c => c.charCodeAt()));
     lines.push(`\t\tstate_changed[i] = MultiOR(${N - 1});`);
     for (let i = 1; i < N; i++) {
         const outputs = [];
         // let is_negates = [];
         for (let prev_i of Object.keys(rev_graph[i])) {
             const k = rev_graph[i][prev_i];
+            k.sort((a, b) => {
+                Number(a) - Number(b);
+            });
             const eq_outputs = [];
             let vals = new Set(k);
-            let is_negate = false;
-            if (vals.has(0xff)) {
-                vals.delete(0xff);
-                is_negate = true;
-            }
+            // let is_negate = false;
+            // if (vals.has(0xff)) {
+            //     vals.delete(0xff);
+            //     is_negate = true;
+            // }
             if (vals.size === 0) {
                 continue;
             }
-            if (is_negate === true) {
-                for (let another_i = 1; another_i < N; another_i++) {
-                    if (i === another_i) {
-                        continue;
+            // if (is_negate === true) {
+            //     for (let another_i = 1; another_i < N; another_i++) {
+            //         if (i === another_i) {
+            //             continue;
+            //         }
+            //         if (rev_graph[another_i][prev_i] === null) {
+            //             continue;
+            //         }
+            //         const another_vals = new Set(rev_graph[another_i][prev_i]);
+            //         if (another_vals.size === 0) {
+            //             continue;
+            //         }
+            //         for (let another_val of another_vals) {
+            //             vals.add(another_val);
+            //         }
+            //     }
+            // }
+            const min_maxes = [];
+            let cur_min = k[0];
+            let cur_max = k[0];
+            for (let idx = 1; idx < k.length; ++idx) {
+                if (cur_max + 1 === k[idx]) {
+                    cur_max += 1;
+                } else {
+                    if (cur_max - cur_min >= 16) {
+                        min_maxes.push([cur_min, cur_max]);
                     }
-                    if (rev_graph[another_i][prev_i] === null) {
-                        continue;
-                    }
-                    const another_vals = new Set(rev_graph[another_i][prev_i]);
-                    if (another_vals.size === 0) {
-                        continue;
-                    }
-                    for (let another_val of another_vals) {
-                        vals.add(another_val);
-                    }
+                    cur_min = k[idx];
+                    cur_max = k[idx];
                 }
             }
-            const min_maxs = [];
-            for (let subsets of [
-                [digits, 47, 58],
-                [symbols1, 57, 65],
-                [uppercase, 64, 91],
-                [symbols2, 90, 97],
-                [lowercase, 96, 123],
-                [symbols3, 122, 127]
-            ]) {
-                const subset = subsets[0];
-                const min = subsets[1];
-                const max = subsets[2];
-                if (vals.isSuperset(subset)) {
-                    vals.difference(subset);
-                    if (min_maxs.length == 0) {
-                        min_maxs.push([min, max]);
-                    } else {
-                        const last = min_maxs[min_maxs.length - 1];
-                        if (last[1] - 1 == min) {
-                            min_maxs[min_maxs.length - 1][1] = max;
-                        } else {
-                            min_maxs.push([min, max]);
-                        }
-                    }
+            if (cur_max - cur_min >= 16) {
+                min_maxes.push([cur_min, cur_max]);
+            }
+            for (const min_max of min_maxes) {
+                for (let code = min_max[0]; code <= min_max[1]; ++code) {
+                    vals.delete(code);
                 }
             }
 
-            for (let min_max of min_maxs) {
-                lines.push(`\t\tlt[${lt_i}][i] = LessThan(8);`);
+            // for (let subsets of [
+            //     [digits, 47, 58],
+            //     [symbols1, 57, 65],
+            //     [uppercase, 64, 91],
+            //     [symbols2, 90, 97],
+            //     [lowercase, 96, 123],
+            //     [symbols3, 122, 127]
+            // ]) {
+            //     const subset = subsets[0];
+            //     const min = subsets[1];
+            //     const max = subsets[2];
+            //     if (vals.isSuperset(subset)) {
+            //         vals.difference(subset);
+            //         if (min_maxs.length == 0) {
+            //             min_maxs.push([min, max]);
+            //         } else {
+            //             const last = min_maxs[min_maxs.length - 1];
+            //             if (last[1] - 1 == min) {
+            //                 min_maxs[min_maxs.length - 1][1] = max;
+            //             } else {
+            //                 min_maxs.push([min, max]);
+            //             }
+            //         }
+            //     }
+            // }
+
+            for (let min_max of min_maxes) {
+                lines.push(`\t\tlt[${lt_i}][i] = LessEqThan(8);`);
                 lines.push(`\t\tlt[${lt_i}][i].in[0] <== ${min_max[0]};`);
                 lines.push(`\t\tlt[${lt_i}][i].in[1] <== in[i];`);
 
-                lines.push(`\t\tlt[${lt_i + 1}][i] = LessThan(8);`);
+                lines.push(`\t\tlt[${lt_i + 1}][i] = LessEqThan(8);`);
                 lines.push(`\t\tlt[${lt_i + 1}][i].in[0] <== in[i];`);
                 lines.push(`\t\tlt[${lt_i + 1}][i].in[1] <== ${min_max[1]};`);
 
@@ -154,21 +180,23 @@ function genCircomAllstr(graph_json, template_name) {
             lines.push(`\t\tand[${and_i}][i] = AND();`);
             lines.push(`\t\tand[${and_i}][i].a <== states[i][${prev_i}];`);
             if (eq_outputs.length === 1) {
-                if (is_negate) {
-                    lines.push(`\t\tand[${and_i}][i].b <== 1 - ${eq_outputs[0][0]}[${eq_outputs[0][1]}][i].out;`);
-                } else {
-                    lines.push(`\t\tand[${and_i}][i].b <== ${eq_outputs[0][0]}[${eq_outputs[0][1]}][i].out;`);
-                }
+                // if (is_negate) {
+                //     lines.push(`\t\tand[${and_i}][i].b <== 1 - ${eq_outputs[0][0]}[${eq_outputs[0][1]}][i].out;`);
+                // } else {
+                //     lines.push(`\t\tand[${and_i}][i].b <== ${eq_outputs[0][0]}[${eq_outputs[0][1]}][i].out;`);
+                // }
+                lines.push(`\t\tand[${and_i}][i].b <== ${eq_outputs[0][0]}[${eq_outputs[0][1]}][i].out;`);
             } else if (eq_outputs.length > 1) {
                 lines.push(`\t\tmulti_or[${multi_or_i}][i] = MultiOR(${eq_outputs.length});`);
                 for (let output_i = 0; output_i < eq_outputs.length; output_i++) {
                     lines.push(`\t\tmulti_or[${multi_or_i}][i].in[${output_i}] <== ${eq_outputs[output_i][0]}[${eq_outputs[output_i][1]}][i].out;`);
                 }
-                if (is_negate) {
-                    lines.push(`\t\tand[${and_i}][i].b <== 1 - multi_or[${multi_or_i}][i].out;`);
-                } else {
-                    lines.push(`\t\tand[${and_i}][i].b <== multi_or[${multi_or_i}][i].out;`);
-                }
+                // if (is_negate) {
+                //     lines.push(`\t\tand[${and_i}][i].b <== 1 - multi_or[${multi_or_i}][i].out;`);
+                // } else {
+                //     lines.push(`\t\tand[${and_i}][i].b <== multi_or[${multi_or_i}][i].out;`);
+                // }
+                lines.push(`\t\tand[${and_i}][i].b <== multi_or[${multi_or_i}][i].out;`);
                 multi_or_i += 1
             }
 
@@ -201,7 +229,7 @@ function genCircomAllstr(graph_json, template_name) {
     declarations.push(`\tsignal output out;\n`);
     declarations.push(`\tvar num_bytes = msg_bytes+1;`);
     declarations.push(`\tsignal in[num_bytes];`);
-    declarations.push(`\tin[0]<==128;`);
+    declarations.push(`\tin[0]<==255;`);
     declarations.push(`\tfor (var i = 0; i < msg_bytes; i++) {`);
     declarations.push(`\t\tin[i+1] <== msg[i];`);
     declarations.push(`\t}\n`);

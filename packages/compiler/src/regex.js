@@ -55,9 +55,9 @@ function parseRegex(text) {
                     }
                     parts.push(sub);
                     last = i + 1;
-                } else if (text[i] === '(' || text[i] === '[') {
+                } else if (text[i] === '(') {
                     stack += 1;
-                } else if (text[i] === ')' || text[i] === ']') {
+                } else if (text[i] === ')') {
                     stack -= 1;
                 }
             }
@@ -91,30 +91,30 @@ function parseRegex(text) {
                     sub.begin -= 1;
                     sub.end += 1;
                     parts.push(sub);
-                } else if (text[i] === '[') {
-                    last = i + 1;
-                    i += 1;
-                    if (text[i] === '^') {
-                        text[i] = '\u{ff}';
-                    }
-                    stack = 1;
-                    while (i < text.length && stack !== 0) {
-                        if (text[i] === ']') {
-                            stack -= 1;
-                        }
-                        i += 1;
-                    }
-                    if (stack !== 0) {
-                        return 'Error: missing right brakets for ' + (begin + last) + '.';
-                    }
-                    i -= 1;
-                    sub = parseSub(text.slice(last, i), begin + last, begin + i, true);
-                    if (typeof sub === 'string') {
-                        return sub;
-                    }
-                    sub.begin -= 1;
-                    sub.end += 1;
-                    parts.push(sub);
+                    // } else if (text[i] === '[') {
+                    //     last = i + 1;
+                    //     i += 1;
+                    //     if (text[i] === '^') {
+                    //         text[i] = '\u{ff}';
+                    //     }
+                    //     stack = 1;
+                    //     while (i < text.length && stack !== 0) {
+                    //         if (text[i] === ']') {
+                    //             stack -= 1;
+                    //         }
+                    //         i += 1;
+                    //     }
+                    //     if (stack !== 0) {
+                    //         return 'Error: missing right brakets for ' + (begin + last) + '.';
+                    //     }
+                    //     i -= 1;
+                    //     sub = parseSub(text.slice(last, i), begin + last, begin + i, true);
+                    //     if (typeof sub === 'string') {
+                    //         return sub;
+                    //     }
+                    //     sub.begin -= 1;
+                    //     sub.end += 1;
+                    //     parts.push(sub);
                 } else if (text[i] === '*') {
                     if (parts.length === 0) {
                         return 'Error: unexpected * at ' + (begin + i) + '.';
@@ -175,6 +175,7 @@ function parseRegex(text) {
     let new_text = [];
     let i = 0;
     let is_in_brancket = false;
+    let brancket_text = [];
     while (i < text.length) {
         char = text[i];
         if (text[i] == '\\') {
@@ -188,15 +189,51 @@ function parseRegex(text) {
                 return `Error: unexpected [ at ${i}.`;
             }
             is_in_brancket = true;
-            new_text.push(char);
+            brancket_text = [];
+            // new_text.push(char);
             i += 1;
         } else if (char === ']') {
             if (!is_in_brancket) {
                 return `Error: unexpected ] at ${i}.`;
             }
             is_in_brancket = false;
+            if (brancket_text[0] === '^') {
+                brancket_text.shift();
+                let rev_text = [];
+                let code_char = '';
+                const brancket_text_jsons = brancket_text.map(val => JSON.stringify(val));
+                for (let idx = 0; idx < 255; idx++) {
+                    code_char = String.fromCodePoint(idx);
+                    if ([
+                        '(',
+                        ')',
+                        '*',
+                        '+',
+                        '.',
+                        '?',
+                        '[',
+                        '\\',
+                        ']',
+                        '^',
+                        '`',
+                        '|',
+                        '-'
+                    ].indexOf(code_char) != -1) {
+                        code_char = [code_char];
+                    }
+                    if (brancket_text_jsons.indexOf(JSON.stringify(code_char)) === -1) {
+                        rev_text.push(code_char);
+                    }
+                }
+                brancket_text = rev_text;
+            }
+            new_text.push('(');
+            for (const c of brancket_text) {
+                new_text.push(c);
+                new_text.push('|');
+            }
             new_text.pop();
-            new_text.push(char);
+            new_text.push(')');
             i += 1;
         } else if (is_in_brancket) {
             if (!Array.isArray(char) && ['(', ')', '[', '*', '+', '?', 'ϵ'].includes(char)) {
@@ -205,8 +242,9 @@ function parseRegex(text) {
             if (char === '^' && text[i - 1] !== '[') {
                 return 'Error: unexpected ^ at ' + i + '.';
             }
-            new_text.push(char);
-            new_text.push('|');
+            // new_text.push(char);
+            // new_text.push('|');
+            brancket_text.push(char);
             i += 1;
         } else {
             new_text.push(char);
@@ -307,7 +345,6 @@ function nfaToDfa(nfa) {
             top = stack.pop();
             // If top is of type string and starts with "Error" then return error
             if (typeof top === 'string' && top[0] === 'E') {
-                console.log(top);
                 continue;
             }
             for (i = 0; i < top.edges.length; i += 1) {

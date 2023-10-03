@@ -55,8 +55,63 @@ describe("From Addr Regex", () => {
         }
     });
 
+
     it("from field from beginning case 2", async () => {
         const fromStr = "from:Sora Suegami <suegamisora@gmail.com>\r\n";
+        // const revealed = "suegamisora@gmail.com";
+        // const prefixLen = "from:Sora Suegami <".length;
+        const paddedStr = apis.padString(fromStr, 1024);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        // const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_from_addr_regex.circom"), option);
+        const witness = await circuit.calculateWitness(circuitInputs);
+        await circuit.checkConstraints(witness);
+        // console.log(witness);
+        // console.log(paddedStr);
+        expect(1n).toEqual(witness[1]);
+        const prefixIdxes = apis.extractSubstrIdxes(fromStr, readFileSync(path.join(__dirname, "../circuits/common/from_addr.json"), "utf8"))[0];
+        // for (let idx = 0; idx < revealed.length; ++idx) {
+        //     expect(BigInt(paddedStr[prefixIdx + idx])).toEqual(witness[2 + prefixIdx + idx]);
+        // }
+        for (let idx = 0; idx < 1024; ++idx) {
+            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+            } else {
+                expect(0n).toEqual(witness[2 + idx]);
+            }
+        }
+    });
+
+    it("from field from beginning case 3 (email address as a name)", async () => {
+        const fromStr = "from:suegamisora@gmail.com<suegamisora@gmail.com>\r\n";
+        // const revealed = "suegamisora@gmail.com";
+        // const prefixLen = "from:Sora Suegami <".length;
+        const paddedStr = apis.padString(fromStr, 1024);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        // const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_from_addr_regex.circom"), option);
+        const witness = await circuit.calculateWitness(circuitInputs);
+        await circuit.checkConstraints(witness);
+        // console.log(witness);
+        // console.log(paddedStr);
+        expect(1n).toEqual(witness[1]);
+        const prefixIdxes = apis.extractSubstrIdxes(fromStr, readFileSync(path.join(__dirname, "../circuits/common/from_addr.json"), "utf8"))[0];
+        // for (let idx = 0; idx < revealed.length; ++idx) {
+        //     expect(BigInt(paddedStr[prefixIdx + idx])).toEqual(witness[2 + prefixIdx + idx]);
+        // }
+        for (let idx = 0; idx < 1024; ++idx) {
+            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+            } else {
+                expect(0n).toEqual(witness[2 + idx]);
+            }
+        }
+    });
+
+    it("from field from beginning case 4 (non-English string is used as a name)", async () => {
+        const fromStr = "from: \"末神奏宙\" <suegamisora@gmail.com>\r\n";
         // const revealed = "suegamisora@gmail.com";
         // const prefixLen = "from:Sora Suegami <".length;
         const paddedStr = apis.padString(fromStr, 1024);
@@ -133,4 +188,59 @@ describe("From Addr Regex", () => {
             }
         }
     });
+
+    it("from field after new line case 3 (email address as a name)", async () => {
+        const fromStr = "dummy\r\nfrom:suegamisora@gmail.com<suegamisora@gmail.com>\r\n";
+        // const revealed = "suegamisora@gmail.com";
+        // const prefixLen = "from:Sora Suegami <".length;
+        const paddedStr = apis.padString(fromStr, 1024);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        // const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_from_addr_regex.circom"), option);
+        const witness = await circuit.calculateWitness(circuitInputs);
+        await circuit.checkConstraints(witness);
+        // console.log(witness);
+        // console.log(paddedStr);
+        expect(1n).toEqual(witness[1]);
+        const prefixIdxes = apis.extractSubstrIdxes(fromStr, readFileSync(path.join(__dirname, "../circuits/common/from_addr.json"), "utf8"))[0];
+        // for (let idx = 0; idx < revealed.length; ++idx) {
+        //     expect(BigInt(paddedStr[prefixIdx + idx])).toEqual(witness[2 + prefixIdx + idx]);
+        // }
+        for (let idx = 0; idx < 1024; ++idx) {
+            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+            } else {
+                expect(0n).toEqual(witness[2 + idx]);
+            }
+        }
+    });
+
+    it("from field after new line case 4 (non-English string is used as a name)", async () => {
+        const fromStr = "dummy\r\nfrom: \"末神奏宙\" <suegamisora@gmail.com>\r\n";
+        // const revealed = "suegamisora@gmail.com";
+        // const prefixLen = "from:Sora Suegami <".length;
+        const paddedStr = apis.padString(fromStr, 1024);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        // const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_from_addr_regex.circom"), option);
+        const witness = await circuit.calculateWitness(circuitInputs);
+        await circuit.checkConstraints(witness);
+        // console.log(witness);
+        // console.log(paddedStr);
+        expect(1n).toEqual(witness[1]);
+        const prefixIdxes = apis.extractSubstrIdxes(fromStr, readFileSync(path.join(__dirname, "../circuits/common/from_addr.json"), "utf8"))[0];
+        // for (let idx = 0; idx < revealed.length; ++idx) {
+        //     expect(BigInt(paddedStr[prefixIdx + idx])).toEqual(witness[2 + prefixIdx + idx]);
+        // }
+        for (let idx = 0; idx < 1024; ++idx) {
+            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+            } else {
+                expect(0n).toEqual(witness[2 + idx]);
+            }
+        }
+    });
+
 });

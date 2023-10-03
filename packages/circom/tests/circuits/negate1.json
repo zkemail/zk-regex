@@ -8,12 +8,12 @@
         },
         {
             "is_public": true,
-            "regex_def": "[^abcdefghijklmnopqrstuvwxyz]+",
+            "regex_def": "[^abcdefghijklmnopqrstuvwxyz\\.]+",
             "max_size": 128
         },
         {
             "is_public": false,
-            "regex_def": ".",
+            "regex_def": "\\.",
             "max_size": 1
         }
     ]

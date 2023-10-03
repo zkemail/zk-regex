@@ -2,7 +2,7 @@ pragma circom 2.1.5;
 
 include "zk-regex-circom/circuits/regex_helpers.circom";
 
-template SubjectAllRegex(msg_bytes) {
+template FromAllRegex(msg_bytes) {
 	signal input msg[msg_bytes];
 	signal output out;
 
@@ -13,20 +13,20 @@ template SubjectAllRegex(msg_bytes) {
 		in[i+1] <== msg[i];
 	}
 
-	component eq[38][num_bytes];
+	component eq[35][num_bytes];
 	component lt[4][num_bytes];
-	component and[18][num_bytes];
+	component and[15][num_bytes];
 	component multi_or[5][num_bytes];
-	signal states[num_bytes+1][14];
+	signal states[num_bytes+1][11];
 	component state_changed[num_bytes];
 
 	states[0][0] <== 1;
-	for (var i = 1; i < 14; i++) {
+	for (var i = 1; i < 11; i++) {
 		states[0][i] <== 0;
 	}
 
 	for (var i = 0; i < num_bytes; i++) {
-		state_changed[i] = MultiOR(13);
+		state_changed[i] = MultiOR(10);
 		lt[0][i] = LessEqThan(8);
 		lt[0][i].in[0] <== 14;
 		lt[0][i].in[1] <== in[i];
@@ -135,7 +135,7 @@ template SubjectAllRegex(msg_bytes) {
 		eq[23][i].in[0] <== in[i];
 		eq[23][i].in[1] <== 12;
 		and[3][i] = AND();
-		and[3][i].a <== states[i][12];
+		and[3][i].a <== states[i][8];
 		multi_or[1][i] = MultiOR(13);
 		multi_or[1][i].in[0] <== and[2][i].out;
 		multi_or[1][i].in[1] <== eq[12][i].out;
@@ -192,7 +192,7 @@ template SubjectAllRegex(msg_bytes) {
 		state_changed[i].in[2] <== states[i+1][3];
 		eq[28][i] = IsEqual();
 		eq[28][i].in[0] <== in[i];
-		eq[28][i].in[1] <== 115;
+		eq[28][i].in[1] <== 102;
 		and[8][i] = AND();
 		and[8][i].a <== states[i][3];
 		and[8][i].b <== eq[28][i].out;
@@ -200,7 +200,7 @@ template SubjectAllRegex(msg_bytes) {
 		state_changed[i].in[3] <== states[i+1][4];
 		eq[29][i] = IsEqual();
 		eq[29][i].in[0] <== in[i];
-		eq[29][i].in[1] <== 117;
+		eq[29][i].in[1] <== 114;
 		and[9][i] = AND();
 		and[9][i].a <== states[i][4];
 		and[9][i].b <== eq[29][i].out;
@@ -208,7 +208,7 @@ template SubjectAllRegex(msg_bytes) {
 		state_changed[i].in[4] <== states[i+1][5];
 		eq[30][i] = IsEqual();
 		eq[30][i].in[0] <== in[i];
-		eq[30][i].in[1] <== 98;
+		eq[30][i].in[1] <== 111;
 		and[10][i] = AND();
 		and[10][i].a <== states[i][5];
 		and[10][i].b <== eq[30][i].out;
@@ -216,7 +216,7 @@ template SubjectAllRegex(msg_bytes) {
 		state_changed[i].in[5] <== states[i+1][6];
 		eq[31][i] = IsEqual();
 		eq[31][i].in[0] <== in[i];
-		eq[31][i].in[1] <== 106;
+		eq[31][i].in[1] <== 109;
 		and[11][i] = AND();
 		and[11][i].a <== states[i][6];
 		and[11][i].b <== eq[31][i].out;
@@ -224,7 +224,7 @@ template SubjectAllRegex(msg_bytes) {
 		state_changed[i].in[6] <== states[i+1][7];
 		eq[32][i] = IsEqual();
 		eq[32][i].in[0] <== in[i];
-		eq[32][i].in[1] <== 101;
+		eq[32][i].in[1] <== 58;
 		and[12][i] = AND();
 		and[12][i].a <== states[i][7];
 		and[12][i].b <== eq[32][i].out;
@@ -232,57 +232,33 @@ template SubjectAllRegex(msg_bytes) {
 		state_changed[i].in[7] <== states[i+1][8];
 		eq[33][i] = IsEqual();
 		eq[33][i].in[0] <== in[i];
-		eq[33][i].in[1] <== 99;
+		eq[33][i].in[1] <== 13;
 		and[13][i] = AND();
-		and[13][i].a <== states[i][8];
+		and[13][i].a <== states[i][1];
 		and[13][i].b <== eq[33][i].out;
 		states[i+1][9] <== and[13][i].out;
 		state_changed[i].in[8] <== states[i+1][9];
 		eq[34][i] = IsEqual();
 		eq[34][i].in[0] <== in[i];
-		eq[34][i].in[1] <== 13;
+		eq[34][i].in[1] <== 10;
 		and[14][i] = AND();
-		and[14][i].a <== states[i][1];
+		and[14][i].a <== states[i][9];
 		and[14][i].b <== eq[34][i].out;
 		states[i+1][10] <== and[14][i].out;
 		state_changed[i].in[9] <== states[i+1][10];
-		eq[35][i] = IsEqual();
-		eq[35][i].in[0] <== in[i];
-		eq[35][i].in[1] <== 116;
-		and[15][i] = AND();
-		and[15][i].a <== states[i][9];
-		and[15][i].b <== eq[35][i].out;
-		states[i+1][11] <== and[15][i].out;
-		state_changed[i].in[10] <== states[i+1][11];
-		eq[36][i] = IsEqual();
-		eq[36][i].in[0] <== in[i];
-		eq[36][i].in[1] <== 58;
-		and[16][i] = AND();
-		and[16][i].a <== states[i][11];
-		and[16][i].b <== eq[36][i].out;
-		states[i+1][12] <== and[16][i].out;
-		state_changed[i].in[11] <== states[i+1][12];
-		eq[37][i] = IsEqual();
-		eq[37][i].in[0] <== in[i];
-		eq[37][i].in[1] <== 10;
-		and[17][i] = AND();
-		and[17][i].a <== states[i][10];
-		and[17][i].b <== eq[37][i].out;
-		states[i+1][13] <== and[17][i].out;
-		state_changed[i].in[12] <== states[i+1][13];
 		states[i+1][0] <== 1 - state_changed[i].out;
 	}
 
 	component final_state_result = MultiOR(num_bytes+1);
 	for (var i = 0; i <= num_bytes; i++) {
-		final_state_result.in[i] <== states[i][13];
+		final_state_result.in[i] <== states[i][10];
 	}
 	out <== final_state_result.out;
 
 	signal is_consecutive[msg_bytes+1][2];
 	is_consecutive[msg_bytes][1] <== 1;
 	for (var i = 0; i < msg_bytes; i++) {
-		is_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][13] * (1 - is_consecutive[msg_bytes-i][1]) + is_consecutive[msg_bytes-i][1];
+		is_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][10] * (1 - is_consecutive[msg_bytes-i][1]) + is_consecutive[msg_bytes-i][1];
 		is_consecutive[msg_bytes-1-i][1] <== state_changed[msg_bytes-i].out * is_consecutive[msg_bytes-1-i][0];
 	}
 	signal is_substr0[msg_bytes][3];
@@ -291,7 +267,7 @@ template SubjectAllRegex(msg_bytes) {
 	for (var i = 0; i < msg_bytes; i++) {
 		is_substr0[i][0] <== 0;
 		is_substr0[i][1] <== is_substr0[i][0] + states[i+1][1] * states[i+2][1];
-		is_substr0[i][2] <== is_substr0[i][1] + states[i+1][12] * states[i+2][1];
+		is_substr0[i][2] <== is_substr0[i][1] + states[i+1][8] * states[i+2][1];
 		is_reveal0[i] <== is_substr0[i][2] * is_consecutive[i][1];
 		reveal0[i] <== in[i+1] * is_reveal0[i];
 	}
