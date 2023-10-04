@@ -9,16 +9,31 @@ const apis = require("../../apis");
 const option = {
     include: path.join(__dirname, "../../../node_modules")
 };
+const compiler = require("../../compiler");
 
 jest.setTimeout(120000);
 describe("Simple Regex", () => {
+    let circuit;
+    beforeAll(async () => {
+        compiler.genFromRaw(
+            "1=(a|b) (2=(b|c)+ )+d",
+            {
+                substrsJsonPath: path.join(__dirname, "./circuits/simple_regex_substrs.json"),
+                circomFilePath: path.join(__dirname, "./circuits/simple_regex.circom"),
+                templateName: "SimpleRegex",
+                genSubstrs: true
+            }
+        );
+        circuit = await wasm_tester(path.join(__dirname, "./circuits/test_simple_regex.circom"), option);
+    });
+
     it("case 1", async () => {
         const input = "1=a 2=b d";
         const paddedStr = apis.padString(input, 64);
         const circuitInputs = {
             msg: paddedStr,
         };
-        const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_simple_regex.circom"), option);
+        // const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_simple_regex.circom"), option);
         const witness = await circuit.calculateWitness(circuitInputs);
         await circuit.checkConstraints(witness);
         // console.log(witness);
@@ -41,7 +56,7 @@ describe("Simple Regex", () => {
         const circuitInputs = {
             msg: paddedStr,
         };
-        const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_simple_regex.circom"), option);
+        // const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_simple_regex.circom"), option);
         const witness = await circuit.calculateWitness(circuitInputs);
         await circuit.checkConstraints(witness);
         // console.log(witness);
@@ -64,7 +79,7 @@ describe("Simple Regex", () => {
         const circuitInputs = {
             msg: paddedStr,
         };
-        const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_simple_regex.circom"), option);
+        // const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_simple_regex.circom"), option);
         const witness = await circuit.calculateWitness(circuitInputs);
         await circuit.checkConstraints(witness);
         expect(1n).toEqual(witness[1]);

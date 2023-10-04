@@ -28,12 +28,12 @@ impl RegexAndDFA {
             return Ok(());
         }
         let substr_endpoints_array = self.substrs_defs.substr_endpoints_array.as_ref().unwrap();
-        let max_bytes = self.substrs_defs.max_bytes.as_ref().unwrap();
+        // let max_bytes = self.substrs_defs.max_bytes.as_ref().unwrap();
         for (idx, defs) in self.substrs_defs.substr_defs_array.iter().enumerate() {
             let mut writer = BufWriter::new(File::create(&substr_file_pathes[idx])?);
-            let max_size = max_bytes[idx];
-            writer.write_fmt(format_args!("{}\n", &max_size))?;
-            writer.write_fmt(format_args!("0\n{}\n", self.max_byte_size - 1))?;
+            // let max_size = max_bytes[idx];
+            // writer.write_fmt(format_args!("{}\n", &max_size))?;
+            // writer.write_fmt(format_args!("0\n{}\n", self.max_byte_size - 1))?;
             let mut starts_str = "".to_string();
             let starts = substr_endpoints_array[idx]
                 .0

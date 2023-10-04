@@ -19,8 +19,8 @@ enum Commands {
     Decomposed {
         #[arg(short, long)]
         decomposed_regex_path: String,
-        #[arg(short, long)]
-        halo2_dir_path: Option<String>,
+        // #[arg(short, long)]
+        // halo2_dir_path: Option<String>,
         #[arg(short, long)]
         circom_file_path: Option<String>,
         #[arg(short, long)]
@@ -31,12 +31,12 @@ enum Commands {
     Raw {
         #[arg(short, long)]
         raw_regex: String,
-        #[arg(short, long)]
-        max_bytes: usize,
+        // #[arg(short, long)]
+        // max_bytes: usize,
         #[arg(short, long)]
         substrs_json_path: Option<String>,
-        #[arg(short, long)]
-        halo2_dir_path: Option<String>,
+        // #[arg(short, long)]
+        // halo2_dir_path: Option<String>,
         #[arg(long)]
         circom_file_path: Option<String>,
         #[arg(long)]
@@ -51,14 +51,14 @@ fn main() {
     match cli.command {
         Commands::Decomposed {
             decomposed_regex_path,
-            halo2_dir_path,
+            // halo2_dir_path,
             circom_file_path,
             template_name,
             gen_substrs,
         } => {
             gen_from_decomposed(
                 &decomposed_regex_path,
-                halo2_dir_path.as_ref().map(|s| s.as_str()),
+                // halo2_dir_path.as_ref().map(|s| s.as_str()),
                 circom_file_path.as_ref().map(|s| s.as_str()),
                 template_name.as_ref().map(|s| s.as_str()),
                 gen_substrs,
@@ -66,18 +66,18 @@ fn main() {
         }
         Commands::Raw {
             raw_regex,
-            max_bytes,
+            // max_bytes,
             substrs_json_path,
-            halo2_dir_path,
+            // halo2_dir_path,
             circom_file_path,
             circom_template_name,
             gen_substrs,
         } => {
             gen_from_raw(
                 &raw_regex,
-                max_bytes,
+                // max_bytes,
                 substrs_json_path.as_ref().map(|s| s.as_str()),
-                halo2_dir_path.as_ref().map(|s| s.as_str()),
+                // halo2_dir_path.as_ref().map(|s| s.as_str()),
                 circom_file_path.as_ref().map(|s| s.as_str()),
                 circom_template_name.as_ref().map(|s| s.as_str()),
                 gen_substrs,

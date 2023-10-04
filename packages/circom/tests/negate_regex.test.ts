@@ -15,11 +15,11 @@ jest.setTimeout(120000);
 describe("Negate Regex", () => {
     let circuit;
     beforeAll(async () => {
-        // compiler.genFromDecomposed(path.join(__dirname, "./circuits/negate1.json"), {
-        //     circomFilePath: path.join(__dirname, "./circuits/negate1_regex.circom"),
-        //     templateName: "Negate1Regex",
-        //     genSubstrs: true
-        // });
+        compiler.genFromDecomposed(path.join(__dirname, "./circuits/negate1.json"), {
+            circomFilePath: path.join(__dirname, "./circuits/negate1_regex.circom"),
+            templateName: "Negate1Regex",
+            genSubstrs: true
+        });
         circuit = await wasm_tester(path.join(__dirname, "./circuits/test_negate1_regex.circom"), option);
     });
 

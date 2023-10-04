@@ -35,7 +35,7 @@ pub enum CompilerError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DecomposedRegexConfig {
     /// Maximum byte size of the input string.
-    pub max_byte_size: usize,
+    // pub max_byte_size: usize,
     /// A vector of decomposed regexes.
     pub parts: Vec<RegexPartConfig>,
 }
@@ -47,10 +47,10 @@ pub struct RegexPartConfig {
     pub is_public: bool,
     /// A regex string.
     pub regex_def: String,
-    /// Maximum byte size of the substring in this part.
-    pub max_size: usize,
-    /// (Optional) A solidity type of the substring in this part, e.g., "String", "Int", "Decimal".
-    pub solidity: Option<SoldityType>,
+    // Maximum byte size of the substring in this part.
+    // pub max_size: usize,
+    // (Optional) A solidity type of the substring in this part, e.g., "String", "Int", "Decimal".
+    // pub solidity: Option<SoldityType>,
 }
 /// Solidity type of the substring.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -63,7 +63,7 @@ pub enum SoldityType {
 
 #[derive(Debug, Clone)]
 pub struct RegexAndDFA {
-    pub max_byte_size: usize,
+    // pub max_byte_size: usize,
     // pub all_regex: String,
     pub dfa_val: Vec<Value>,
     pub substrs_defs: SubstrsDefs,
@@ -73,7 +73,7 @@ pub struct RegexAndDFA {
 pub struct SubstrsDefs {
     pub substr_defs_array: Vec<HashSet<(usize, usize)>>,
     pub substr_endpoints_array: Option<Vec<(HashSet<usize>, HashSet<usize>)>>,
-    pub max_bytes: Option<Vec<usize>>,
+    // pub max_bytes: Option<Vec<usize>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -91,7 +91,7 @@ impl DecomposedRegexConfig {
         let dfa_val = regex_to_dfa(&all_regex)?;
         let substrs_defs = self.extract_substr_ids(&dfa_val)?;
         Ok(RegexAndDFA {
-            max_byte_size: self.max_byte_size,
+            // max_byte_size: self.max_byte_size,
             // all_regex,
             dfa_val,
             substrs_defs,
@@ -262,14 +262,14 @@ impl DecomposedRegexConfig {
                 }
             }
         }
-        let max_bytes = public_config_indexes
-            .iter()
-            .map(|idx| self.parts[*idx].max_size)
-            .collect_vec();
+        // let max_bytes = public_config_indexes
+        //     .iter()
+        //     .map(|idx| self.parts[*idx].max_size)
+        //     .collect_vec();
         let substrs_defs = SubstrsDefs {
             substr_defs_array,
             substr_endpoints_array: Some(substr_endpoints_array),
-            max_bytes: Some(max_bytes),
+            // max_bytes: Some(max_bytes),
         };
         Ok(substrs_defs)
     }
@@ -320,7 +320,7 @@ impl DecomposedRegexConfig {
 
 impl RegexAndDFA {
     pub fn from_regex_str_and_substr_defs(
-        max_byte_size: usize,
+        // max_byte_size: usize,
         regex_str: &str,
         substrs_defs_json: SubstrsDefsJson,
     ) -> Result<RegexAndDFA, CompilerError> {
@@ -333,11 +333,11 @@ impl RegexAndDFA {
         let substrs_defs = SubstrsDefs {
             substr_defs_array,
             substr_endpoints_array: None,
-            max_bytes: None,
+            // max_bytes: None,
         };
 
         Ok(RegexAndDFA {
-            max_byte_size,
+            // max_byte_size,
             // all_regex: regex_str.to_string(),
             dfa_val,
             substrs_defs,
@@ -347,7 +347,7 @@ impl RegexAndDFA {
 
 pub fn gen_from_decomposed(
     decomposed_regex_path: &str,
-    halo2_dir_path: Option<&str>,
+    // halo2_dir_path: Option<&str>,
     circom_file_path: Option<&str>,
     circom_template_name: Option<&str>,
     gen_substrs: Option<bool>,
@@ -358,22 +358,22 @@ pub fn gen_from_decomposed(
         .to_regex_and_dfa()
         .expect("failed to convert the decomposed regex to dfa");
     let gen_substrs = gen_substrs.unwrap_or(true);
-    if let Some(halo2_dir_path) = halo2_dir_path {
-        let halo2_dir_path = PathBuf::from(halo2_dir_path);
-        let allstr_file_path = halo2_dir_path.join("allstr.txt");
-        let mut num_public_parts = 0usize;
-        for part in decomposed_regex_config.parts.iter() {
-            if part.is_public {
-                num_public_parts += 1;
-            }
-        }
-        let substr_file_pathes = (0..num_public_parts)
-            .map(|idx| halo2_dir_path.join(format!("substr_{}.txt", idx)))
-            .collect_vec();
-        regex_and_dfa
-            .gen_halo2_tables(&allstr_file_path, &substr_file_pathes, gen_substrs)
-            .expect("failed to generate halo2 tables");
-    }
+    // if let Some(halo2_dir_path) = halo2_dir_path {
+    //     let halo2_dir_path = PathBuf::from(halo2_dir_path);
+    //     let allstr_file_path = halo2_dir_path.join("allstr.txt");
+    //     let mut num_public_parts = 0usize;
+    //     for part in decomposed_regex_config.parts.iter() {
+    //         if part.is_public {
+    //             num_public_parts += 1;
+    //         }
+    //     }
+    //     let substr_file_pathes = (0..num_public_parts)
+    //         .map(|idx| halo2_dir_path.join(format!("substr_{}.txt", idx)))
+    //         .collect_vec();
+    //     regex_and_dfa
+    //         .gen_halo2_tables(&allstr_file_path, &substr_file_pathes, gen_substrs)
+    //         .expect("failed to generate halo2 tables");
+    // }
     if let Some(circom_file_path) = circom_file_path {
         let circom_file_path = PathBuf::from(circom_file_path);
         let circom_template_name = circom_template_name
@@ -386,9 +386,9 @@ pub fn gen_from_decomposed(
 
 pub fn gen_from_raw(
     raw_regex: &str,
-    max_bytes: usize,
+    // max_bytes: usize,
     substrs_json_path: Option<&str>,
-    halo2_dir_path: Option<&str>,
+    // halo2_dir_path: Option<&str>,
     circom_file_path: Option<&str>,
     circom_template_name: Option<&str>,
     gen_substrs: Option<bool>,
@@ -403,21 +403,20 @@ pub fn gen_from_raw(
             transitions: vec![vec![]],
         }
     };
-    let num_public_parts = substrs_defs_json.transitions.len();
-    let regex_and_dfa =
-        RegexAndDFA::from_regex_str_and_substr_defs(max_bytes, raw_regex, substrs_defs_json)
-            .expect("failed to convert the raw regex and state transitions to dfa");
+    // let num_public_parts = substrs_defs_json.transitions.len();
+    let regex_and_dfa = RegexAndDFA::from_regex_str_and_substr_defs(raw_regex, substrs_defs_json)
+        .expect("failed to convert the raw regex and state transitions to dfa");
     let gen_substrs = gen_substrs.unwrap_or(true);
-    if let Some(halo2_dir_path) = halo2_dir_path {
-        let halo2_dir_path = PathBuf::from(halo2_dir_path);
-        let allstr_file_path = halo2_dir_path.join("allstr.txt");
-        let substr_file_pathes = (0..num_public_parts)
-            .map(|idx| halo2_dir_path.join(format!("substr_{}.txt", idx)))
-            .collect_vec();
-        regex_and_dfa
-            .gen_halo2_tables(&allstr_file_path, &substr_file_pathes, gen_substrs)
-            .expect("failed to generate halo2 tables");
-    }
+    // if let Some(halo2_dir_path) = halo2_dir_path {
+    //     let halo2_dir_path = PathBuf::from(halo2_dir_path);
+    //     let allstr_file_path = halo2_dir_path.join("allstr.txt");
+    //     let substr_file_pathes = (0..num_public_parts)
+    //         .map(|idx| halo2_dir_path.join(format!("substr_{}.txt", idx)))
+    //         .collect_vec();
+    //     regex_and_dfa
+    //         .gen_halo2_tables(&allstr_file_path, &substr_file_pathes, gen_substrs)
+    //         .expect("failed to generate halo2 tables");
+    // }
     if let Some(circom_file_path) = circom_file_path {
         let circom_file_path = PathBuf::from(circom_file_path);
         let circom_template_name = circom_template_name
@@ -526,5 +525,6 @@ pub(crate) fn add_graph_nodes(
 #[neon::main]
 fn main(mut cx: neon::prelude::ModuleContext) -> neon::prelude::NeonResult<()> {
     cx.export_function("genFromDecomposed", gen_from_decomposed_node)?;
+    cx.export_function("genFromRaw", gen_from_raw_node)?;
     Ok(())
 }

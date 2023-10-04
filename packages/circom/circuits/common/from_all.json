@@ -1,20 +1,16 @@
 {
-    "max_byte_size": 512,
     "parts": [
         {
             "is_public": false,
-            "regex_def": "((\r\n)|^)from:",
-            "max_size": 10
+            "regex_def": "((\r\n)|^)from:"
         },
         {
             "is_public": true,
-            "regex_def": "[^\r\n]+",
-            "max_size": 512
+            "regex_def": "[^\r\n]+"
         },
         {
             "is_public": false,
-            "regex_def": "\r\n",
-            "max_size": 2
+            "regex_def": "\r\n"
         }
     ]
 }

@@ -8,7 +8,7 @@ template SimpleRegex(msg_bytes) {
 
 	var num_bytes = msg_bytes+1;
 	signal in[num_bytes];
-	in[0]<==128;
+	in[0]<==255;
 	for (var i = 0; i < msg_bytes; i++) {
 		in[i+1] <== msg[i];
 	}
@@ -163,8 +163,8 @@ template SimpleRegex(msg_bytes) {
 	signal output reveal1[msg_bytes];
 	for (var i = 0; i < msg_bytes; i++) {
 		is_substr1[i][0] <== 0;
-		is_substr1[i][1] <== is_substr1[i][0] + states[i+1][7] * states[i+2][7];
-		is_substr1[i][2] <== is_substr1[i][1] + states[i+1][6] * states[i+2][7];
+		is_substr1[i][1] <== is_substr1[i][0] + states[i+1][6] * states[i+2][7];
+		is_substr1[i][2] <== is_substr1[i][1] + states[i+1][7] * states[i+2][7];
 		is_reveal1[i] <== is_substr1[i][2] * is_consecutive[i][1];
 		reveal1[i] <== in[i+1] * is_reveal1[i];
 	}

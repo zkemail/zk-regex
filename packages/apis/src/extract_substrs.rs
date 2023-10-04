@@ -8,8 +8,8 @@ use serde_json;
 /// Error definitions of the compiler.
 #[derive(Error, Debug)]
 pub enum ExtractSubstrssError {
-    #[error("The max length is {} but the input length is {}",.0,.1)]
-    InvalidInputLen(usize, usize),
+    // #[error("The max length is {} but the input length is {}",.0,.1)]
+    // InvalidInputLen(usize, usize),
     #[error("Substring of the entire regex {} is not found in {}",.0,.1)]
     SubstringOfEntireNotFound(Regex,String),
     #[error("Substring of {} is not found in {}",.0,.1)]
@@ -23,9 +23,9 @@ pub fn extract_substr_idxes(
     input_str: &str,
     regex_config: &DecomposedRegexConfig,
 ) -> Result<Vec<(usize,usize)>,ExtractSubstrssError> {
-    if input_str.len() > regex_config.max_byte_size {
-        return Err(ExtractSubstrssError::InvalidInputLen(regex_config.max_byte_size,input_str.len()));
-    }
+    // if input_str.len() > regex_config.max_byte_size {
+    //     return Err(ExtractSubstrssError::InvalidInputLen(regex_config.max_byte_size,input_str.len()));
+    // }
     let mut entire_regex_str = String::new();
     for part in regex_config.parts.iter() {
         entire_regex_str += part.regex_def.as_str();
@@ -96,25 +96,25 @@ mod test {
     #[test]
     fn test_email_domain_valid() {
         let email_addr_regex = DecomposedRegexConfig {
-            max_byte_size: 256,
+            // max_byte_size: 256,
             parts: vec![
                 RegexPartConfig {
                     is_public: false,
                     regex_def: "(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|\\.|_|%|\\+|-|=)+".to_string(),
-                    max_size: 64,
-                    solidity: None
+                    // max_size: 64,
+                    // solidity: None
                 },
                 RegexPartConfig {
                     is_public: false,
                     regex_def: "@".to_string(),
-                    max_size: 1,
-                    solidity: None
+                    // max_size: 1,
+                    // solidity: None
                 },
                 RegexPartConfig {
                     is_public: true, 
                     regex_def: "(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|\\.|-)+".to_string(),
-                    max_size: 255,
-                    solidity: None
+                    // max_size: 255,
+                    // solidity: None
                 }
             ]
         };
@@ -127,25 +127,25 @@ mod test {
     #[test]
     fn test_email_addr_in_subject_valid() {
         let email_addr_regex = DecomposedRegexConfig {
-            max_byte_size: 256,
+            // max_byte_size: 256,
             parts: vec![
                 RegexPartConfig {
                     is_public: true,
                     regex_def: "(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|\\.|_|%|\\+|-|=)+".to_string(),
-                    max_size: 64,
-                    solidity: None
+                    // max_size: 64,
+                    // solidity: None
                 },
                 RegexPartConfig {
                     is_public: true,
                     regex_def: "@".to_string(),
-                    max_size: 1,
-                    solidity: None
+                    // max_size: 1,
+                    // solidity: None
                 },
                 RegexPartConfig {
                     is_public: true, 
                     regex_def: "(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|\\.|-)+".to_string(),
-                    max_size: 255,
-                    solidity: None
+                    // max_size: 255,
+                    // solidity: None
                 }
             ]
         };
@@ -157,19 +157,19 @@ mod test {
     #[test]
     fn test_code_in_subject_valid() {
         let code_regex = DecomposedRegexConfig {
-            max_byte_size: 1024,
+            // max_byte_size: 1024,
             parts: vec![
                 RegexPartConfig {
                     is_public: false,
                     regex_def: "CODE:0x".to_string(),
-                    max_size: 7,
-                    solidity: None
+                    // max_size: 7,
+                    // solidity: None
                 },
                 RegexPartConfig {
                     is_public: true,
                     regex_def: "(0|1|2|3|4|5|6|7|8|9|a|b|c|d|e|f)+".to_string(),
-                    max_size: 6,
-                    solidity: None
+                    // max_size: 6,
+                    // solidity: None
                 }
             ]
         };
@@ -181,31 +181,31 @@ mod test {
     #[test]
     fn test_timestamp_valid() {
         let timestamp_regex = DecomposedRegexConfig {
-            max_byte_size: 1024,
+            // max_byte_size: 1024,
             parts: vec![
                 RegexPartConfig {
                     is_public: false,
                     regex_def: "dkim-signature:".to_string(),
-                    max_size: 10,
-                    solidity: None
+                    // max_size: 10,
+                    // solidity: None
                 },
                 RegexPartConfig {
                     is_public: false,
                     regex_def: "((a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z)+=(0|1|2|3|4|5|6|7|8|9|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|!|\"|#|$|%|&|\'|\\(|\\)|\\*|\\+|,|-|\\.|\\/|:|<|=|>|\\?|@|\\[|\\\\|\\]|\\^|_|`|{|\\||}|~| |\t|\n|\r|\\x0b|\\x0c)+; )+t=".to_string(),
-                    max_size: 128,
-                    solidity: None
+                    // max_size: 128,
+                    // solidity: None
                 },
                 RegexPartConfig {
                     is_public: true,
                     regex_def: "(0|1|2|3|4|5|6|7|8|9)+".to_string(),
-                    max_size: 10,
-                    solidity: None
+                    // max_size: 10,
+                    // solidity: None
                 },
                 RegexPartConfig {
                     is_public: false,
                     regex_def: ";".to_string(),
-                    max_size: 1,
-                    solidity: None
+                    // max_size: 1,
+                    // solidity: None
                 },
             ]
         };
