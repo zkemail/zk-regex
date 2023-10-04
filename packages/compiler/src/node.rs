@@ -1,5 +1,3 @@
-use std::os::macos::raw;
-
 use crate::{gen_from_decomposed, gen_from_raw};
 use neon::prelude::*;
 
