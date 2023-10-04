@@ -17,12 +17,12 @@ jest.setTimeout(120000);
 describe("Bodyhash Regex", () => {
     let circuit;
     beforeAll(async () => {
-        compiler.genFromDecomposed(path.join(__dirname, "../circuits/common/bodyhash.json"), {
-            circomFilePath: path.join(__dirname, "../circuits/common/bodyhash_regex.circom"),
-            templateName: "BodyhashRegex",
+        compiler.genFromDecomposed(path.join(__dirname, "../circuits/common/body_hash.json"), {
+            circomFilePath: path.join(__dirname, "../circuits/common/body_hash_regex.circom"),
+            templateName: "BodyHashRegex",
             genSubstrs: true
         });
-        circuit = await wasm_tester(path.join(__dirname, "./circuits/test_bodyhash_regex.circom"), option);
+        circuit = await wasm_tester(path.join(__dirname, "./circuits/test_body_hash_regex.circom"), option);
     });
 
     it("bodyhash in the header", async () => {
@@ -36,7 +36,7 @@ describe("Bodyhash Regex", () => {
         const witness = await circuit.calculateWitness(circuitInputs);
         await circuit.checkConstraints(witness);
         expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(signatureField, readFileSync(path.join(__dirname, "../circuits/common/bodyhash.json"), "utf8"))[0];
+        const prefixIdxes = apis.extractSubstrIdxes(signatureField, readFileSync(path.join(__dirname, "../circuits/common/body_hash.json"), "utf8"))[0];
         for (let idx = 0; idx < 1024; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
                 expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
@@ -53,11 +53,11 @@ describe("Bodyhash Regex", () => {
         const circuitInputs = {
             msg: paddedStr,
         };
-        const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_bodyhash_regex.circom"), option);
+        // const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_bodyhash_regex.circom"), option);
         const witness = await circuit.calculateWitness(circuitInputs);
         await circuit.checkConstraints(witness);
         expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(signatureField, readFileSync(path.join(__dirname, "../circuits/common/bodyhash.json"), "utf8"))[0];
+        const prefixIdxes = apis.extractSubstrIdxes(signatureField, readFileSync(path.join(__dirname, "../circuits/common/body_hash.json"), "utf8"))[0];
         for (let idx = 0; idx < 1024; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
                 expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
