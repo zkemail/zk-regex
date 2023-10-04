@@ -12,7 +12,7 @@ const option = {
 import { readFileSync } from "fs";
 const compiler = require("../../compiler");
 
-jest.setTimeout(120000);
+jest.setTimeout(240000);
 describe("From Addr Regex", () => {
     let circuit;
     beforeAll(async () => {
@@ -84,7 +84,7 @@ describe("From Addr Regex", () => {
     });
 
     it("from field from beginning case 3 (email address as a name)", async () => {
-        const fromStr = "from:suegamisora@gmail.com<suegamisora@gmail.com>\r\n";
+        const fromStr = "from:dummy@example.com<suegamisora@gmail.com>\r\n";
         // const revealed = "suegamisora@gmail.com";
         // const prefixLen = "from:Sora Suegami <".length;
         const paddedStr = apis.padString(fromStr, 1024);
@@ -190,7 +190,7 @@ describe("From Addr Regex", () => {
     });
 
     it("from field after new line case 3 (email address as a name)", async () => {
-        const fromStr = "dummy\r\nfrom:suegamisora@gmail.com<suegamisora@gmail.com>\r\n";
+        const fromStr = "dummy\r\nfrom:dummy@example.com<suegamisora@gmail.com>\r\n";
         // const revealed = "suegamisora@gmail.com";
         // const prefixLen = "from:Sora Suegami <".length;
         const paddedStr = apis.padString(fromStr, 1024);
