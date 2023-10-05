@@ -15,7 +15,7 @@
     "build-release": "npm run build -- --release",
     "install": "npm run build-release",
     "test": "cargo test",
-    "publish": "yarn npm publish --access=public"
+    "publish": "yarn publish --access=public"
   },
   "license": "MIT",
   "devDependencies": {

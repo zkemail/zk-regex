@@ -11,7 +11,7 @@
   ],
   "scripts": {
     "test": "jest",
-    "publish": "yarn npm publish --access=public"
+    "publish": "yarn publish --access=public"
   },
   "dependencies": {
     "commander": "^11.0.0",
