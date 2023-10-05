@@ -1,5 +1,5 @@
 {
-  "name": "zk-regex-compiler",
+  "name": "@zk-email/zk-regex-compiler",
   "version": "1.0.1",
   "description": "a compiler to generate a regex verification circuit in circom from a user-defined regex. Please check [zk-regex](https://github.com/zkemail/zk-regex/tree/main) for the detail.",
   "main": "index.node",

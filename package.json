@@ -1,5 +1,5 @@
 {
-  "name": "zk-regex",
+  "name": "@zk-email/zk-regex",
   "version": "1.0.0",
   "private": true,
   "description": "zk regex circuit for content attestation",
@@ -14,7 +14,7 @@
     "Yush G <aayushg@mit.edu>"
   ],
   "scripts": {
-    "install": "cargo install --path ./packages/compiler",
+    "postinstall": "cargo install --path ./packages/compiler",
     "test": "yarn workspaces -pt run test"
   },
   "repository": {

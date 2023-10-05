@@ -222,7 +222,7 @@ function genCircomAllstr(graph_json, template_name) {
 
     const declarations = [];
     declarations.push(`pragma circom 2.1.5;\n`);
-    declarations.push(`include "zk-regex-circom/circuits/regex_helpers.circom";\n`);
+    declarations.push(`include "@zk-email/zk-regex-circom/circuits/regex_helpers.circom";\n`);
     // declarations.push(`pragma circom 2.1.5;\ninclude "@zk-email/circuits/regexes/regex_helpers.circom";\n`);
     declarations.push(`template ${template_name}(msg_bytes) {`);
     declarations.push(`\tsignal input msg[msg_bytes];`);

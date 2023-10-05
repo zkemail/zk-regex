@@ -1,6 +1,6 @@
 pragma circom 2.1.5;
 
-include "zk-regex-circom/circuits/regex_helpers.circom";
+include "@zk-email/zk-regex-circom/circuits/regex_helpers.circom";
 
 template SubjectAllRegex(msg_bytes) {
 	signal input msg[msg_bytes];
