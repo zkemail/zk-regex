@@ -1,11 +1,17 @@
 {
   "name": "zk-regex",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "private": true,
   "description": "zk regex circuit for content attestation",
   "main": "node-apis/index.node",
   "workspaces": [
     "packages/*"
+  ],
+  "contributors": [
+    "Javier Su <javier.su.weijie@gmail.com>",
+    "Kata Choi <kata.choi@gmail.com>",
+    "Sora Suegami <suegamisora@gmail.com>",
+    "Yush G <aayushg@mit.edu>"
   ],
   "scripts": {
     "install": "cargo install --path ./packages/compiler",

@@ -1,10 +1,12 @@
-# zk-regex-apis
+# zk-regex-compiler
+
+A compiler CLI in [zk-regex](https://github.com/zkemail/zk-regex/tree/main).
 
 This project was bootstrapped by [create-neon](https://www.npmjs.com/package/create-neon).
 
-## Installing zk-regex-apis
+## Installing zk-regex-compiler
 
-Installing zk-regex-apis requires a [supported version of Node and Rust](https://github.com/neon-bindings/neon#platform-support).
+Installing zk-regex-compiler requires a [supported version of Node and Rust](https://github.com/neon-bindings/neon#platform-support).
 
 You can install the project with npm. In the project directory, run:
 
@@ -14,7 +16,7 @@ $ npm install
 
 This fully installs the project, including installing any dependencies and running the build.
 
-## Building zk-regex-apis
+## Building zk-regex-compiler
 
 If you have already installed the project and only want to run the build, run:
 
@@ -24,9 +26,12 @@ $ npm run build
 
 This command uses the [cargo-cp-artifact](https://github.com/neon-bindings/cargo-cp-artifact) utility to run the Rust build and copy the built library into `./index.node`.
 
-## Exploring zk-regex-apis
+## CLI Usage
+Please see "Compiler CLI" section in [zk-regex](https://github.com/zkemail/zk-regex/tree/main).
 
-After building zk-regex-apis, you can explore its exports at the Node REPL:
+## Exploring zk-regex-compiler
+
+After building zk-regex-compiler, you can explore its exports at the Node REPL:
 
 ```sh
 $ npm install
@@ -70,7 +75,7 @@ Runs the unit tests by calling `cargo test`. You can learn more about [adding te
 The directory structure of this project is:
 
 ```
-zk-regex-apis/
+zk-regex-compiler/
 ├── Cargo.toml
 ├── README.md
 ├── index.node

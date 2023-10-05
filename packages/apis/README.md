@@ -1,5 +1,7 @@
 # zk-regex-apis
 
+Helpful nodejs/Rust APIs in [zk-regex](https://github.com/zkemail/zk-regex/tree/main).
+
 This project was bootstrapped by [create-neon](https://www.npmjs.com/package/create-neon).
 
 ## Installing zk-regex-apis

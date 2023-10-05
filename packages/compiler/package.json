@@ -1,14 +1,21 @@
 {
   "name": "zk-regex-compiler",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "",
   "main": "index.node",
+  "contributors": [
+    "Javier Su <javier.su.weijie@gmail.com>",
+    "Kata Choi <kata.choi@gmail.com>",
+    "Sora Suegami <suegamisora@gmail.com>",
+    "Yush G <aayushg@mit.edu>"
+  ],
   "scripts": {
     "build": "cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
     "build-debug": "npm run build --",
     "build-release": "npm run build -- --release",
     "install": "npm run build-release",
-    "test": "cargo test"
+    "test": "cargo test",
+    "publish": "yarn npm publish --access=public"
   },
   "author": "",
   "license": "MIT",

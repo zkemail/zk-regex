@@ -2,8 +2,15 @@
   "name": "zk-regex-circom",
   "version": "1.0.0",
   "license": "MIT",
+  "contributors": [
+    "Javier Su <javier.su.weijie@gmail.com>",
+    "Kata Choi <kata.choi@gmail.com>",
+    "Sora Suegami <suegamisora@gmail.com>",
+    "Yush G <aayushg@mit.edu>"
+  ],
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "publish": "yarn npm publish --access=public"
   },
   "dependencies": {
     "commander": "^11.0.0",
