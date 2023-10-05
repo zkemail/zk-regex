@@ -1,6 +1,6 @@
 [package]
 name = "zk-regex-compiler"
-version = "1.0.0"
+version = "1.0.1"
 authors = [
     "Javier Su <javier.su.weijie@gmail.com>",
     "Kata Choi <kata.choi@gmail.com>",
