@@ -8,6 +8,7 @@
     "packages/*"
   ],
   "scripts": {
+    "install": "cargo install --path ./packages/compiler",
     "test": "yarn workspaces -pt run test"
   },
   "repository": {

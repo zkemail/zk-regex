@@ -390,7 +390,7 @@ pub fn gen_from_raw(
     substrs_json_path: Option<&str>,
     // halo2_dir_path: Option<&str>,
     circom_file_path: Option<&str>,
-    circom_template_name: Option<&str>,
+    template_name: Option<&str>,
     gen_substrs: Option<bool>,
 ) {
     let substrs_defs_json = if let Some(substrs_json_path) = substrs_json_path {
@@ -419,10 +419,10 @@ pub fn gen_from_raw(
     // }
     if let Some(circom_file_path) = circom_file_path {
         let circom_file_path = PathBuf::from(circom_file_path);
-        let circom_template_name = circom_template_name
+        let template_name = template_name
             .expect("circom template name must be specified if circom file path is specified");
         regex_and_dfa
-            .gen_circom(&circom_file_path, &circom_template_name, gen_substrs)
+            .gen_circom(&circom_file_path, &template_name, gen_substrs)
             .expect("failed to generate circom");
     }
 }

@@ -69,7 +69,7 @@ pub(crate) fn gen_from_raw_node(mut cx: FunctionContext) -> JsResult<JsNull> {
                 .expect("circomFilePath must be null or string")
                 .value(&mut cx)
         });
-    let circom_template_name = obj
+    let template_name = obj
         .get_opt::<JsString, _, _>(&mut cx, "templateName")?
         .map(|v| {
             v.to_string(&mut cx)
@@ -89,7 +89,7 @@ pub(crate) fn gen_from_raw_node(mut cx: FunctionContext) -> JsResult<JsNull> {
         substrs_json_path.as_ref().map(|s| s.as_str()),
         // halo2_dir_path.as_ref().map(|s| s.as_str()),
         circom_file_path.as_ref().map(|s| s.as_str()),
-        circom_template_name.as_ref().map(|s| s.as_str()),
+        template_name.as_ref().map(|s| s.as_str()),
         gen_substrs,
     );
     Ok(cx.null())
