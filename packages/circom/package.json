@@ -10,8 +10,7 @@
     "Yush G <aayushg@mit.edu>"
   ],
   "scripts": {
-    "test": "jest",
-    "publish": "yarn publish --access=public"
+    "test": "jest"
   },
   "dependencies": {
     "commander": "^11.0.0",
