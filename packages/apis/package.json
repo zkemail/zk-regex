@@ -17,7 +17,6 @@
     "test": "cargo test",
     "publish": "yarn npm publish --access=public"
   },
-  "author": "",
   "license": "MIT",
   "devDependencies": {
     "cargo-cp-artifact": "^0.1"

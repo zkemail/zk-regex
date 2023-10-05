@@ -28,7 +28,6 @@
     "zk",
     "attestation"
   ],
-  "author": "",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/zk-email-verify/zk-regex/issues"
