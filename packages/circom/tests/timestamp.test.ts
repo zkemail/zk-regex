@@ -36,7 +36,7 @@ describe("Timestamp Regex", () => {
         const witness = await circuit.calculateWitness(circuitInputs);
         await circuit.checkConstraints(witness);
         expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(signatureField, readFileSync(path.join(__dirname, "../circuits/common/timestamp.json"), "utf8"))[0];
+        const prefixIdxes = apis.extractTimestampIdxes(signatureField)[0];
         for (let idx = 0; idx < 1024; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
                 expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
@@ -57,7 +57,7 @@ describe("Timestamp Regex", () => {
         const witness = await circuit.calculateWitness(circuitInputs);
         await circuit.checkConstraints(witness);
         expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(signatureField, readFileSync(path.join(__dirname, "../circuits/common/timestamp.json"), "utf8"))[0];
+        const prefixIdxes = apis.extractTimestampIdxes(signatureField)[0];
         for (let idx = 0; idx < 1024; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
                 expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);

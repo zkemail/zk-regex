@@ -38,7 +38,7 @@ describe("Subject All Regex", () => {
         await circuit.checkConstraints(witness);
         // console.log(witness);
         expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(subjectStr, readFileSync(path.join(__dirname, "../circuits/common/subject_all.json"), "utf8"))[0];
+        const prefixIdxes = apis.extractSubjectAllIdxes(subjectStr)[0];
         for (let idx = 0; idx < 256; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
                 expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
@@ -61,7 +61,7 @@ describe("Subject All Regex", () => {
         await circuit.checkConstraints(witness);
         // console.log(witness);
         expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(subjectStr, readFileSync(path.join(__dirname, "../circuits/common/subject_all.json"), "utf8"))[0];
+        const prefixIdxes = apis.extractSubjectAllIdxes(subjectStr)[0];
         for (let idx = 0; idx < 256; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
                 expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
@@ -84,7 +84,7 @@ describe("Subject All Regex", () => {
         await circuit.checkConstraints(witness);
         // console.log(witness);
         expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(subjectStr, readFileSync(path.join(__dirname, "../circuits/common/subject_all.json"), "utf8"))[0];
+        const prefixIdxes = apis.extractSubjectAllIdxes(subjectStr)[0];
         for (let idx = 0; idx < 256; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
                 expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);

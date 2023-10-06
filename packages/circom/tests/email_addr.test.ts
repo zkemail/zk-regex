@@ -34,7 +34,7 @@ describe("Email Address Regex", () => {
         const witness = await circuit.calculateWitness(circuitInputs);
         await circuit.checkConstraints(witness);
         expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(emailAddr, readFileSync(path.join(__dirname, "../circuits/common/email_addr.json"), "utf8"))[0];
+        const prefixIdxes = apis.extractEmailAddrIdxes(emailAddr)[0];
         for (let idx = 0; idx < 256; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
                 expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
@@ -57,7 +57,7 @@ describe("Email Address Regex", () => {
         const witness = await circuit.calculateWitness(circuitInputs);
         await circuit.checkConstraints(witness);
         expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(string, readFileSync(path.join(__dirname, "../circuits/common/email_addr.json"), "utf8"))[0];
+        const prefixIdxes = apis.extractEmailAddrIdxes(string)[0];
         for (let idx = 0; idx < 256; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
                 expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);

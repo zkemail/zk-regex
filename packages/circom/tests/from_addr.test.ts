@@ -45,7 +45,7 @@ describe("From Addr Regex", () => {
         const witness = await circuit.calculateWitness(circuitInputs);
         await circuit.checkConstraints(witness);
         expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(fromStr, readFileSync(path.join(__dirname, "../circuits/common/from_addr.json"), "utf8"))[0];
+        const prefixIdxes = apis.extractFromAddrIdxes(fromStr)[0];
         for (let idx = 0; idx < 1024; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
                 expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
@@ -70,7 +70,7 @@ describe("From Addr Regex", () => {
         // console.log(witness);
         // console.log(paddedStr);
         expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(fromStr, readFileSync(path.join(__dirname, "../circuits/common/from_addr.json"), "utf8"))[0];
+        const prefixIdxes = apis.extractFromAddrIdxes(fromStr)[0];
         // for (let idx = 0; idx < revealed.length; ++idx) {
         //     expect(BigInt(paddedStr[prefixIdx + idx])).toEqual(witness[2 + prefixIdx + idx]);
         // }
@@ -97,7 +97,7 @@ describe("From Addr Regex", () => {
         // console.log(witness);
         // console.log(paddedStr);
         expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(fromStr, readFileSync(path.join(__dirname, "../circuits/common/from_addr.json"), "utf8"))[0];
+        const prefixIdxes = apis.extractFromAddrIdxes(fromStr)[0];
         // for (let idx = 0; idx < revealed.length; ++idx) {
         //     expect(BigInt(paddedStr[prefixIdx + idx])).toEqual(witness[2 + prefixIdx + idx]);
         // }
@@ -124,7 +124,7 @@ describe("From Addr Regex", () => {
         // console.log(witness);
         // console.log(paddedStr);
         expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(fromStr, readFileSync(path.join(__dirname, "../circuits/common/from_addr.json"), "utf8"))[0];
+        const prefixIdxes = apis.extractFromAddrIdxes(fromStr)[0];
         // for (let idx = 0; idx < revealed.length; ++idx) {
         //     expect(BigInt(paddedStr[prefixIdx + idx])).toEqual(witness[2 + prefixIdx + idx]);
         // }
@@ -150,7 +150,7 @@ describe("From Addr Regex", () => {
         await circuit.checkConstraints(witness);
         // console.log(witness);
         expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(fromStr, readFileSync(path.join(__dirname, "../circuits/common/from_addr.json"), "utf8"))[0];
+        const prefixIdxes = apis.extractFromAddrIdxes(fromStr)[0];
         // for (let idx = 0; idx < revealed.length; ++idx) {
         //     expect(BigInt(paddedStr[prefixIdx + idx])).toEqual(witness[2 + prefixIdx + idx]);
         // }
@@ -176,7 +176,7 @@ describe("From Addr Regex", () => {
         await circuit.checkConstraints(witness);
         // console.log(witness);
         expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(fromStr, readFileSync(path.join(__dirname, "../circuits/common/from_addr.json"), "utf8"))[0];
+        const prefixIdxes = apis.extractFromAddrIdxes(fromStr)[0];
         // for (let idx = 0; idx < revealed.length; ++idx) {
         //     expect(BigInt(paddedStr[prefixIdx + idx])).toEqual(witness[2 + prefixIdx + idx]);
         // }
@@ -203,7 +203,7 @@ describe("From Addr Regex", () => {
         // console.log(witness);
         // console.log(paddedStr);
         expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(fromStr, readFileSync(path.join(__dirname, "../circuits/common/from_addr.json"), "utf8"))[0];
+        const prefixIdxes = apis.extractFromAddrIdxes(fromStr)[0];
         // for (let idx = 0; idx < revealed.length; ++idx) {
         //     expect(BigInt(paddedStr[prefixIdx + idx])).toEqual(witness[2 + prefixIdx + idx]);
         // }
@@ -230,7 +230,7 @@ describe("From Addr Regex", () => {
         // console.log(witness);
         // console.log(paddedStr);
         expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(fromStr, readFileSync(path.join(__dirname, "../circuits/common/from_addr.json"), "utf8"))[0];
+        const prefixIdxes = apis.extractFromAddrIdxes(fromStr)[0];
         // for (let idx = 0; idx < revealed.length; ++idx) {
         //     expect(BigInt(paddedStr[prefixIdx + idx])).toEqual(witness[2 + prefixIdx + idx]);
         // }

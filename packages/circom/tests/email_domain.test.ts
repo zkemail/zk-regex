@@ -38,7 +38,7 @@ describe("Email Domain Regex", () => {
         for (let idx = 0; idx < 12; ++idx) {
             expect(0n).toEqual(witness[2 + idx]);
         }
-        const prefixIdxes = apis.extractSubstrIdxes(emailAddr, readFileSync(path.join(__dirname, "../circuits/common/email_domain.json"), "utf8"))[0];
+        const prefixIdxes = apis.extractEmailDomainIdxes(emailAddr)[0];
         for (let idx = 0; idx < 256; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
                 expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
