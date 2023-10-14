@@ -18,11 +18,11 @@ template FromAddrRegex(msg_bytes) {
 
 	signal emailNameOut;
 	signal emailNameReveal[msg_bytes];
-	(emailNameOut, emailNameReveal) <== EmailAddrWithNameRegex(msg_bytes)(msg);
+	(emailNameOut, emailNameReveal) <== EmailAddrWithNameRegex(msg_bytes)(fromReveal);
 
 	signal emailAddrOut;
 	signal emailAddrReveal[msg_bytes];
-	(emailAddrOut, emailAddrReveal) <== EmailAddrRegex(msg_bytes)(msg);
+	(emailAddrOut, emailAddrReveal) <== EmailAddrRegex(msg_bytes)(fromReveal);
 
 	out <== MultiOR(2)([emailNameOut, emailAddrOut]);
 	for(var i=0; i<msg_bytes; i++) {
