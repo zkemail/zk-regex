@@ -66,27 +66,23 @@ pub fn extract_email_addr_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config =
-        serde_json::from_str(include_str!("../../circom/circuits/common/email_addr.json")).unwrap();
+        serde_json::from_str(include_str!("./decomposed_defs/email_addr.json")).unwrap();
     extract_substr_idxes(input_str, &regex_config)
 }
 
 pub fn extract_email_domain_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
-    let regex_config = serde_json::from_str(include_str!(
-        "../../circom/circuits/common/email_domain.json"
-    ))
-    .unwrap();
+    let regex_config =
+        serde_json::from_str(include_str!("./decomposed_defs/email_domain.json")).unwrap();
     extract_substr_idxes(input_str, &regex_config)
 }
 
 pub fn extract_email_addr_with_name_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
-    let regex_config = serde_json::from_str(include_str!(
-        "../../circom/circuits/common/email_addr_with_name.json"
-    ))
-    .unwrap();
+    let regex_config =
+        serde_json::from_str(include_str!("./decomposed_defs/email_addr_with_name.json")).unwrap();
     extract_substr_idxes(input_str, &regex_config)
 }
 
@@ -94,7 +90,7 @@ pub fn extract_from_all_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config =
-        serde_json::from_str(include_str!("../../circom/circuits/common/from_all.json")).unwrap();
+        serde_json::from_str(include_str!("./decomposed_defs/from_all.json")).unwrap();
     extract_substr_idxes(input_str, &regex_config)
 }
 
@@ -102,17 +98,15 @@ pub fn extract_from_addr_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config =
-        serde_json::from_str(include_str!("../../circom/circuits/common/from_addr.json")).unwrap();
+        serde_json::from_str(include_str!("./decomposed_defs/from_addr.json")).unwrap();
     extract_substr_idxes(input_str, &regex_config)
 }
 
 pub fn extract_subject_all_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
-    let regex_config = serde_json::from_str(include_str!(
-        "../../circom/circuits/common/subject_all.json"
-    ))
-    .unwrap();
+    let regex_config =
+        serde_json::from_str(include_str!("./decomposed_defs/subject_all.json")).unwrap();
     extract_substr_idxes(input_str, &regex_config)
 }
 
@@ -120,7 +114,7 @@ pub fn extract_body_hash_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config =
-        serde_json::from_str(include_str!("../../circom/circuits/common/body_hash.json")).unwrap();
+        serde_json::from_str(include_str!("./decomposed_defs/body_hash.json")).unwrap();
     extract_substr_idxes(input_str, &regex_config)
 }
 
@@ -128,7 +122,7 @@ pub fn extract_timestamp_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config =
-        serde_json::from_str(include_str!("../../circom/circuits/common/timestamp.json")).unwrap();
+        serde_json::from_str(include_str!("./decomposed_defs/timestamp.json")).unwrap();
     extract_substr_idxes(input_str, &regex_config)
 }
 
@@ -136,7 +130,7 @@ pub fn extract_message_id_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config =
-        serde_json::from_str(include_str!("../../circom/circuits/common/message_id.json")).unwrap();
+        serde_json::from_str(include_str!("./decomposed_defs/message_id.json")).unwrap();
     extract_substr_idxes(input_str, &regex_config)
 }
 
