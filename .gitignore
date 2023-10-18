@@ -111,3 +111,6 @@ target
 
 index.node
 Cargo.lock
+
+.DS_Store
+packages/*/build

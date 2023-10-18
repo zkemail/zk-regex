@@ -1,6 +1,6 @@
 {
   "name": "@zk-email/zk-regex-compiler",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "a compiler to generate a regex verification circuit in circom from a user-defined regex. Please check [zk-regex](https://github.com/zkemail/zk-regex/tree/main) for the detail.",
   "main": "index.node",
   "contributors": [
@@ -13,11 +13,24 @@
     "build": "cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
     "build-debug": "npm run build --",
     "build-release": "npm run build -- --release",
-    "install": "npm run build-release",
-    "test": "cargo test"
+    "install": "node-pre-gyp install --fallback-to-build=false || npm run build-release",
+    "test": "cargo test",
+    "package": "cp index.node native && node-pre-gyp package",
+    "upload-binary": "npm run package && node-pre-gyp-github publish --release"
   },
   "license": "MIT",
   "dependencies": {
-    "cargo-cp-artifact": "^0.1"
+    "cargo-cp-artifact": "^0.1",
+    "node-pre-gyp": "^0.17.0"
+  },
+  "devDependencies": {
+    "node-pre-gyp-github": "^1.4.4"
+  },
+  "binary": {
+    "module_name": "index",
+    "host": "https://github.com/zkemail/zk-regex/releases/download/",
+    "remote_path": "{version}",
+    "package_name": "{node_abi}-{platform}-{arch}.tar.gz",
+    "module_path": "./native"
   }
 }

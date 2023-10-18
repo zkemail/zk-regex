@@ -1839,7 +1839,7 @@
 
 "@zk-email/zk-regex-apis@file:/Users/suegamisora/codes/zk-regex/packages/apis":
   "resolved" "file:packages/apis"
-  "version" "1.1.1"
+  "version" "1.1.2"
   dependencies:
     "cargo-cp-artifact" "^0.1"
     "node-pre-gyp" "^0.17.0"
@@ -1853,7 +1853,7 @@
 
 "@zk-email/zk-regex-compiler@file:/Users/suegamisora/codes/zk-regex/packages/compiler":
   "resolved" "file:packages/compiler"
-  "version" "1.0.2"
+  "version" "1.0.3"
   dependencies:
     "cargo-cp-artifact" "^0.1"
 
