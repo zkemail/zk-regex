@@ -9,6 +9,10 @@
     "Sora Suegami <suegamisora@gmail.com>",
     "Yush G <aayushg@mit.edu>"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zkemail/zk-regex.git"
+  },
   "scripts": {
     "build": "cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
     "build-debug": "npm run build --",
@@ -16,7 +20,7 @@
     "install": "node-pre-gyp install --fallback-to-build=false || npm run build-release",
     "test": "cargo test",
     "package": "cp index.node native && node-pre-gyp package",
-    "upload-binary": "npm run package && node-pre-gyp-github publish --release"
+    "upload-binary": "npm run package && node-pre-gyp-github publish"
   },
   "license": "MIT",
   "dependencies": {
@@ -24,7 +28,7 @@
     "node-pre-gyp": "^0.17.0"
   },
   "devDependencies": {
-    "node-pre-gyp-github": "^1.4.4"
+    "node-pre-gyp-github": "https://github.com/ultamatt/node-pre-gyp-github.git"
   },
   "binary": {
     "module_name": "index",

@@ -24,7 +24,7 @@
     "node-pre-gyp": "^0.17.0"
   },
   "devDependencies": {
-    "node-pre-gyp-github": "^1.4.4"
+    "node-pre-gyp-github": "https://github.com/ultamatt/node-pre-gyp-github.git"
   },
   "binary": {
     "module_name": "index",
