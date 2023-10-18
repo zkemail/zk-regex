@@ -34,7 +34,7 @@
     "module_name": "index",
     "host": "https://github.com/zkemail/zk-regex/releases/download/",
     "remote_path": "{version}",
-    "package_name": "{node_abi}-{platform}-{arch}.tar.gz",
+    "package_name": "compiler-{node_abi}-{platform}-{arch}.tar.gz",
     "module_path": "./native"
   }
 }
