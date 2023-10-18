@@ -9,6 +9,10 @@
     "Yush G <aayushg@mit.edu>"
   ],
   "main": "index.node",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zkemail/zk-regex.git"
+  },
   "scripts": {
     "build": "cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
     "build-debug": "npm run build --",
