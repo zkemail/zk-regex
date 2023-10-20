@@ -40,4 +40,4 @@ jobs:
       - name: Publish binaries
         run: npm run upload-binary
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NODE_PRE_GYP_GITHUB_TOKEN }}
+          NODE_PRE_GYP_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
