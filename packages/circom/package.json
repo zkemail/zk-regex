@@ -10,7 +10,8 @@
     "Yush G <aayushg@mit.edu>"
   ],
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "package": "echo"
   },
   "dependencies": {
     "commander": "^11.0.0",
