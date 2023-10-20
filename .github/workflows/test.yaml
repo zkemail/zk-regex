@@ -17,8 +17,15 @@ jobs:
         with:
           rust-version: nightly
           components: clippy
-      - name: Download circom
+      - name: Download circom (Linux)
+        if: ${{ matrix.os == 'ubuntu-latest'}}
         run: wget https://github.com/iden3/circom/releases/latest/download/circom-linux-amd64 -O /usr/local/bin/circom
+      - name: Download circom (Windows)
+        if: ${{ matrix.os == 'windows-latest'}}
+        run: wget https://github.com/iden3/circom/releases/latest/download/circom-windows-amd64.exe -O /usr/local/bin/circom
+      - name: Download circom (Macos)
+        if: ${{ matrix.os == 'macos-latest'}}
+        run: wget https://github.com/iden3/circom/releases/latest/download/circom-macos-amd64.exe -O /usr/local/bin/circom
       - name: Update permission
         run: chmod +x /usr/local/bin/circom
       - name: Install yarn
