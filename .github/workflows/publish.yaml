@@ -1,6 +1,10 @@
-name: Test
+name: Publish
 
 on: [push]
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   build:
@@ -25,9 +29,7 @@ jobs:
         run: npm install -g yarn
       - name: Install dependencies
         run: yarn
-      # - name: Create build folder
-      #   run: mkdir build
-      # - name: Run Linters
-      #   run: yarn lint
-      - name: Run tests
-        run: yarn test
+      - name: Publish binaries
+        run: yarn package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_PRE_GYP_GITHUB_TOKEN }}

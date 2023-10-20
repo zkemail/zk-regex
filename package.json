@@ -15,7 +15,8 @@
   ],
   "scripts": {
     "postinstall": "cargo install --path ./packages/compiler",
-    "test": "yarn workspaces -pt run test"
+    "test": "yarn workspaces -pt run test",
+    "package": "yarn workspaces -pt run package"
   },
   "repository": {
     "type": "git",
