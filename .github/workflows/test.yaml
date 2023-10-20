@@ -25,7 +25,7 @@ jobs:
         run: wget https://github.com/iden3/circom/releases/latest/download/circom-windows-amd64.exe -O /usr/local/bin/circom
       - name: Download circom (Macos)
         if: ${{ matrix.os == 'macos-latest'}}
-        run: wget https://github.com/iden3/circom/releases/latest/download/circom-macos-amd64.exe -O /usr/local/bin/circom
+        run: wget https://github.com/iden3/circom/releases/latest/download/circom-macos-amd64 -O /usr/local/bin/circom
       - name: Update permission
         run: chmod +x /usr/local/bin/circom
       - name: Install yarn
