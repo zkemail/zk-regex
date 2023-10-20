@@ -38,6 +38,6 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Publish binaries
-        run: npm run package
+        run: npm run upload-binary
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_PRE_GYP_GITHUB_TOKEN }}

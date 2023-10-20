@@ -11,7 +11,7 @@
   ],
   "scripts": {
     "test": "jest",
-    "package": "echo"
+    "upload-binary": "echo"
   },
   "dependencies": {
     "commander": "^11.0.0",
