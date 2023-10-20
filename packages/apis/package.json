@@ -14,7 +14,7 @@
     "url": "git+https://github.com/zkemail/zk-regex.git"
   },
   "scripts": {
-    "build": "npx cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
+    "build": "cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
     "build-debug": "npm run build --",
     "build-release": "npm run build -- --release",
     "install": "node-pre-gyp install --fallback-to-build=false || npm run build-release",
