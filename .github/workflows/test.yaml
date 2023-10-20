@@ -26,13 +26,13 @@ jobs:
       - name: Download circom (Macos)
         if: ${{ matrix.os == 'macos-latest'}}
         run: curl https://github.com/iden3/circom/releases/latest/download/circom-macos-amd64 -o /usr/local/bin/circom && chmod +x /usr/local/bin/circom
-      - name: Install yarn
-        run: npm install -g yarn
+      # - name: Install yarn
+      #   run: npm install -g yarn
       - name: Install dependencies
-        run: yarn
+        run: npm install
       # - name: Create build folder
       #   run: mkdir build
       # - name: Run Linters
       #   run: yarn lint
       - name: Run tests
-        run: yarn test
+        run: npm run test
