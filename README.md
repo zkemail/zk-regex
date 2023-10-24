@@ -51,15 +51,15 @@ For example, if you want to verify the regex of `email was meant for @(a|b|c|d|e
      "parts":[
          {
              "is_public": false,
-             "regex_def": "email was meant for @",
+             "regex_def": "email was meant for @"
          },
          {
              "is_public": true,
-             "regex_def": "(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z)+",
+             "regex_def": "(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z)+"
          },
          {
              "is_public": false,
-             "regex_def": ".",
+             "regex_def": "."
          }
      ]
 }
