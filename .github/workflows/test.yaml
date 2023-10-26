@@ -22,10 +22,10 @@ jobs:
       # - name: Install yarn
       #   run: npm install -g yarn
       - name: Install dependencies
-        run: npm install
+        run: yarn
       # - name: Create build folder
       #   run: mkdir build
       # - name: Run Linters
       #   run: yarn lint
       - name: Run tests
-        run: npm run test
+        run: yarn test

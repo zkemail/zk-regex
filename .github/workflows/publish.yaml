@@ -36,8 +36,8 @@ jobs:
       # - name: Install yarn
       #   run: npm install -g yarn
       - name: Install dependencies
-        run: npm install
+        run: yarn
       - name: Publish binaries
-        run: npm run upload-binary
+        run: yarn upload-binary
         env:
           NODE_PRE_GYP_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
