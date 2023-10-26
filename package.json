@@ -14,6 +14,7 @@
     "Yush G <aayushg@mit.edu>"
   ],
   "scripts": {
+    "install": "yarn workspaces -pt install",
     "postinstall": "cargo install --path ./packages/compiler",
     "test": "yarn workspaces -pt run test",
     "upload-binary": "yarn workspaces -pt run upload-binary"
