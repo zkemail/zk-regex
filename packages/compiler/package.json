@@ -17,7 +17,7 @@
     "build": "cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
     "build-debug": "npm run build --",
     "build-release": "npm run build -- --release",
-    "install": "node-pre-gyp install --fallback-to-build=false && cp ./native/index.node ./index.node || npm run build-release",
+    "install": "node-pre-gyp install --fallback-to-build=false || npm run build-release",
     "test": "cargo test",
     "package": "cp index.node native && node-pre-gyp package",
     "upload-binary": "npm run package && node-pre-gyp-github publish"
@@ -33,6 +33,6 @@
     "host": "https://github.com/zkemail/zk-regex/releases/download/",
     "remote_path": "{version}",
     "package_name": "compiler-{node_abi}-{platform}-{arch}.tar.gz",
-    "module_path": "./native"
+    "module_path": "./"
   }
 }

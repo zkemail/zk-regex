@@ -15,6 +15,7 @@
   ],
   "scripts": {
     "install": "yarn workspaces -pt run install",
+    "build": "yarn workspaces -pt run build",
     "postinstall": "cargo install --path ./packages/compiler",
     "test": "yarn workspaces -pt run test",
     "upload-binary": "yarn workspaces -pt run upload-binary"

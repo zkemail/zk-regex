@@ -12,6 +12,7 @@
   "scripts": {
     "test": "jest",
     "install": "echo",
+    "build": "echo",
     "upload-binary": "echo"
   },
   "dependencies": {
