@@ -19,7 +19,7 @@
     "build-release": "npm run build -- --release",
     "install": "node-pre-gyp install --fallback-to-build=false || npm run build-release",
     "test": "cargo test",
-    "package": "cp index.node native && node-pre-gyp package",
+    "package": "node-pre-gyp package",
     "upload-binary": "npm run package && node-pre-gyp-github publish"
   },
   "license": "MIT",

@@ -33,11 +33,11 @@ jobs:
       - name: Download circom (Macos)
         if: ${{ matrix.os == 'macos-latest'}}
         run: curl https://github.com/iden3/circom/releases/latest/download/circom-macos-amd64 -o /usr/local/bin/circom && chmod +x /usr/local/bin/circom
-      - name: Install yarn
-        run: npm install -g yarn
+      # - name: Install yarn
+      #   run: npm install -g yarn
       - name: Install dependencies
-        run: yarn
+        run: npm install
       - name: Publish binaries
-        run: yarn upload-binary
+        run: npm run upload-binary
         env:
           NODE_PRE_GYP_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
