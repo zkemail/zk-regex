@@ -10,6 +10,42 @@
 // const whitespace = Object.values(escapeMap);
 // const slash_s = whitespace.join("|");
 
+type CusNode = {
+    type?: string;
+    sub?: CusNode;
+    parts?: CusNode[];
+    text?: string;
+    begin: number;
+    end: number;
+}
+
+type Edge = [string, NfaNode];
+
+type NfaNode = {
+  type: string;
+  edges: Edge[];
+  id?: string | number;
+};
+
+type DfaNode = {
+    id: string | number;
+    key: string,
+    items: NfaNode[],
+    symbols: string[],
+    type: string,
+    edges: Edge[],
+    trans: {[key: string]: any}
+};
+
+type Closure = {
+    id: string | number;
+    key: string;
+    items: NfaNode[];
+    symbols: string[];
+    type: string;
+    edges: Edge[];
+    trans: Record<string, any>;
+}
 /**
  * Try parsing simple regular expression to syntax tree.
  *
@@ -29,17 +65,20 @@
  * @return {string|object} Returns a string that is an error message if failed to parse the expression,
  *                         otherwise returns an object which is the syntax tree.
  */
-function parseRegex(text) {
+function parseRegex(text: string) : CusNode | string {
     'use strict';
-    function parseSub(text, begin, end, first) {
-        var i,
-            sub,
-            last = 0,
-            node = { 'begin': begin, 'end': end },
-            virNode,
-            tempNode,
-            stack = 0,
-            parts = [];
+    function parseSub(text: string, begin: number, end: number, first: boolean) : CusNode | string {
+        var i: number,
+            sub: CusNode | string,
+            last: number = 0,
+            node: CusNode = {
+                begin: begin,
+                end: end,
+            },
+            virNode: CusNode,
+            tempNode: CusNode,
+            stack: number = 0,
+            parts: CusNode[] = [];
         if (text.length === 0) {
             return 'Error: empty input at ' + begin + '.';
         }
@@ -171,15 +210,15 @@ function parseRegex(text) {
         return node;
     }
 
-    let char;
-    let new_text = [];
-    let i = 0;
-    let is_in_brancket = false;
-    let brancket_text = [];
+    let char: string = '';
+    let new_text: string = '';
+    let i: number = 0;
+    let is_in_brancket: boolean = false;
+    let brancket_text: string = '';
     while (i < text.length) {
         char = text[i];
         if (text[i] == '\\') {
-            char = [text[i + 1]];
+            char = text[i + 1];
             // new_text.push([text[i + 1]]);
             i += 1;
         }
@@ -189,7 +228,7 @@ function parseRegex(text) {
                 return `Error: unexpected [ at ${i}.`;
             }
             is_in_brancket = true;
-            brancket_text = [];
+            brancket_text = '';
             // new_text.push(char);
             i += 1;
         } else if (char === ']') {
@@ -198,10 +237,11 @@ function parseRegex(text) {
             }
             is_in_brancket = false;
             if (brancket_text[0] === '^') {
-                brancket_text.shift();
-                let rev_text = [];
-                let code_char = '';
-                const brancket_text_jsons = brancket_text.map(val => JSON.stringify(val));
+                brancket_text = brancket_text.slice(1);
+                let rev_text: string = '';
+                let code_char: string = '';
+                const brancket_text_array: string[] = brancket_text.split(''); 
+                const brancket_text_jsons: string[] = brancket_text_array.map((c) => JSON.stringify(c)); 
                 for (let idx = 0; idx < 255; idx++) {
                     code_char = String.fromCodePoint(idx);
                     if ([
@@ -219,21 +259,21 @@ function parseRegex(text) {
                         '|',
                         '-'
                     ].indexOf(code_char) != -1) {
-                        code_char = [code_char];
+                        code_char = code_char[0];
                     }
                     if (brancket_text_jsons.indexOf(JSON.stringify(code_char)) === -1) {
-                        rev_text.push(code_char);
+                        rev_text += code_char;                        
                     }
                 }
                 brancket_text = rev_text;
             }
-            new_text.push('(');
+            new_text += '(';
             for (const c of brancket_text) {
-                new_text.push(c);
-                new_text.push('|');
+                new_text += c;
+                new_text += '|';
             }
-            new_text.pop();
-            new_text.push(')');
+            new_text = new_text.slice(0, -1);
+            new_text += ')';
             i += 1;
         } else if (is_in_brancket) {
             if (!Array.isArray(char) && ['(', ')', '[', '*', '+', '?', 'ϵ'].includes(char)) {
@@ -244,10 +284,10 @@ function parseRegex(text) {
             }
             // new_text.push(char);
             // new_text.push('|');
-            brancket_text.push(char);
+            brancket_text += char;
             i += 1;
         } else {
-            new_text.push(char);
+            new_text += char;
             i += 1;
         }
     }
@@ -257,17 +297,22 @@ function parseRegex(text) {
     return parseSub(new_text, 0, new_text.length, true);
 }
 
+
 /**
 * Convert regular expression to nondeterministic finite automaton.
 *
 * @param {string} text @see parseRegex()
 * @return {object|string}
 */
-function regexToNfa(text) {
+function regexToNfa(text: string) : NfaNode | string {
     'use strict';
-    function generateGraph(node, start, end, count) {
-        var i, last, temp, tempStart, tempEnd;
-        if (!start.hasOwnProperty('id')) {
+    function generateGraph(node: CusNode, start: NfaNode, end: NfaNode, count: number) : number {
+        var i: number, 
+            last: { type: string; edges: any; }, 
+            temp: { type: string; edges: any; }, 
+            tempStart: { type: string; edges: any; }, 
+            tempEnd: { type: string; edges: any; };
+        if ('id' in start) {
             start.id = count;
             count += 1;
         }
@@ -276,23 +321,23 @@ function regexToNfa(text) {
                 start.edges.push(['ϵ', end]);
                 break;
             case 'text':
-                start.edges.push([node.text, end]);
+                start.edges.push([node.text!, end]);
                 break;
             case 'cat':
                 last = start;
-                for (i = 0; i < node.parts.length - 1; i += 1) {
+                for (i = 0; i < node.parts!.length - 1; i += 1) {
                     temp = { 'type': '', 'edges': [] };
-                    count = generateGraph(node.parts[i], last, temp, count);
+                    count = generateGraph(node.parts![i], last, temp, count);
                     last = temp;
                 }
-                count = generateGraph(node.parts[node.parts.length - 1], last, end, count);
+                count = generateGraph(node.parts![node.parts!.length - 1], last, end, count);
                 break;
             case 'or':
-                for (i = 0; i < node.parts.length; i += 1) {
+                for (i = 0; i < node.parts!.length; i += 1) {
                     tempStart = { 'type': '', 'edges': [] };
                     tempEnd = { 'type': '', 'edges': [['ϵ', end]] };
                     start.edges.push(['ϵ', tempStart]);
-                    count = generateGraph(node.parts[i], tempStart, tempEnd, count);
+                    count = generateGraph(node.parts![i], tempStart, tempEnd, count);
                 }
                 break;
             case 'star':
@@ -300,18 +345,18 @@ function regexToNfa(text) {
                 tempEnd = { 'type': '', 'edges': [['ϵ', tempStart], ['ϵ', end]] };
                 start.edges.push(['ϵ', tempStart]);
                 start.edges.push(['ϵ', end]);
-                count = generateGraph(node.sub, tempStart, tempEnd, count);
+                count = generateGraph(node.sub!, tempStart, tempEnd, count);
                 break;
         }
-        if (!end.hasOwnProperty('id')) {
+        if (!('id' in end)) {
             end.id = count;
             count += 1;
         }
         return count;
     }
-    var ast = parseRegex(text),
-        start = { 'type': 'start', 'edges': [] },
-        accept = { 'type': 'accept', 'edges': [] };
+    var ast: string | CusNode = parseRegex(text),
+        start: NfaNode = { 'type': '', 'edges': [] },
+        accept: NfaNode = { 'type': 'accept', 'edges': [] };
     if (typeof ast === 'string') {
         return ast;
     }
@@ -325,112 +370,119 @@ function regexToNfa(text) {
 * @param {object} nfa @see regexToNfa(), the function assumes that the given NFA is valid.
 * @return {object} dfa Returns the first element of the DFA.
 */
-function nfaToDfa(nfa) {
+function nfaToDfa(nfa: NfaNode) : DfaNode {
     'use strict';
-    function getClosure(nodes) {
-        var i,
-            closure = [],
-            stack = [],
-            symbols = [],
-            type = '',
-            top;
-        for (i = 0; i < nodes.length; i += 1) {
+    function getClosure(nodes: NfaNode[]): Closure {
+        const closure: NfaNode[] = [];
+        const stack: NfaNode[] = [];
+        const symbols: string[] = [];
+        let type = '';
+        let top: NfaNode;
+      
+        for (let i = 0; i < nodes.length; i++) {
             stack.push(nodes[i]);
             closure.push(nodes[i]);
             if (nodes[i].type === 'accept') {
                 type = 'accept';
             }
         }
+      
         while (stack.length > 0) {
-            top = stack.pop();
+            top = stack.pop()!;
             // If top is of type string and starts with "Error" then return error
             if (typeof top === 'string' && top[0] === 'E') {
                 continue;
             }
-            for (i = 0; i < top.edges.length; i += 1) {
-                if (top.edges[i][0] === 'ϵ') {
-                    if (closure.indexOf(top.edges[i][1]) < 0) {
-                        stack.push(top.edges[i][1]);
-                        closure.push(top.edges[i][1]);
-                        if (top.edges[i][1].type === 'accept') {
+            for (let i = 0; i < top.edges.length; i++) {
+                const [edgeSymbol, edgeNode] = top.edges[i];
+                if (edgeSymbol === 'ϵ') {
+                    if (!closure.includes(edgeNode)) {
+                        stack.push(edgeNode);
+                        closure.push(edgeNode);
+                        if (edgeNode.type === 'accept') {
                             type = 'accept';
                         }
                     }
                 } else {
-                    if (symbols.indexOf(top.edges[i][0]) < 0) {
-                        symbols.push(top.edges[i][0]);
+                    if (!symbols.includes(edgeSymbol)) {
+                        symbols.push(edgeSymbol);
                     }
                 }
             }
         }
-        closure.sort(function (a, b) {
-            return a.id - b.id;
+      
+        closure.sort((a, b) => {
+            if (a.id && b.id) {
+                return a.id > b.id ? 1 : -1;
+            }
+            return 0;
         });
         symbols.sort();
+      
         return {
-            'key': closure.map(function (x) {
-                return x.id;
-            }).join(','),
-            'items': closure,
-            'symbols': symbols,
-            'type': type,
-            'edges': [],
-            'trans': {}
+            id: '',
+            key: closure.map((x) => x.id).join(','),
+            items: closure,
+            symbols: symbols,
+            type: type,
+            edges: [],
+            trans: {},
         };
     }
-    function getClosedMove(closure, symbol) {
-        var i,
-            j,
-            node,
-            nexts = [];
-        for (i = 0; i < closure.items.length; i += 1) {
-            node = closure.items[i];
-            for (j = 0; j < node.edges.length; j += 1) {
-                if (symbol === node.edges[j][0]) {
-                    if (nexts.indexOf(node.edges[j][1]) < 0) {
-                        nexts.push(node.edges[j][1]);
-                    }
+    function getClosedMove(closure: Closure, symbol: string): Closure {
+        const nexts: NfaNode[] = [];
+        
+        for (const node of closure.items) {
+            for (const [edgeSymbol, edgeNode] of node.edges) {
+                if (symbol === edgeSymbol && !nexts.includes(edgeNode)) {
+                    nexts.push(edgeNode);
                 }
             }
         }
+        
         return getClosure(nexts);
     }
-    function toAlphaCount(n) {
-        var a = 'A'.charCodeAt(0),
-            z = 'Z'.charCodeAt(0),
-            len = z - a + 1,
-            s = '';
+    function toAlphaCount(n: number) {
+        var a: number = 'A'.charCodeAt(0),
+            z: number = 'Z'.charCodeAt(0),
+            len: number = z - a + 1,
+            s: string = '';
         while (n >= 0) {
             s = String.fromCharCode(n % len + a) + s;
             n = Math.floor(n / len) - 1;
         }
         return s;
     }
-    var i,
-        first = getClosure([nfa]),
-        states = {},
-        front = 0,
-        top,
-        closure,
-        queue = [first],
-        count = 0;
+    let i: number;
+    const first: DfaNode = getClosure([nfa]);
+    const states: Record<string, DfaNode> = {};
+    let front = 0;
+    let top: DfaNode;
+    let closure: Closure;
+    const queue: DfaNode[] = [first];
+    let count = 0;
     first.id = toAlphaCount(count);
     states[first.key] = first;
+    
     while (front < queue.length) {
-        top = queue[front];
-        front += 1;
-        for (i = 0; i < top.symbols.length; i += 1) {
-            closure = getClosedMove(top, top.symbols[i]);
-            if (!states.hasOwnProperty(closure.key)) {
-                count += 1;
-                closure.id = toAlphaCount(count);
-                states[closure.key] = closure;
-                queue.push(closure);
-            }
-            top.trans[top.symbols[i]] = states[closure.key];
-            top.edges.push([top.symbols[i], states[closure.key]]);
+      top = queue[front];
+      front += 1;
+    
+      for (i = 0; i < top.symbols.length; i += 1) {
+        closure = getClosedMove(top, top.symbols[i]);
+    
+        if (!(closure.key in states)) {
+          count += 1;
+          closure.id = toAlphaCount(count);
+          states[closure.key] = closure;
+          queue.push(closure);
         }
+    
+        top.trans[top.symbols[i]] = states[closure.key];
+        top.edges.push([top.symbols[i], states[closure.key]]);
+      }
     }
+    
     return first;
 }
 
@@ -442,99 +494,132 @@ function nfaToDfa(nfa) {
 */
 function minDfa(dfa) {
     'use strict';
-    function getReverseEdges(start) {
-        var i, top, symbol, next,
-            front = 0,
-            queue = [start],
-            visited = {},
-            symbols = {},   // The input alphabet
-            idMap = {},     // Map id to states
-            revEdges = {};  // Map id to the ids which connects to the id with an alphabet
+    function getReverseEdges(start: DfaNode): [string[], Record<string, DfaNode>, Record<string, Record<string, string[]>>] {
+        const symbols: Record<string, boolean> = {}; // The input alphabet
+        const idMap: Record<string, DfaNode> = {}; // Map id to states
+        const revEdges: Record<string, Record<string, any[]>> = {}; // Map id to the ids which connects to the id with an alphabet
+        const visited: Record<string, boolean> = {};
         visited[start.id] = true;
+      
+        const queue: DfaNode[] = [start];
+        let front = 0;
+        let top: DfaNode;
+        let symbol: string;
+        let next: DfaNode;
+      
         while (front < queue.length) {
-            top = queue[front];
-            front += 1;
-            idMap[top.id] = top;
-            for (i = 0; i < top.symbols.length; i += 1) {
-                symbol = top.symbols[i];
-                if (!symbols.hasOwnProperty(symbol)) {
-                    symbols[symbol] = true;
-                }
-                next = top.trans[symbol];
-                if (!revEdges.hasOwnProperty(next.id)) {
-                    revEdges[next.id] = {};
-                }
-                if (!revEdges[next.id].hasOwnProperty(symbol)) {
-                    revEdges[next.id][symbol] = [];
-                }
-                revEdges[next.id][symbol].push(top.id);
-                if (!visited.hasOwnProperty(next.id)) {
-                    visited[next.id] = true;
-                    queue.push(next);
-                }
+          top = queue[front];
+          front += 1;
+          idMap[top.id] = top;
+      
+          for (symbol of top.symbols) {
+            if (!(symbol in symbols)) {
+              symbols[symbol] = true;
             }
+      
+            next = top.trans[symbol];
+      
+            if (!(next.id in revEdges)) {
+              revEdges[next.id] = {};
+            }
+
+            if (!(symbol in revEdges[next.id])) {
+              revEdges[next.id][symbol] = [];
+            }
+      
+            revEdges[next.id][symbol].push(top.id);
+      
+            if (!(next.id in visited)) {
+              visited[next.id] = true;
+              queue.push(next);
+            }
+          }
         }
+      
         return [Object.keys(symbols), idMap, revEdges];
     }
-    function hopcroft(symbols, idMap, revEdges) {
-        var i, j, k, keys, key, key1, key2, top, group1, group2, symbol, revGroup,
-            ids = Object.keys(idMap).sort(),
-            partitions = {},
-            front = 0,
-            queue = [],
-            visited = {};
+    function hopcroft(symbols: string[], idMap: Record<string, DfaNode>, revEdges: Record<string, Record<string, string[]>>): string[][] {
+        const ids = Object.keys(idMap).sort();
+        const partitions: Record<string, string[]> = {};
+        const queue: (string | null)[] = [];
+        const visited: Record<string, number> = {};
+        
+        let front = 0;
+        let top: string[] | string | null;
+        let i: number;
+        let j: number;
+        let k: number;
+        let keys: string[];
+        let key: string;
+        let key1: string;
+        let key2: string;
+        let group1: string[];
+        let group2: string[];
+        let symbol: string;
+        let revGroup: Record<string, boolean>;
+        
         group1 = [];
         group2 = [];
+        
         for (i = 0; i < ids.length; i += 1) {
             if (idMap[ids[i]].type === 'accept') {
-                group1.push(ids[i]);
+            group1.push(ids[i]);
             } else {
-                group2.push(ids[i]);
+            group2.push(ids[i]);
             }
         }
+        
         key = group1.join(',');
         partitions[key] = group1;
         queue.push(key);
         visited[key] = 0;
+        
         if (group2.length !== 0) {
             key = group2.join(',');
             partitions[key] = group2;
             queue.push(key);
         }
+        
         while (front < queue.length) {
             top = queue[front];
             front += 1;
-            if (top) {
+        
+            if (top !== null) {
                 top = top.split(',');
-                for (i = 0; i < symbols.length; i += 1) {
-                    symbol = symbols[i];
+            
+                for (symbol of symbols) {
                     revGroup = {};
+            
                     for (j = 0; j < top.length; j += 1) {
-                        if (revEdges.hasOwnProperty(top[j]) && revEdges[top[j]].hasOwnProperty(symbol)) {
+                        if (top[j] in revEdges && symbol in revEdges[top[j]]) {
                             for (k = 0; k < revEdges[top[j]][symbol].length; k += 1) {
                                 revGroup[revEdges[top[j]][symbol][k]] = true;
                             }
                         }
                     }
+            
                     keys = Object.keys(partitions);
-                    for (j = 0; j < keys.length; j += 1) {
-                        key = keys[j];
+            
+                    for (key of keys) {
                         group1 = [];
                         group2 = [];
+            
                         for (k = 0; k < partitions[key].length; k += 1) {
-                            if (revGroup.hasOwnProperty(partitions[key][k])) {
+                            if (partitions[key][k] in revGroup) {
                                 group1.push(partitions[key][k]);
                             } else {
                                 group2.push(partitions[key][k]);
                             }
                         }
+                
                         if (group1.length !== 0 && group2.length !== 0) {
                             delete partitions[key];
                             key1 = group1.join(',');
                             key2 = group2.join(',');
                             partitions[key1] = group1;
                             partitions[key2] = group2;
-                            if (visited.hasOwnProperty(key1)) {
+                
+                            if (key1 in visited) {
                                 queue[visited[key1]] = null;
                                 visited[key1] = queue.length;
                                 queue.push(key1);
@@ -624,9 +709,9 @@ function minDfa(dfa) {
     return buildMinNfa(dfa, partitions, idMap, revEdges);
 }
 
-function toNature(col) {
-    var i,
-        j,
+function toNature(col: string) {
+    var i: number,
+        j: number,
         base = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
         result = 0;
     if ('1' <= col[0] && col[0] <= '9') {
@@ -649,10 +734,10 @@ function toNature(col) {
 // const word_char = '(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|_)';
 
 
-function regexToDfa(regex) {
+function regexToDfa(regex: string) {
     let nfa = regexToNfa(regex);
     let dfa = minDfa(nfaToDfa(nfa));
-    var i,
+    var i: number,
         states = {},
         nodes = [],
         stack = [dfa],
