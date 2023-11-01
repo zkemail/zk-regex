@@ -10,12 +10,12 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
     const rev_graph: Record<number, Record<number, number[]>> = {};
     const to_init_graph: number[][] = [];
     let init_going_state: number | null = null;
-  
+
     for (let i = 0; i < N; i++) {
         rev_graph[i] = {};
         to_init_graph.push([]);
     }
-  
+
     let accept_nodes: Set<number> = new Set();
     for (let i = 0; i < N; i++) {
         const node = graph_json[i];
@@ -30,7 +30,7 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
                 }
                 for (let j = 0; j < rev_graph[v][i].length; j++) {
                     if (rev_graph[v][i][j] == 255) {
-                    continue;
+                        continue;
                     }
                     to_init_graph[v].push(rev_graph[v][i][j]);
                 }
@@ -40,7 +40,7 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
             accept_nodes.add(i);
         }
     }
-  
+
     if (init_going_state !== null) {
         for (const [going_state, chars] of Object.entries(to_init_graph)) {
             if (chars.length === 0) {
@@ -52,7 +52,7 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
             rev_graph[going_state][init_going_state] = rev_graph[going_state][init_going_state].concat(chars);
         }
     }
-  
+
     if (accept_nodes[0] === null) {
         throw new Error("accept node must not be 0");
     }
@@ -68,7 +68,7 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
 
     let lines: string[] = [];
     lines.push(`\tfor (var i = 0; i < num_bytes; i++) {`);
-    
+
     // const uppercase = new Set(Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ").map(c => c.charCodeAt()));
     // const lowercase = new Set(Array.from("abcdefghijklmnopqrstuvwxyz").map(c => c.charCodeAt()));
     // const digits = new Set(Array.from("0123456789").map(c => c.charCodeAt()));
@@ -113,13 +113,13 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
             const min_maxes: [number, number][] = [];
             let cur_min: number = k[0];
             let cur_max: number = k[0];
-            
+
             for (let idx = 1; idx < k.length; ++idx) {
                 if (cur_max + 1 === k[idx]) {
                     cur_max += 1;
                 } else {
                     if (cur_max - cur_min >= 16) {
-                    min_maxes.push([cur_min, cur_max]);
+                        min_maxes.push([cur_min, cur_max]);
                     }
                     cur_min = k[idx];
                     cur_max = k[idx];
