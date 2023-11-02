@@ -57,6 +57,13 @@ function genCircomAllstr(graph_json, template_name) {
     let and_i = 0;
     let multi_or_i = 0;
 
+    const range_checks = new Array(256);
+    for (let i = 0; i < 256; i++) {
+        range_checks[i] = new Array(256);
+    }
+    const eq_checks = new Array(256);
+
+
     let lines = [];
     lines.push("\tfor (var i = 0; i < num_bytes; i++) {");
 
@@ -152,29 +159,43 @@ function genCircomAllstr(graph_json, template_name) {
             // }
 
             for (let min_max of min_maxes) {
-                lines.push(`\t\tlt[${lt_i}][i] = LessEqThan(8);`);
-                lines.push(`\t\tlt[${lt_i}][i].in[0] <== ${min_max[0]};`);
-                lines.push(`\t\tlt[${lt_i}][i].in[1] <== in[i];`);
+                const min = min_max[0];
+                const max = min_max[1];
+                if (range_checks[min][max] === undefined) {
+                    lines.push(`\t\tlt[${lt_i}][i] = LessEqThan(8);`);
+                    lines.push(`\t\tlt[${lt_i}][i].in[0] <== ${min};`);
+                    lines.push(`\t\tlt[${lt_i}][i].in[1] <== in[i];`);
 
-                lines.push(`\t\tlt[${lt_i + 1}][i] = LessEqThan(8);`);
-                lines.push(`\t\tlt[${lt_i + 1}][i].in[0] <== in[i];`);
-                lines.push(`\t\tlt[${lt_i + 1}][i].in[1] <== ${min_max[1]};`);
+                    lines.push(`\t\tlt[${lt_i + 1}][i] = LessEqThan(8);`);
+                    lines.push(`\t\tlt[${lt_i + 1}][i].in[0] <== in[i];`);
+                    lines.push(`\t\tlt[${lt_i + 1}][i].in[1] <== ${max};`);
 
-                lines.push(`\t\tand[${and_i}][i] = AND();`);
-                lines.push(`\t\tand[${and_i}][i].a <== lt[${lt_i}][i].out;`);
-                lines.push(`\t\tand[${and_i}][i].b <== lt[${lt_i + 1}][i].out;`);
+                    lines.push(`\t\tand[${and_i}][i] = AND();`);
+                    lines.push(`\t\tand[${and_i}][i].a <== lt[${lt_i}][i].out;`);
+                    lines.push(`\t\tand[${and_i}][i].b <== lt[${lt_i + 1}][i].out;`);
 
-                eq_outputs.push(['and', and_i]);
-                lt_i += 2
-                and_i += 1
+                    eq_outputs.push(['and', and_i]);
+                    range_checks[min][max] = [lt_i, and_i];
+                    lt_i += 2
+                    and_i += 1
+                } else {
+                    let [_, and_i] = range_checks[min][max];
+                    eq_outputs.push(['and', and_i]);
+                }
+
             }
 
             for (let code of vals) {
-                lines.push(`\t\teq[${eq_i}][i] = IsEqual();`);
-                lines.push(`\t\teq[${eq_i}][i].in[0] <== in[i];`);
-                lines.push(`\t\teq[${eq_i}][i].in[1] <== ${code};`);
-                eq_outputs.push(['eq', eq_i]);
-                eq_i += 1
+                if (eq_checks[code] === undefined) {
+                    lines.push(`\t\teq[${eq_i}][i] = IsEqual();`);
+                    lines.push(`\t\teq[${eq_i}][i].in[0] <== in[i];`);
+                    lines.push(`\t\teq[${eq_i}][i].in[1] <== ${code};`);
+                    eq_outputs.push(['eq', eq_i]);
+                    eq_checks[code] = eq_i;
+                    eq_i += 1
+                } else {
+                    eq_outputs.push(['eq', eq_checks[code]]);
+                }
             }
 
             lines.push(`\t\tand[${and_i}][i] = AND();`);
