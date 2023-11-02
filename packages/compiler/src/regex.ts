@@ -14,12 +14,12 @@ type CusNode = {
     type?: string;
     sub?: CusNode;
     parts?: CusNode[];
-    text?: string;
+    text?: string | [string];
     begin: number;
     end: number;
 }
 
-type NfaEdge = [string, NfaNode];
+type NfaEdge = [string | [string], NfaNode];
 
 type NfaNode = {
     type: string;
@@ -33,10 +33,11 @@ type DfaNode = {
     id: string | number;
     key: string,
     items: NfaNode[],
-    symbols: string[],
+    symbols: (string | [string])[],
     type: string,
     edges: DfaEdge[],
-    trans: Record<string, DfaNode>;
+    trans: { [key: string | [string]]: DfaNode },
+    // trans: Record<string | [string], DfaNode>;
     nature: number;
 };
 
@@ -61,7 +62,7 @@ type DfaNode = {
  */
 function parseRegex(text: string): CusNode | string {
     'use strict';
-    function parseSub(text: string, begin: number, end: number, first: boolean): CusNode | string {
+    function parseSub(text: (string | [string])[], begin: number, end: number, first: boolean): CusNode | string {
         var i: number,
             sub: CusNode | string,
             last: number = 0,
@@ -205,16 +206,16 @@ function parseRegex(text: string): CusNode | string {
         return node;
     }
 
-    let char: string = '';
-    let new_text: string = '';
+    let char: string | [string];
+    let new_text: (string | [string])[] = [];
     let i: number = 0;
     let is_in_brancket: boolean = false;
-    let brancket_text: string = '';
+    let brancket_text: (string | [string])[] = [];
     while (i < text.length) {
         char = text[i];
 
         if (text[i] == '\\') {
-            char = text[i + 1];
+            char = [text[i + 1]];
             // new_text.push([text[i + 1]]);
             i += 1;
         }
@@ -224,7 +225,7 @@ function parseRegex(text: string): CusNode | string {
                 return `Error: unexpected [ at ${i}.`;
             }
             is_in_brancket = true;
-            brancket_text = '';
+            brancket_text = [];
             // new_text.push(char);
             i += 1;
         } else if (char === ']') {
@@ -234,11 +235,10 @@ function parseRegex(text: string): CusNode | string {
             is_in_brancket = false;
 
             if (brancket_text[0] === '^') {
-                brancket_text = brancket_text.slice(1);
-                let rev_text: string = '';
-                let code_char: string = '';
-                const brancket_text_array: string[] = brancket_text.split('');
-                const brancket_text_jsons: string[] = brancket_text_array.map((c) => JSON.stringify(c));
+                brancket_text.shift();
+                let rev_text: (string | [string])[] = [];
+                let code_char: string | [string] = '';
+                const brancket_text_jsons = brancket_text.map(val => JSON.stringify(val));
                 for (let idx = 0; idx < 255; idx++) {
                     code_char = String.fromCodePoint(idx);
 
@@ -257,26 +257,26 @@ function parseRegex(text: string): CusNode | string {
                         '|',
                         '-'
                     ].indexOf(code_char) != -1) {
-                        code_char = code_char[0];
+                        code_char = [code_char];
                     }
 
                     if (brancket_text_jsons.indexOf(JSON.stringify(code_char)) === -1) {
-                        rev_text += code_char;
+                        rev_text.push(code_char);
                     }
                 }
 
                 brancket_text = rev_text;
             }
 
-            new_text += '(';
+            new_text.push('(');
 
             for (const c of brancket_text) {
-                new_text += c;
-                new_text += '|';
+                new_text.push(c);
+                new_text.push('|');
             }
 
             new_text = new_text.slice(0, -1);
-            new_text += ')';
+            new_text.push(')');
             i += 1;
         } else if (is_in_brancket) {
             if (!Array.isArray(char) && ['(', ')', '[', '*', '+', '?', 'ϵ'].includes(char)) {
@@ -288,10 +288,10 @@ function parseRegex(text: string): CusNode | string {
             }
             // new_text.push(char);
             // new_text.push('|');
-            brancket_text += char;
+            brancket_text.push(char);
             i += 1;
         } else {
-            new_text += char;
+            new_text.push(char);
             i += 1;
         }
     }
@@ -392,7 +392,7 @@ function nfaToDfa(nfa: NfaNode): DfaNode {
     function getClosure(nodes: NfaNode[]): DfaNode {
         const closure: NfaNode[] = [];
         const stack: NfaNode[] = [];
-        const symbols: string[] = [];
+        const symbols: (string | [string])[] = [];
         let type = '';
         let top: NfaNode | string;
 
@@ -447,7 +447,7 @@ function nfaToDfa(nfa: NfaNode): DfaNode {
         };
     }
 
-    function getClosedMove(closure: DfaNode, symbol: string): DfaNode {
+    function getClosedMove(closure: DfaNode, symbol: string | [string]): DfaNode {
         const nexts: NfaNode[] = [];
 
         for (const node of closure.items) {
@@ -514,7 +514,7 @@ function nfaToDfa(nfa: NfaNode): DfaNode {
 * @param {object} dfa @see nfaToDfa(), the function assumes that the given DFA is valid.
 * @return {object} dfa Returns the first element of the minimum DFA.
 */
-function minDfa(dfa) {
+function minDfa(dfa: DfaNode) {
     'use strict';
     function getReverseEdges(start: DfaNode): [string[], Record<string, DfaNode>, Record<string, Record<string, (string | number)[]>>] {
         const symbols: Record<string, boolean> = {}; // The input alphabet
@@ -724,8 +724,8 @@ function minDfa(dfa) {
         });
 
         Object.keys(edges).forEach((from) => {
-            Object.keys(edges[from]).forEach((to) => {
-                const symbol = JSON.stringify(Object.keys(edges[from][to]).sort());
+            Object.keys(edges[Number(from)]).forEach((to) => {
+                const symbol = JSON.stringify(Object.keys(edges[Number(from)][Number(to)]).sort());
                 nodes[parseInt(from)].symbols.push(symbol);
                 nodes[parseInt(from)].edges.push([symbol, nodes[parseInt(to)]]);
                 nodes[parseInt(from)].trans[symbol] = nodes[parseInt(to)];
@@ -767,12 +767,13 @@ function toNature(col: string): number {
 
 function regexToDfa(regex: string): string {
     const nfa = regexToNfa(regex);
-
+    console.log(nfa);
     if (typeof nfa === 'string') {
         return nfa;
     }
 
     const dfa = minDfa(nfaToDfa(nfa));
+    console.log(dfa);
     const states: Record<string, DfaNode> = {};
     const nodes: DfaNode[] = [];
     const stack: DfaNode[] = [dfa];
@@ -809,7 +810,7 @@ function regexToDfa(regex: string): string {
         }
         graph[node.nature - 1] = curr;
     }
-    // console.log(`graph: ${JSON.stringify(graph, null, 2)}`);
+    console.log(`graph: ${JSON.stringify(graph, null, 2)}`);
 
     return JSON.stringify(graph);
 }

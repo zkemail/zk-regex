@@ -16,7 +16,7 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
         to_init_graph.push([]);
     }
 
-    let accept_nodes: Set<number> = new Set();
+    const accept_nodes: Set<number> = new Set();
     for (let i = 0; i < N; i++) {
         const node = graph_json[i];
         for (let k in node.edges) {
@@ -43,21 +43,22 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
 
     if (init_going_state !== null) {
         for (const [going_state, chars] of Object.entries(to_init_graph)) {
+            const going_state_num = Number(going_state);
             if (chars.length === 0) {
                 continue;
             }
-            if (rev_graph[going_state][init_going_state] == null) {
-                rev_graph[going_state][init_going_state] = [];
+            if (rev_graph[going_state_num][init_going_state] == null) {
+                rev_graph[going_state_num][init_going_state] = [];
             }
-            rev_graph[going_state][init_going_state] = rev_graph[going_state][init_going_state].concat(chars);
+            rev_graph[going_state_num][init_going_state] = rev_graph[going_state_num][init_going_state].concat(chars);
         }
     }
 
-    if (accept_nodes[0] === null) {
-        throw new Error("accept node must not be 0");
+    if (accept_nodes.size === 0) {
+        throw new Error("accept node must exist");
     }
-    accept_nodes.add([...accept_nodes][0]);
-    if (accept_nodes.size !== 1) {
+    const accept_nodes_array = [...accept_nodes];
+    if (accept_nodes_array.length !== 1) {
         throw new Error("the size of accept nodes must be one");
     }
 
@@ -80,8 +81,9 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
     for (let i = 1; i < N; i++) {
         const outputs: number[] = [];
         // let is_negates = [];
-        for (let prev_i of Object.keys(rev_graph[i])) {
-            const k = rev_graph[i][prev_i];
+        for (const prev_i of Object.keys(rev_graph[i])) {
+            const prev_i_num = Number(prev_i);
+            const k = rev_graph[i][prev_i_num];
             k.sort((a, b) => Number(a) - Number(b));
             const eq_outputs: [string, number][] = [];
             let vals: Set<number> = new Set(k);
@@ -270,7 +272,7 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
 
     lines = declarations.concat(init_code).concat(lines);
 
-    const accept_node: number = accept_nodes[0];
+    const accept_node: number = accept_nodes_array[0];
     const accept_lines = [""];
     accept_lines.push("\tcomponent final_state_result = MultiOR(num_bytes+1);");
     accept_lines.push("\tfor (var i = 0; i <= num_bytes; i++) {");

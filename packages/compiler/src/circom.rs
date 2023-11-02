@@ -25,6 +25,10 @@ impl RegexAndDFA {
         let circom = gen_circom_allstr(&self.dfa_val, template_name)?;
         if gen_substrs {
             self.add_substrs_constraints(circom_path, circom)?;
+        } else {
+            let mut circom_file = File::create(circom_path)?;
+            write!(circom_file, "{}", circom)?;
+            circom_file.flush()?;
         }
         Ok(())
     }

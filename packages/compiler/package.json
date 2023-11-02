@@ -1,6 +1,6 @@
 {
   "name": "@zk-email/zk-regex-compiler",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "a compiler to generate a regex verification circuit in circom from a user-defined regex. Please check [zk-regex](https://github.com/zkemail/zk-regex/tree/main) for the detail.",
   "main": "index.node",
   "contributors": [
@@ -14,19 +14,20 @@
     "url": "git+https://github.com/zkemail/zk-regex.git"
   },
   "scripts": {
-    "build": "cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
+    "build": "npx tsc && cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
     "build-debug": "npm run build --",
     "build-release": "npm run build -- --release",
-    "install": "node-pre-gyp install --fallback-to-build=false || npm run build-release",
+    "install": "npx tsc && node-pre-gyp install --fallback-to-build=false || npm run build-release",
     "test": "cargo test",
     "package": "node-pre-gyp package",
     "upload-binary": "npm run package && node-pre-gyp-github publish"
   },
   "license": "MIT",
   "dependencies": {
-    "cargo-cp-artifact": "^0.1",
     "@mapbox/node-pre-gyp": "^1.0",
-    "node-pre-gyp-github": "https://github.com/ultamatt/node-pre-gyp-github.git"
+    "cargo-cp-artifact": "^0.1",
+    "node-pre-gyp-github": "https://github.com/ultamatt/node-pre-gyp-github.git",
+    "typescript": "^5.2.2"
   },
   "binary": {
     "module_name": "index",
