@@ -1,27 +1,19 @@
-type Graph = {
-    type: string;
-    edges: Record<string, number>;
-}[];
-
-function genCircomAllstr(graph_json: Graph, template_name: string): string {
-    const N: number = graph_json.length;
+function genCircomAllstr(graph_json, template_name) {
+    const N = graph_json.length;
     // console.log(JSON.stringify(graph_json, null, 2));
     // const graph = Array(N).fill({});
-    const rev_graph: Record<number, Record<number, number[]>> = {};
-    const to_init_graph: number[][] = [];
-    let init_going_state: number | null = null;
-
+    const rev_graph = [];
+    const to_init_graph = [];
+    let init_going_state = null;
     for (let i = 0; i < N; i++) {
-        rev_graph[i] = {};
+        rev_graph.push({});
         to_init_graph.push([]);
     }
-
-    let accept_nodes: Set<number> = new Set();
+    let accept_nodes = new Set();
     for (let i = 0; i < N; i++) {
-        const node = graph_json[i];
-        for (let k in node.edges) {
-            const v: number = node.edges[k];
-            rev_graph[v][i] = Array.from(JSON.parse(k)).map(c => (c as string).charCodeAt(0));
+        for (let k in graph_json[i]["edges"]) {
+            const v = graph_json[i]["edges"][k];
+            rev_graph[v][i] = Array.from(JSON.parse(k)).map(c => c.charCodeAt());
             if (i === 0) {
                 const index = rev_graph[v][i].indexOf(94);
                 if (index !== -1) {
@@ -36,11 +28,10 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
                 }
             }
         }
-        if (node.type == "accept") {
+        if (graph_json[i]["type"] == "accept") {
             accept_nodes.add(i);
         }
     }
-
     if (init_going_state !== null) {
         for (const [going_state, chars] of Object.entries(to_init_graph)) {
             if (chars.length === 0) {
@@ -56,18 +47,18 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
     if (accept_nodes[0] === null) {
         throw new Error("accept node must not be 0");
     }
-    accept_nodes.add([...accept_nodes][0]);
-    if (accept_nodes.size !== 1) {
+    accept_nodes = [...accept_nodes];
+    if (accept_nodes.length !== 1) {
         throw new Error("the size of accept nodes must be one");
     }
 
-    let eq_i: number = 0;
-    let lt_i: number = 0;
-    let and_i: number = 0;
-    let multi_or_i: number = 0;
+    let eq_i = 0;
+    let lt_i = 0;
+    let and_i = 0;
+    let multi_or_i = 0;
 
-    let lines: string[] = [];
-    lines.push(`\tfor (var i = 0; i < num_bytes; i++) {`);
+    let lines = [];
+    lines.push("\tfor (var i = 0; i < num_bytes; i++) {");
 
     // const uppercase = new Set(Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ").map(c => c.charCodeAt()));
     // const lowercase = new Set(Array.from("abcdefghijklmnopqrstuvwxyz").map(c => c.charCodeAt()));
@@ -76,15 +67,16 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
     // const symbols2 = new Set(["[", "\\", "]", "^", "_", "`"].map(c => c.charCodeAt()));
     // const symbols3 = new Set(["{", "|", "}", "~"].map(c => c.charCodeAt()));
     lines.push(`\t\tstate_changed[i] = MultiOR(${N - 1});`);
-
     for (let i = 1; i < N; i++) {
-        const outputs: number[] = [];
+        const outputs = [];
         // let is_negates = [];
         for (let prev_i of Object.keys(rev_graph[i])) {
             const k = rev_graph[i][prev_i];
-            k.sort((a, b) => Number(a) - Number(b));
-            const eq_outputs: [string, number][] = [];
-            let vals: Set<number> = new Set(k);
+            k.sort((a, b) => {
+                Number(a) - Number(b);
+            });
+            const eq_outputs = [];
+            let vals = new Set(k);
             // let is_negate = false;
             // if (vals.has(0xff)) {
             //     vals.delete(0xff);
@@ -110,10 +102,9 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
             //         }
             //     }
             // }
-            const min_maxes: [number, number][] = [];
-            let cur_min: number = k[0];
-            let cur_max: number = k[0];
-
+            const min_maxes = [];
+            let cur_min = k[0];
+            let cur_max = k[0];
             for (let idx = 1; idx < k.length; ++idx) {
                 if (cur_max + 1 === k[idx]) {
                     cur_max += 1;
@@ -125,7 +116,6 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
                     cur_max = k[idx];
                 }
             }
-
             if (cur_max - cur_min >= 16) {
                 min_maxes.push([cur_min, cur_max]);
             }
@@ -175,8 +165,8 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
                 lines.push(`\t\tand[${and_i}][i].b <== lt[${lt_i + 1}][i].out;`);
 
                 eq_outputs.push(['and', and_i]);
-                lt_i += 2;
-                and_i += 1;
+                lt_i += 2
+                and_i += 1
             }
 
             for (let code of vals) {
@@ -184,7 +174,7 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
                 lines.push(`\t\teq[${eq_i}][i].in[0] <== in[i];`);
                 lines.push(`\t\teq[${eq_i}][i].in[1] <== ${code};`);
                 eq_outputs.push(['eq', eq_i]);
-                eq_i += 1;
+                eq_i += 1
             }
 
             lines.push(`\t\tand[${and_i}][i] = AND();`);
@@ -207,7 +197,7 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
                 //     lines.push(`\t\tand[${and_i}][i].b <== multi_or[${multi_or_i}][i].out;`);
                 // }
                 lines.push(`\t\tand[${and_i}][i].b <== multi_or[${multi_or_i}][i].out;`);
-                multi_or_i += 1;
+                multi_or_i += 1
             }
 
             outputs.push(and_i);
@@ -222,17 +212,15 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
                 lines.push(`\t\tmulti_or[${multi_or_i}][i].in[${output_i}] <== and[${outputs[output_i]}][i].out;`);
             }
             lines.push(`\t\tstates[i+1][${i}] <== multi_or[${multi_or_i}][i].out;`);
-            multi_or_i += 1;
+            multi_or_i += 1
         }
-
         lines.push(`\t\tstate_changed[i].in[${i - 1}] <== states[i+1][${i}];`);
     }
-
     lines.push(`\t\tstates[i+1][0] <== 1 - state_changed[i].out;`);
-    lines.push(`\t}`);
+    lines.push("\t}");
 
 
-    const declarations: string[] = [];
+    const declarations = [];
     declarations.push(`pragma circom 2.1.5;\n`);
     declarations.push(`include "@zk-email/zk-regex-circom/circuits/regex_helpers.circom";\n`);
     // declarations.push(`pragma circom 2.1.5;\ninclude "@zk-email/circuits/regexes/regex_helpers.circom";\n`);
@@ -261,7 +249,7 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
     declarations.push(`\tcomponent state_changed[num_bytes];`);
     declarations.push("");
 
-    const init_code: string[] = [];
+    const init_code = [];
     init_code.push(`\tstates[0][0] <== 1;`);
     init_code.push(`\tfor (var i = 1; i < ${N}; i++) {`);
     init_code.push(`\t\tstates[0][i] <== 0;`);
@@ -270,7 +258,7 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
 
     lines = declarations.concat(init_code).concat(lines);
 
-    const accept_node: number = accept_nodes[0];
+    const accept_node = accept_nodes[0];
     const accept_lines = [""];
     accept_lines.push("\tcomponent final_state_result = MultiOR(num_bytes+1);");
     accept_lines.push("\tfor (var i = 0; i <= num_bytes; i++) {");
@@ -279,27 +267,26 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
     accept_lines.push("\tout <== final_state_result.out;");
 
     lines = lines.concat(accept_lines);
-    let string: string = lines.reduce((res, line) => res + line + "\n", "");
+    let string = lines.reduce((res, line) => res + line + "\n", "");
     return string;
 }
 
 
-// Commented these two out as they're only used by the code that's also commented out
 
-// Set.prototype.isSuperset = function (subset) {
-//     if (this.size === 0) {
-//         return false;
-//     }
-//     for (var elem of subset) {
-//         if (!this.has(elem)) {
-//             return false;
-//         }
-//     }
-//     return true;
-// }
+Set.prototype.isSuperset = function (subset) {
+    if (this.size === 0) {
+        return false;
+    }
+    for (var elem of subset) {
+        if (!this.has(elem)) {
+            return false;
+        }
+    }
+    return true;
+}
 
-// Set.prototype.difference = function (setB) {
-//     for (let elem of setB) {
-//         this.delete(elem)
-//     }
-// }
+Set.prototype.difference = function (setB) {
+    for (let elem of setB) {
+        this.delete(elem)
+    }
+}
