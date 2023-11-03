@@ -27,7 +27,7 @@ type NfaNode = {
     id?: string | number;
 };
 
-type DfaEdge = [string, DfaNode];
+type DfaEdge = [string | [string], DfaNode];
 
 type DfaNode = {
     id: string | number;
@@ -36,8 +36,7 @@ type DfaNode = {
     symbols: (string | [string])[],
     type: string,
     edges: DfaEdge[],
-    trans: { [key: string | [string]]: DfaNode },
-    // trans: Record<string | [string], DfaNode>;
+    trans: Record<string, DfaNode>;
     nature: number;
 };
 
@@ -500,7 +499,7 @@ function nfaToDfa(nfa: NfaNode): DfaNode {
                 queue.push(closure);
             }
 
-            top.trans[top.symbols[i]] = states[closure.key];
+            top.trans[top.symbols[i] as string] = states[closure.key];
             top.edges.push([top.symbols[i], states[closure.key]]);
         }
     }
@@ -526,7 +525,7 @@ function minDfa(dfa: DfaNode) {
         const queue: DfaNode[] = [start];
         let front = 0;
         let top: DfaNode;
-        let symbol: string;
+        let symbol: string | [string];
         let next: DfaNode;
 
         while (front < queue.length) {
@@ -535,21 +534,22 @@ function minDfa(dfa: DfaNode) {
             idMap[top.id] = top;
 
             for (symbol of top.symbols) {
-                if (!(symbol in symbols)) {
-                    symbols[symbol] = true;
+                const symbolString = symbol as string;
+                if (!(symbolString in symbols)) {
+                    symbols[symbolString] = true;
                 }
 
-                next = top.trans[symbol];
+                next = top.trans[symbolString];
 
                 if (!(next.id in revEdges)) {
                     revEdges[next.id] = {};
                 }
 
-                if (!(symbol in revEdges[next.id])) {
-                    revEdges[next.id][symbol] = [];
+                if (!(symbolString in revEdges[next.id])) {
+                    revEdges[next.id][symbolString] = [];
                 }
 
-                revEdges[next.id][symbol].push(top.id);
+                revEdges[next.id][symbolString].push(top.id);
 
                 if (!(next.id in visited)) {
                     visited[next.id] = true;
@@ -786,8 +786,8 @@ function regexToDfa(regex: string): string {
             top.nature = toNature(top.id.toString());
             nodes.push(top);
             for (const [symbol, node] of top.edges) {
-                if (symbol !== 'ϵ' && !symbols.includes(symbol)) {
-                    symbols.push(symbol);
+                if (symbol !== 'ϵ' && !symbols.includes(symbol as string)) {
+                    symbols.push(symbol as string);
                 }
                 stack.push(node);
             }
