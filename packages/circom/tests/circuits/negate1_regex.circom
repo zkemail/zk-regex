@@ -16,7 +16,7 @@ template Negate1Regex(msg_bytes) {
 	component eq[3][num_bytes];
 	component lt[6][num_bytes];
 	component and[8][num_bytes];
-	component multi_or[3][num_bytes];
+	component multi_or[2][num_bytes];
 	signal states[num_bytes+1][5];
 	component state_changed[num_bytes];
 
@@ -63,15 +63,11 @@ template Negate1Regex(msg_bytes) {
 		and[3][i].b <== multi_or[0][i].out;
 		and[4][i] = AND();
 		and[4][i].a <== states[i][3];
-		multi_or[1][i] = MultiOR(3);
-		multi_or[1][i].in[0] <== and[0][i].out;
-		multi_or[1][i].in[1] <== and[1][i].out;
-		multi_or[1][i].in[2] <== and[2][i].out;
-		and[4][i].b <== multi_or[1][i].out;
-		multi_or[2][i] = MultiOR(2);
-		multi_or[2][i].in[0] <== and[3][i].out;
-		multi_or[2][i].in[1] <== and[4][i].out;
-		states[i+1][1] <== multi_or[2][i].out;
+		and[4][i].b <== multi_or[0][i].out;
+		multi_or[1][i] = MultiOR(2);
+		multi_or[1][i].in[0] <== and[3][i].out;
+		multi_or[1][i].in[1] <== and[4][i].out;
+		states[i+1][1] <== multi_or[1][i].out;
 		state_changed[i].in[0] <== states[i+1][1];
 		eq[0][i] = IsEqual();
 		eq[0][i].in[0] <== in[i];

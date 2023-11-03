@@ -16,7 +16,7 @@ template EmailDomainRegex(msg_bytes) {
 	component eq[25][num_bytes];
 	component lt[8][num_bytes];
 	component and[9][num_bytes];
-	component multi_or[6][num_bytes];
+	component multi_or[5][num_bytes];
 	signal states[num_bytes+1][4];
 	component state_changed[num_bytes];
 
@@ -229,26 +229,11 @@ template EmailDomainRegex(msg_bytes) {
 		and[7][i].b <== multi_or[3][i].out;
 		and[8][i] = AND();
 		and[8][i].a <== states[i][3];
-		multi_or[4][i] = MultiOR(14);
-		multi_or[4][i].in[0] <== and[0][i].out;
-		multi_or[4][i].in[1] <== and[6][i].out;
-		multi_or[4][i].in[2] <== eq[8][i].out;
-		multi_or[4][i].in[3] <== eq[9][i].out;
-		multi_or[4][i].in[4] <== eq[11][i].out;
-		multi_or[4][i].in[5] <== eq[12][i].out;
-		multi_or[4][i].in[6] <== eq[13][i].out;
-		multi_or[4][i].in[7] <== eq[14][i].out;
-		multi_or[4][i].in[8] <== eq[15][i].out;
-		multi_or[4][i].in[9] <== eq[16][i].out;
-		multi_or[4][i].in[10] <== eq[17][i].out;
-		multi_or[4][i].in[11] <== eq[18][i].out;
-		multi_or[4][i].in[12] <== eq[19][i].out;
-		multi_or[4][i].in[13] <== eq[20][i].out;
-		and[8][i].b <== multi_or[4][i].out;
-		multi_or[5][i] = MultiOR(2);
-		multi_or[5][i].in[0] <== and[7][i].out;
-		multi_or[5][i].in[1] <== and[8][i].out;
-		states[i+1][3] <== multi_or[5][i].out;
+		and[8][i].b <== multi_or[3][i].out;
+		multi_or[4][i] = MultiOR(2);
+		multi_or[4][i].in[0] <== and[7][i].out;
+		multi_or[4][i].in[1] <== and[8][i].out;
+		states[i+1][3] <== multi_or[4][i].out;
 		state_changed[i].in[2] <== states[i+1][3];
 		states[i+1][0] <== 1 - state_changed[i].out;
 	}
