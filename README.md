@@ -10,7 +10,7 @@ This library provides circom circuits that enables you to prove that
 - the input string satisfies regular expressions (regexes) specified in the chip.
 - the substrings are correctly extracted from the input string according to substring definitions.
 
-This is a JS/Rust adaptation of the Python regex-to-circom work done by [sampriti](https://github.com/sampritipanda/) and [yush_g](https://twitter.com/yush_g) at https://github.com/zk-email-verify/zk-email-verify/tree/main/regex_to_circom.
+This is a JS/Rust adaptation of the Python regex-to-circom work done by [sampriti](https://github.com/sampritipanda/) and [yush_g](https://twitter.com/yush_g) at https://www.zkregex.com
 
 In addition to the original work, this library also supports the following features:
 - CLI to dynamically generate regex circuit based on regex argument
