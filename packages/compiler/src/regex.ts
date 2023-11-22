@@ -767,13 +767,13 @@ function toNature(col: string): number {
 
 function regexToDfa(regex: string): string {
     const nfa = regexToNfa(regex);
-    console.log(nfa);
+    // console.log(nfa);
     if (typeof nfa === 'string') {
         return nfa;
     }
 
     const dfa = minDfa(nfaToDfa(nfa));
-    console.log(dfa);
+    // console.log(dfa);
     const states: Record<string, DfaNode> = {};
     const nodes: DfaNode[] = [];
     const stack: DfaNode[] = [dfa];
@@ -810,7 +810,7 @@ function regexToDfa(regex: string): string {
         }
         graph[node.nature - 1] = curr;
     }
-    console.log(`graph: ${JSON.stringify(graph, null, 2)}`);
+    // console.log(`graph: ${JSON.stringify(graph, null, 2)}`);
 
     return JSON.stringify(graph);
 }

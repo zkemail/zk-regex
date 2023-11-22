@@ -89,7 +89,7 @@ impl DecomposedRegexConfig {
             all_regex += &config.regex_def;
         }
         let dfa_val = regex_to_dfa(&all_regex)?;
-        println!("dfa_val {:?}", dfa_val);
+        // println!("dfa_val {:?}", dfa_val);
         let substrs_defs = self.extract_substr_ids(&dfa_val)?;
         Ok(RegexAndDFA {
             // max_byte_size: self.max_byte_size,
