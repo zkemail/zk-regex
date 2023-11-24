@@ -67,6 +67,14 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
     let and_i: number = 0;
     let multi_or_i: number = 0;
 
+    const range_checks: number[][][] = new Array(256);
+    for (let i = 0; i < 256; i++) {
+        range_checks[i] = new Array(256);
+    }
+    const eq_checks: number[] = new Array(256);
+    const multi_or_checks1: Record<string, number> = {};
+    const multi_or_checks2: Record<string, number> = {};
+
     let lines: string[] = [];
     lines.push(`\tfor (var i = 0; i < num_bytes; i++) {`);
 
@@ -164,29 +172,43 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
             // }
 
             for (let min_max of min_maxes) {
-                lines.push(`\t\tlt[${lt_i}][i] = LessEqThan(8);`);
-                lines.push(`\t\tlt[${lt_i}][i].in[0] <== ${min_max[0]};`);
-                lines.push(`\t\tlt[${lt_i}][i].in[1] <== in[i];`);
+                const min: number = min_max[0];
+                const max: number = min_max[1];
+                if (range_checks[min][max] === undefined) {
+                    lines.push(`\t\tlt[${lt_i}][i] = LessEqThan(8);`);
+                    lines.push(`\t\tlt[${lt_i}][i].in[0] <== ${min};`);
+                    lines.push(`\t\tlt[${lt_i}][i].in[1] <== in[i];`);
 
-                lines.push(`\t\tlt[${lt_i + 1}][i] = LessEqThan(8);`);
-                lines.push(`\t\tlt[${lt_i + 1}][i].in[0] <== in[i];`);
-                lines.push(`\t\tlt[${lt_i + 1}][i].in[1] <== ${min_max[1]};`);
+                    lines.push(`\t\tlt[${lt_i + 1}][i] = LessEqThan(8);`);
+                    lines.push(`\t\tlt[${lt_i + 1}][i].in[0] <== in[i];`);
+                    lines.push(`\t\tlt[${lt_i + 1}][i].in[1] <== ${max};`);
 
-                lines.push(`\t\tand[${and_i}][i] = AND();`);
-                lines.push(`\t\tand[${and_i}][i].a <== lt[${lt_i}][i].out;`);
-                lines.push(`\t\tand[${and_i}][i].b <== lt[${lt_i + 1}][i].out;`);
+                    lines.push(`\t\tand[${and_i}][i] = AND();`);
+                    lines.push(`\t\tand[${and_i}][i].a <== lt[${lt_i}][i].out;`);
+                    lines.push(`\t\tand[${and_i}][i].b <== lt[${lt_i + 1}][i].out;`);
 
-                eq_outputs.push(['and', and_i]);
-                lt_i += 2;
-                and_i += 1;
+                    eq_outputs.push(['and', and_i]);
+                    range_checks[min][max] = [lt_i, and_i];
+                    lt_i += 2;
+                    and_i += 1;
+                } else {
+                    let [_, and_i] = range_checks[min][max];
+                    eq_outputs.push(['and', and_i]);
+                }
+
             }
 
             for (let code of vals) {
-                lines.push(`\t\teq[${eq_i}][i] = IsEqual();`);
-                lines.push(`\t\teq[${eq_i}][i].in[0] <== in[i];`);
-                lines.push(`\t\teq[${eq_i}][i].in[1] <== ${code};`);
-                eq_outputs.push(['eq', eq_i]);
-                eq_i += 1;
+                if (eq_checks[code] === undefined) {
+                    lines.push(`\t\teq[${eq_i}][i] = IsEqual();`);
+                    lines.push(`\t\teq[${eq_i}][i].in[0] <== in[i];`);
+                    lines.push(`\t\teq[${eq_i}][i].in[1] <== ${code};`);
+                    eq_outputs.push(['eq', eq_i]);
+                    eq_checks[code] = eq_i;
+                    eq_i += 1;
+                } else {
+                    eq_outputs.push(['eq', eq_checks[code]]);
+                }
             }
 
             lines.push(`\t\tand[${and_i}][i] = AND();`);
@@ -199,17 +221,23 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
                 // }
                 lines.push(`\t\tand[${and_i}][i].b <== ${eq_outputs[0][0]}[${eq_outputs[0][1]}][i].out;`);
             } else if (eq_outputs.length > 1) {
-                lines.push(`\t\tmulti_or[${multi_or_i}][i] = MultiOR(${eq_outputs.length});`);
-                for (let output_i = 0; output_i < eq_outputs.length; output_i++) {
-                    lines.push(`\t\tmulti_or[${multi_or_i}][i].in[${output_i}] <== ${eq_outputs[output_i][0]}[${eq_outputs[output_i][1]}][i].out;`);
+                const eq_outputs_key: string = JSON.stringify(eq_outputs);
+                if (multi_or_checks1[eq_outputs_key] === undefined) {
+                    lines.push(`\t\tmulti_or[${multi_or_i}][i] = MultiOR(${eq_outputs.length});`);
+                    for (let output_i = 0; output_i < eq_outputs.length; output_i++) {
+                        lines.push(`\t\tmulti_or[${multi_or_i}][i].in[${output_i}] <== ${eq_outputs[output_i][0]}[${eq_outputs[output_i][1]}][i].out;`);
+                    }
+                    // if (is_negate) {
+                    //     lines.push(`\t\tand[${and_i}][i].b <== 1 - multi_or[${multi_or_i}][i].out;`);
+                    // } else {
+                    //     lines.push(`\t\tand[${and_i}][i].b <== multi_or[${multi_or_i}][i].out;`);
+                    // }
+                    lines.push(`\t\tand[${and_i}][i].b <== multi_or[${multi_or_i}][i].out;`);
+                    multi_or_checks1[eq_outputs_key] = multi_or_i;
+                    multi_or_i += 1
+                } else {
+                    lines.push(`\t\tand[${and_i}][i].b <== multi_or[${multi_or_checks1[eq_outputs_key]}][i].out;`);
                 }
-                // if (is_negate) {
-                //     lines.push(`\t\tand[${and_i}][i].b <== 1 - multi_or[${multi_or_i}][i].out;`);
-                // } else {
-                //     lines.push(`\t\tand[${and_i}][i].b <== multi_or[${multi_or_i}][i].out;`);
-                // }
-                lines.push(`\t\tand[${and_i}][i].b <== multi_or[${multi_or_i}][i].out;`);
-                multi_or_i += 1;
             }
 
             outputs.push(and_i);
@@ -219,12 +247,18 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
         if (outputs.length === 1) {
             lines.push(`\t\tstates[i+1][${i}] <== and[${outputs[0]}][i].out;`);
         } else if (outputs.length > 1) {
-            lines.push(`\t\tmulti_or[${multi_or_i}][i] = MultiOR(${outputs.length});`);
-            for (let output_i = 0; output_i < outputs.length; output_i++) {
-                lines.push(`\t\tmulti_or[${multi_or_i}][i].in[${output_i}] <== and[${outputs[output_i]}][i].out;`);
+            const outputs_key: string = JSON.stringify(outputs);
+            if (multi_or_checks2[outputs_key] === undefined) {
+                lines.push(`\t\tmulti_or[${multi_or_i}][i] = MultiOR(${outputs.length});`);
+                for (let output_i = 0; output_i < outputs.length; output_i++) {
+                    lines.push(`\t\tmulti_or[${multi_or_i}][i].in[${output_i}] <== and[${outputs[output_i]}][i].out;`);
+                }
+                lines.push(`\t\tstates[i+1][${i}] <== multi_or[${multi_or_i}][i].out;`);
+                multi_or_checks2[outputs_key] = multi_or_i;
+                multi_or_i += 1;
+            } else {
+                lines.push(`\t\tstates[i+1][${i}] <== multi_or[${multi_or_checks2[outputs_key]}][i].out;`);
             }
-            lines.push(`\t\tstates[i+1][${i}] <== multi_or[${multi_or_i}][i].out;`);
-            multi_or_i += 1;
         }
 
         lines.push(`\t\tstate_changed[i].in[${i - 1}] <== states[i+1][${i}];`);
@@ -284,7 +318,6 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
     let string: string = lines.reduce((res, line) => res + line + "\n", "");
     return string;
 }
-
 
 // Commented these two out as they're only used by the code that's also commented out
 
