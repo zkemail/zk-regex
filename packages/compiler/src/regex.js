@@ -1,6 +1,122 @@
 "use strict";
 /* eslint-disable no-prototype-builtins */
 /*jslint browser: true*/
+
+const a2z_nosep = "abcdefghijklmnopqrstuvwxyz";
+const A2Z_nosep = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const a2f_nosep = "abcdef";
+const A2F_nosep = "ABCDEF";
+const r0to9_nosep = "0123456789";
+const escapeMap = { n: "\n", r: "\r", t: "\t", v: "\v", f: "\f" };
+const whitespace = Object.values(escapeMap);
+const slash_s = whitespace.join("|");
+
+/** 
+ *  Parse regex to a min DFA spec
+ *  to support some shorthands that make regex easier to write e.g. [A-Z]
+ */
+function regexToMinDFASpec(str) {
+    // Replace all A-Z with A2Z etc
+    let combined_nosep = str
+        .replaceAll("A-Z", A2Z_nosep)
+        .replaceAll("a-z", a2z_nosep)
+        .replaceAll("A-F", A2F_nosep)
+        .replaceAll("a-f", a2f_nosep)
+        .replaceAll("0-9", r0to9_nosep)
+        .replaceAll("\\w", A2Z_nosep + r0to9_nosep + a2z_nosep + "_")
+        .replaceAll("\\d", r0to9_nosep)
+        .replaceAll("\\s", slash_s);
+    // .replaceAll("\\w", A2Z_nosep + r0to9_nosep + a2z_nosep); // I think that there's also an underscore here
+
+    function addPipeInsideBrackets(str) {
+        let result = "";
+        let insideBrackets = false;
+        for (let i = 0; i < str.length; i++) {
+            if (str[i] === "[") {
+                result += str[i];
+                insideBrackets = true;
+                continue;
+            } else if (str[i] === "]") {
+                insideBrackets = false;
+            }
+            let str_to_add = str[i];
+            if (str[i] === "\\") {
+                i++;
+                str_to_add += str[i];
+            }
+            result += insideBrackets ? "|" + str_to_add : str_to_add;
+        }
+        return result.replaceAll("[|", "[").replaceAll("[", "(").replaceAll("]", ")");
+    }
+
+    //   function makeCurlyBracesFallback(str) {
+    //     let result = "";
+    //     let insideBrackets = false;
+    //     for (let i = 0; i < str.length; i++) {
+    //       if (str[i] === "{") {
+    //         result += str[i];
+    //         insideBrackets = true;
+    //         continue;
+    //       } else if (str[i] === "}") {
+    //         insideBrackets = false;
+    //       }
+    //       result += insideBrackets ? "|" + str[i] : str[i];
+    //     }
+    //     return result.replaceAll("[|", "[").replaceAll("[", "(").replaceAll("]", ")");
+    //   }
+
+    function checkIfBracketsHavePipes(str) {
+        let result = true;
+        let insideBrackets = false;
+        let insideParens = 0;
+        let indexAt = 0;
+        for (let i = 0; i < str.length; i++) {
+            if (indexAt >= str.length) break;
+            if (str[indexAt] === "[") {
+                insideBrackets = true;
+                indexAt++;
+                continue;
+            } else if (str[indexAt] === "]") {
+                insideBrackets = false;
+            }
+            if (str[indexAt] === "(") {
+                insideParens++;
+            } else if (str[indexAt] === ")") {
+                insideParens--;
+            }
+            if (insideBrackets) {
+                if (str[indexAt] === "|") {
+                    indexAt++;
+                } else {
+                    result = false;
+                    return result;
+                }
+            }
+            if (!insideParens && str[indexAt] === "|") {
+                console.log("Error: | outside of parens!");
+            }
+            if (str[indexAt] === "\\") {
+                indexAt++;
+            }
+            indexAt++;
+        }
+        return result;
+    }
+
+    let combined;
+    if (!checkIfBracketsHavePipes(combined_nosep)) {
+        // console.log("Adding pipes within brackets between everything!");
+        combined = addPipeInsideBrackets(combined_nosep);
+        if (!checkIfBracketsHavePipes(combined)) {
+            console.log("Did not add brackets correctly!");
+        }
+    } else {
+        combined = combined_nosep;
+    }
+
+    return combined;
+}
+
 /**
  * Try parsing simple regular expression to syntax tree.
  *
@@ -21,239 +137,139 @@
  *                         otherwise returns an object which is the syntax tree.
  */
 function parseRegex(text) {
-    'use strict';
+    text = regexToMinDFASpec(text);
+    "use strict";
     function parseSub(text, begin, end, first) {
-        var i, sub, last = 0, node = {
-            begin: begin,
-            end: end,
-        }, virNode, tempNode, stack = 0, parts = [];
-        if (text.length === 0) {
-            return 'Error: empty input at ' + begin + '.';
+      var i,
+        sub,
+        last = 0,
+        node = { begin: begin, end: end },
+        virNode,
+        tempNode,
+        stack = 0,
+        parts = [];
+      if (text.length === 0) {
+        return "Error: empty input at " + begin + ".";
+      }
+      if (first) {
+        for (i = 0; i <= text.length; i += 1) {
+          if (i === text.length || (text[i] === "|" && stack === 0)) {
+            if (last === 0 && i === text.length) {
+              return parseSub(text, begin + last, begin + i, false);
+            }
+            sub = parseSub(text.slice(last, i), begin + last, begin + i, true);
+            if (typeof sub === "string") {
+              return sub;
+            }
+            parts.push(sub);
+            last = i + 1;
+          } else if (text[i] === "(") {
+            stack += 1;
+          } else if (text[i] === ")") {
+            stack -= 1;
+          }
         }
-        if (first) {
-            for (i = 0; i <= text.length; i += 1) {
-                if (i === text.length || (text[i] === '|' && stack === 0)) {
-                    if (last === 0 && i === text.length) {
-                        return parseSub(text, begin + last, begin + i, false);
-                    }
-                    sub = parseSub(text.slice(last, i), begin + last, begin + i, true);
-                    if (typeof sub === 'string') {
-                        return sub;
-                    }
-                    parts.push(sub);
-                    last = i + 1;
-                }
-                else if (text[i] === '(') {
-                    stack += 1;
-                }
-                else if (text[i] === ')') {
-                    stack -= 1;
-                }
-            }
-            if (parts.length === 1) {
-                return parts[0];
-            }
-            node.type = 'or';
-            node.parts = parts;
+        if (parts.length === 1) {
+          return parts[0];
         }
-        else {
-            for (i = 0; i < text.length; i += 1) {
-                if (text[i] === '(') {
-                    last = i + 1;
-                    i += 1;
-                    stack = 1;
-                    while (i < text.length && stack !== 0) {
-                        if (text[i] === '(') {
-                            stack += 1;
-                        }
-                        else if (text[i] === ')') {
-                            stack -= 1;
-                        }
-                        i += 1;
-                    }
-                    if (stack !== 0) {
-                        return `Error: missing right parentheses for ${begin + last}.`;
-                    }
-                    i -= 1;
-                    sub = parseSub(text.slice(last, i), begin + last, begin + i, true);
-                    if (typeof sub === 'string') {
-                        return sub;
-                    }
-                    sub.begin -= 1;
-                    sub.end += 1;
-                    parts.push(sub);
-                    // } else if (text[i] === '[') {
-                    //     last = i + 1;
-                    //     i += 1;
-                    //     if (text[i] === '^') {
-                    //         text[i] = '\u{ff}';
-                    //     }
-                    //     stack = 1;
-                    //     while (i < text.length && stack !== 0) {
-                    //         if (text[i] === ']') {
-                    //             stack -= 1;
-                    //         }
-                    //         i += 1;
-                    //     }
-                    //     if (stack !== 0) {
-                    //         return 'Error: missing right brakets for ' + (begin + last) + '.';
-                    //     }
-                    //     i -= 1;
-                    //     sub = parseSub(text.slice(last, i), begin + last, begin + i, true);
-                    //     if (typeof sub === 'string') {
-                    //         return sub;
-                    //     }
-                    //     sub.begin -= 1;
-                    //     sub.end += 1;
-                    //     parts.push(sub);
-                }
-                else if (text[i] === '*') {
-                    if (parts.length === 0) {
-                        return `Error: unexpected * at ${begin + i}.`;
-                    }
-                    tempNode = { begin: parts[parts.length - 1].begin, end: parts[parts.length - 1].end + 1 };
-                    tempNode.type = 'star';
-                    tempNode.sub = parts[parts.length - 1];
-                    parts[parts.length - 1] = tempNode;
-                }
-                else if (text[i] === '+') {
-                    if (parts.length === 0) {
-                        return `Error: unexpected + at ${begin + i}.`;
-                    }
-                    virNode = { begin: parts[parts.length - 1].begin, end: parts[parts.length - 1].end + 1 };
-                    virNode.type = 'star';
-                    virNode.sub = parts[parts.length - 1];
-                    tempNode = { begin: parts[parts.length - 1].begin, end: parts[parts.length - 1].end + 1 };
-                    tempNode.type = 'cat';
-                    tempNode.parts = [parts[parts.length - 1], virNode];
-                    parts[parts.length - 1] = tempNode;
-                }
-                else if (text[i] === '?') {
-                    if (parts.length === 0) {
-                        return `Error: unexpected ? at ${begin + i}.`;
-                    }
-                    virNode = { begin: parts[parts.length - 1].begin, end: parts[parts.length - 1].end + 1 };
-                    virNode.type = 'empty';
-                    virNode.sub = parts[parts.length - 1];
-                    tempNode = { begin: parts[parts.length - 1].begin, end: parts[parts.length - 1].end + 1 };
-                    tempNode.type = 'or';
-                    tempNode.parts = [parts[parts.length - 1], virNode];
-                    parts[parts.length - 1] = tempNode;
-                }
-                else if (text[i] === 'ϵ') {
-                    tempNode = { begin: begin + i, end: begin + i + 1 };
-                    tempNode.type = 'empty';
-                    parts.push(tempNode);
-                }
-                else if (Array.isArray(text[i])) {
-                    tempNode = { begin: begin + i, end: begin + i + 1 };
-                    tempNode.type = 'text';
-                    tempNode.text = text[i][0];
-                    parts.push(tempNode);
-                }
-                else {
-                    tempNode = { begin: begin + i, end: begin + i + 1 };
-                    tempNode.type = 'text';
-                    tempNode.text = text[i];
-                    parts.push(tempNode);
-                }
+        node.type = "or";
+        node.parts = parts;
+      } else {
+        for (i = 0; i < text.length; i += 1) {
+          if (text[i] === "(") {
+            last = i + 1;
+            i += 1;
+            stack = 1;
+            while (i < text.length && stack !== 0) {
+              if (text[i] === "(") {
+                stack += 1;
+              } else if (text[i] === ")") {
+                stack -= 1;
+              }
+              i += 1;
             }
-            // console.log(`parts ${JSON.stringify(parts)}`);
-            if (parts.length === 1) {
-                return parts[0];
+            if (stack !== 0) {
+              return "Error: missing right bracket for " + (begin + last) + ".";
             }
-            node.type = 'cat';
-            node.parts = parts;
+            i -= 1;
+            sub = parseSub(text.slice(last, i), begin + last, begin + i, true);
+            if (typeof sub === "string") {
+              return sub;
+            }
+            sub.begin -= 1;
+            sub.end += 1;
+            parts.push(sub);
+          } else if (text[i] === "*") {
+            if (parts.length === 0) {
+              return "Error: unexpected * at " + (begin + i) + ".";
+            }
+            tempNode = { begin: parts[parts.length - 1].begin, end: parts[parts.length - 1].end + 1 };
+            tempNode.type = "star";
+            tempNode.sub = parts[parts.length - 1];
+            parts[parts.length - 1] = tempNode;
+          } else if (text[i] === "+") {
+            if (parts.length === 0) {
+              return "Error: unexpected + at " + (begin + i) + ".";
+            }
+            virNode = { begin: parts[parts.length - 1].begin, end: parts[parts.length - 1].end + 1 };
+            virNode.type = "star";
+            virNode.sub = parts[parts.length - 1];
+            tempNode = { begin: parts[parts.length - 1].begin, end: parts[parts.length - 1].end + 1 };
+            tempNode.type = "cat";
+            tempNode.parts = [parts[parts.length - 1], virNode];
+            parts[parts.length - 1] = tempNode;
+          } else if (text[i] === "?") {
+            if (parts.length === 0) {
+              return "Error: unexpected + at " + (begin + i) + ".";
+            }
+            virNode = { begin: parts[parts.length - 1].begin, end: parts[parts.length - 1].end + 1 };
+            virNode.type = "empty";
+            virNode.sub = parts[parts.length - 1];
+            tempNode = { begin: parts[parts.length - 1].begin, end: parts[parts.length - 1].end + 1 };
+            tempNode.type = "or";
+            tempNode.parts = [parts[parts.length - 1], virNode];
+            parts[parts.length - 1] = tempNode;
+          } else if (text[i] === "ϵ") {
+            tempNode = { begin: begin + i, end: begin + i + 1 };
+            tempNode.type = "empty";
+            parts.push(tempNode);
+          } else if (Array.isArray(text[i])) {
+            tempNode = { begin: begin + i, end: begin + i + 1 };
+            tempNode.type = "text";
+            tempNode.text = text[i][0];
+            parts.push(tempNode);
+          } else {
+            tempNode = { begin: begin + i, end: begin + i + 1 };
+            tempNode.type = "text";
+            tempNode.text = text[i];
+            parts.push(tempNode);
+          }
         }
-        return node;
+        if (parts.length === 1) {
+          return parts[0];
+        }
+        node.type = "cat";
+        node.parts = parts;
+      }
+      return node;
     }
-    let char;
+  
     let new_text = [];
     let i = 0;
-    let is_in_brancket = false;
-    let brancket_text = [];
     while (i < text.length) {
-        char = text[i];
-        if (text[i] == '\\') {
-            char = [text[i + 1]];
-            // new_text.push([text[i + 1]]);
-            i += 1;
-        }
-        if (char === '[') {
-            if (is_in_brancket) {
-                return `Error: unexpected [ at ${i}.`;
-            }
-            is_in_brancket = true;
-            brancket_text = [];
-            // new_text.push(char);
-            i += 1;
-        }
-        else if (char === ']') {
-            if (!is_in_brancket) {
-                return `Error: unexpected ] at ${i}.`;
-            }
-            is_in_brancket = false;
-            if (brancket_text[0] === '^') {
-                brancket_text.shift();
-                let rev_text = [];
-                let code_char = '';
-                const brancket_text_jsons = brancket_text.map(val => JSON.stringify(val));
-                for (let idx = 0; idx < 255; idx++) {
-                    code_char = String.fromCodePoint(idx);
-                    if ([
-                        '(',
-                        ')',
-                        '*',
-                        '+',
-                        '.',
-                        '?',
-                        '[',
-                        '\\',
-                        ']',
-                        '^',
-                        '`',
-                        '|',
-                        '-'
-                    ].indexOf(code_char) != -1) {
-                        code_char = [code_char];
-                    }
-                    if (brancket_text_jsons.indexOf(JSON.stringify(code_char)) === -1) {
-                        rev_text.push(code_char);
-                    }
-                }
-                brancket_text = rev_text;
-            }
-            new_text.push('(');
-            for (const c of brancket_text) {
-                new_text.push(c);
-                new_text.push('|');
-            }
-            new_text = new_text.slice(0, -1);
-            new_text.push(')');
-            i += 1;
-        }
-        else if (is_in_brancket) {
-            if (!Array.isArray(char) && ['(', ')', '[', '*', '+', '?', 'ϵ'].includes(char)) {
-                return `Error: unexpected ${char} at ${i}.`;
-            }
-            if (char === '^' && text[i - 1] !== '[') {
-                return `Error: unexpected ^ at ${i}.`;
-            }
-            // new_text.push(char);
-            // new_text.push('|');
-            brancket_text.push(char);
-            i += 1;
-        }
-        else {
-            new_text.push(char);
-            i += 1;
-        }
-    }
-    if (is_in_brancket) {
-        return `Error: missing right brackets.`;
+      if (text[i] === "\\") {
+        const escapeMap = { n: "\n", r: "\r", t: "\t", v: "\v", f: "\f", "^": String.fromCharCode(128) };
+        const char = text[i + 1];
+        new_text.push([escapeMap[char] || char]);
+        i += 2;
+      } else {
+        new_text.push(text[i]);
+        i += 1;
+      }
     }
     return parseSub(new_text, 0, new_text.length, true);
-}
+  }
+
 /**
 * Convert regular expression to nondeterministic finite automaton.
 *
