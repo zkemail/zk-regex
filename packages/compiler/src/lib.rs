@@ -5,6 +5,10 @@ pub mod halo2;
 pub mod js_caller;
 
 pub mod node;
+
+#[cfg(test)]
+mod tests;
+
 use crate::node::*;
 use neon;
 
