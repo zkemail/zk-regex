@@ -51,6 +51,7 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
                 rev_graph[going_state_num][init_going_state] = [];
             }
             rev_graph[going_state_num][init_going_state] = rev_graph[going_state_num][init_going_state].concat(chars);
+
         }
     }
 
@@ -125,7 +126,10 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
             let cur_max: number = k[0];
 
             for (let idx = 1; idx < k.length; ++idx) {
-                if (cur_max + 1 === k[idx]) {
+                if (cur_max === k[idx]) {
+                    continue;
+                }
+                else if (cur_max + 1 === k[idx]) {
                     cur_max += 1;
                 } else {
                     if (cur_max - cur_min >= 16) {
@@ -197,7 +201,6 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
                 }
 
             }
-
             for (let code of vals) {
                 if (eq_checks[code] === undefined) {
                     lines.push(`\t\teq[${eq_i}][i] = IsEqual();`);
