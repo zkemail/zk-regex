@@ -20,28 +20,28 @@ pub enum JsCallerError {
 }
 
 // pub fn catch_all_regex_str() -> Result<String, JsCallerError> {
-//     let code: &'static str = include_str!("regex.ts");
+//     let code: &'static str = include_str!("regex.js");
 //     let mut script = Script::from_string(code)?;
 //     let result: String = script.call("catchAllRegexStr", ())?;
 //     Ok(result)
 // }
 
 pub fn text_context_prefix() -> Result<String, JsCallerError> {
-    let code: &'static str = include_str!("regex.ts");
+    let code: &'static str = include_str!("regex.js");
     let mut script = Script::from_string(code)?;
     let result: String = script.call("textContextPrefix", ())?;
     Ok(result)
 }
 
 // pub fn format_regex_printable(regex: &str) -> Result<String, JsCallerError> {
-//     let code: &'static str = include_str!("regex.ts");
+//     let code: &'static str = include_str!("regex.js");
 //     let mut script = Script::from_string(code)?;
 //     let result: String = script.call("formatRegexPrintable", (regex,))?;
 //     Ok(result)
 // }
 
 pub fn regex_to_dfa(regex: &str) -> Result<Vec<Value>, JsCallerError> {
-    let code: &'static str = include_str!("regex.ts");
+    let code: &'static str = include_str!("regex.js");
     let mut script = Script::from_string(code)?;
     let result: String = script.call("regexToDfa", (regex,))?;
     Ok(serde_json::from_str(&result)?)
