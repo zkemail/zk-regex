@@ -18,7 +18,7 @@
     "build-debug": "npm run build --",
     "build-release": "npm run build -- --release",
     "install": "npx tsc && node-pre-gyp install --fallback-to-build=false || npm run build-release",
-    "test": "cargo test",
+    "test": "npx tsc && cargo test",
     "package": "node-pre-gyp package",
     "upload-binary": "npm run package && node-pre-gyp-github publish"
   },
