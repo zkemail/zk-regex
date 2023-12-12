@@ -14,7 +14,7 @@ const slash_s = whitespace.join("|");
  *  Parse regex to a min DFA spec
  *  to support some shorthands that make regex easier to write e.g. [A-Z]
  */
-function regexToMinDFASpec(str) {
+function regexToMinDFASpec(str: any) {
   // Replace all A-Z with A2Z etc
   let combined_nosep = str
     .replaceAll("A-Z", A2Z_nosep)
@@ -27,8 +27,8 @@ function regexToMinDFASpec(str) {
     .replaceAll("\\s", slash_s);
   // .replaceAll("\\w", A2Z_nosep + r0to9_nosep + a2z_nosep); // I think that there's also an underscore here
 
-  function addPipeInsideBrackets(str) {
-    let result = "";
+  function addPipeInsideBrackets(str: string) {
+    let result: any = "";
     let insideBrackets = false;
     for (let i = 0; i < str.length; i++) {
       if (str[i] === "[") {
@@ -64,7 +64,7 @@ function regexToMinDFASpec(str) {
   //   return result.replaceAll("[|", "[").replaceAll("[", "(").replaceAll("]", ")");
   //   }
 
-  function checkIfBracketsHavePipes(str) {
+  function checkIfBracketsHavePipes(str: string) {
     let result = true;
     let insideBrackets = false;
     let insideParens = 0;
@@ -116,6 +116,36 @@ function regexToMinDFASpec(str) {
   return combined;
 }
 
+type CusNode = {
+    type?: string;
+    sub?: CusNode;
+    parts?: CusNode[];
+    text?: string | [string];
+    begin: number;
+    end: number;
+}
+
+type NfaEdge = [string | [string], NfaNode];
+
+type NfaNode = {
+    type: string;
+    edges: NfaEdge[];
+    id?: string | number;
+};
+
+type DfaEdge = [string | [string], DfaNode];
+
+type DfaNode = {
+    id: string | number;
+    key: string,
+    items: NfaNode[],
+    symbols: (string | [string])[],
+    type: string,
+    edges: DfaEdge[],
+    trans: Record<string, DfaNode>;
+    nature: number;
+};
+
 /**
  * Try parsing simple regular expression to syntax tree.
  *
@@ -135,18 +165,21 @@ function regexToMinDFASpec(str) {
  * @return {string|object} Returns a string that is an error message if failed to parse the expression,
  *             otherwise returns an object which is the syntax tree.
  */
-function parseRegex(text) {
+function parseRegex(text: string): string | CusNode {
   text = regexToMinDFASpec(text);
   "use strict";
-  function parseSub(text, begin, end, first) {
-    var i,
-    sub,
-    last = 0,
-    node = { begin: begin, end: end },
-    virNode,
-    tempNode,
-    stack = 0,
-    parts = [];
+  function parseSub(text: (string | [string])[], begin: number, end: number, first: boolean): CusNode | string {
+    var i: number,
+      sub: CusNode | string,
+      last: number = 0,
+      node: CusNode = {
+          begin: begin,
+          end: end,
+      },
+      virNode: CusNode,
+      tempNode: CusNode,
+      stack: number = 0,
+      parts: CusNode[] = [];
     if (text.length === 0) {
     return "Error: empty input at " + begin + ".";
     }
@@ -253,11 +286,11 @@ function parseRegex(text) {
     return node;
   }
   
-  let new_text = [];
+  let new_text: any = [];
   let i = 0;
   while (i < text.length) {
     if (text[i] === "\\") {
-    const escapeMap = { n: "\n", r: "\r", t: "\t", v: "\v", f: "\f", "^": String.fromCharCode(128) };
+    const escapeMap: any = { n: "\n", r: "\r", t: "\t", v: "\v", f: "\f", "^": String.fromCharCode(128) };
     const char = text[i + 1];
     new_text.push([escapeMap[char] || char]);
     i += 2;
@@ -269,16 +302,17 @@ function parseRegex(text) {
   return parseSub(new_text, 0, new_text.length, true);
   }
 
+
 /**
 * Convert regular expression to nondeterministic finite automaton.
 *
 * @param {string} text @see parseRegex()
 * @return {object|string}
 */
-function regexToNfa(text) {
+function regexToNfa(text: string) {
   'use strict';
-  function generateGraph(node, start, end, count) {
-    var i, last, temp, tempStart, tempEnd;
+  function generateGraph(node: any, start: NfaNode, end: NfaNode, count: number): number {
+    // var i, last, temp, tempStart, tempEnd;
     if (!start.hasOwnProperty('id')) {
       start.id = count;
       count += 1;
@@ -291,28 +325,39 @@ function regexToNfa(text) {
         start.edges.push([node.text, end]);
         break;
       case 'cat':
-        last = start;
-        for (i = 0; i < node.parts.length - 1; i += 1) {
-          temp = { 'type': '', 'edges': [] };
-          count = generateGraph(node.parts[i], last, temp, count);
-          last = temp;
+        let last = start;
+        for (let i = 0; i < node.parts!.length - 1; i += 1) {
+            const temp: NfaNode = { type: '', edges: [] };
+            count = generateGraph(node.parts![i], last, temp, count);
+            last = temp;
         }
-        count = generateGraph(node.parts[node.parts.length - 1], last, end, count);
+        count = generateGraph(
+            node.parts![node.parts!.length - 1],
+            last,
+            end,
+            count
+        );
         break;
       case 'or':
-        for (i = 0; i < node.parts.length; i += 1) {
-          tempStart = { 'type': '', 'edges': [] };
-          tempEnd = { 'type': '', 'edges': [['ϵ', end]] };
+        for (let i = 0; i < node.parts!.length; i += 1) {
+          const tempStart: NfaNode = { type: '', edges: [] };
+          const tempEnd: NfaNode = {
+              type: '',
+              edges: [['ϵ', end]],
+          };
           start.edges.push(['ϵ', tempStart]);
-          count = generateGraph(node.parts[i], tempStart, tempEnd, count);
+          count = generateGraph(node.parts![i], tempStart, tempEnd, count);
         }
         break;
       case 'star':
-        tempStart = { 'type': '', 'edges': [] };
-        tempEnd = { 'type': '', 'edges': [['ϵ', tempStart], ['ϵ', end]] };
+        const tempStart: NfaNode = { type: '', edges: [] };
+        const tempEnd: NfaNode = {
+            type: '',
+            edges: [['ϵ', tempStart], ['ϵ', end]],
+        };
         start.edges.push(['ϵ', tempStart]);
         start.edges.push(['ϵ', end]);
-        count = generateGraph(node.sub, tempStart, tempEnd, count);
+        count = generateGraph(node.sub!, tempStart, tempEnd, count);
         break;
     }
     if (!end.hasOwnProperty('id')) {
@@ -337,15 +382,14 @@ function regexToNfa(text) {
 * @param {object} nfa @see regexToNfa(), the function assumes that the given NFA is valid.
 * @return {object} dfa Returns the first element of the DFA.
 */
-function nfaToDfa(nfa) {
+function nfaToDfa(nfa: NfaNode) {
   'use strict';
-  function getClosure(nodes) {
-    var i,
-      closure = [],
-      stack = [],
-      symbols = [],
-      type = '',
-      top;
+  function getClosure(nodes: NfaNode[]): DfaNode {
+    const closure: NfaNode[] = [];
+    const stack: NfaNode[] = [];
+    const symbols: (string | [string])[] = [];
+    let type = '';
+    let top: NfaNode | string;
     for (i = 0; i < nodes.length; i += 1) {
       stack.push(nodes[i]);
       closure.push(nodes[i]);
@@ -354,7 +398,7 @@ function nfaToDfa(nfa) {
       }
     }
     while (stack.length > 0) {
-      top = stack.pop();
+      top = stack.pop()!;
       // If top is of type string and starts with "Error" then return error
       if (typeof top === 'string' && top[0] === 'E') {
         continue;
@@ -376,25 +420,26 @@ function nfaToDfa(nfa) {
       }
     }
     closure.sort(function (a, b) {
-      return a.id - b.id;
+      if (a.id && b.id) {
+          return a.id > b.id ? 1 : -1;
+      }
+      return 0;
     });
     symbols.sort();
     return {
-      'key': closure.map(function (x) {
-        return x.id;
-      }).join(','),
-      'items': closure,
-      'symbols': symbols,
-      'type': type,
-      'edges': [],
-      'trans': {}
+        id: '',
+        key: closure.map((x) => x.id).join(','),
+        items: closure,
+        symbols: symbols,
+        type: type,
+        edges: [],
+        trans: {},
+        nature: 0,
     };
   }
-  function getClosedMove(closure, symbol) {
-    var i,
-      j,
-      node,
-      nexts = [];
+  function getClosedMove(closure: DfaNode, symbol: string | [string]): DfaNode {
+    var i, j, node;
+    const nexts: NfaNode[] = [];
     for (i = 0; i < closure.items.length; i += 1) {
       node = closure.items[i];
       for (j = 0; j < node.edges.length; j += 1) {
@@ -407,7 +452,7 @@ function nfaToDfa(nfa) {
     }
     return getClosure(nexts);
   }
-  function toAlphaCount(n) {
+  function toAlphaCount(n: number): string {
     var a = 'A'.charCodeAt(0),
       z = 'Z'.charCodeAt(0),
       len = z - a + 1,
@@ -418,14 +463,14 @@ function nfaToDfa(nfa) {
     }
     return s;
   }
-  var i,
-    first = getClosure([nfa]),
-    states = {},
-    front = 0,
-    top,
-    closure,
-    queue = [first],
-    count = 0;
+  let i: number;
+  const first: DfaNode = getClosure([nfa]);
+  const states: Record<string, DfaNode> = {};
+  let front = 0;
+  let top: DfaNode;
+  let closure: DfaNode;
+  const queue: DfaNode[] = [first];
+  let count = 0;
   first.id = toAlphaCount(count);
   states[first.key] = first;
   while (front < queue.length) {
@@ -439,7 +484,7 @@ function nfaToDfa(nfa) {
         states[closure.key] = closure;
         queue.push(closure);
       }
-      top.trans[top.symbols[i]] = states[closure.key];
+      top.trans[top.symbols[i] as string] = states[closure.key];
       top.edges.push([top.symbols[i], states[closure.key]]);
     }
   }
@@ -452,22 +497,25 @@ function nfaToDfa(nfa) {
 * @param {object} dfa @see nfaToDfa(), the function assumes that the given DFA is valid.
 * @return {object} dfa Returns the first element of the minimum DFA.
 */
-function minDfa(dfa) {
+function minDfa(dfa: DfaNode) {
   'use strict';
-  function getReverseEdges(start) {
-    var i, top, symbol, next,
-      front = 0,
-      queue = [start],
-      visited = {},
-      symbols = {},   // The input alphabet
-      idMap = {},   // Map id to states
-      revEdges = {};  // Map id to the ids which connects to the id with an alphabet
+  function getReverseEdges(start: DfaNode): [string[], Record<string, DfaNode>, Record<string, Record<string, (string | number)[]>>]  {    
+    const symbols: Record<string, boolean> = {}; // The input alphabet
+    const idMap: Record<string, DfaNode> = {}; // Map id to states
+    const revEdges: Record<string, Record<string, (string | number)[]>> = {} // Map id to the ids which connects to the id with an alphabet;
+    const visited: Record<string, boolean> = {};
     visited[start.id] = true;
+
+    const queue: DfaNode[] = [start];
+    let front = 0;
+    let top: DfaNode;
+    let symbol: any;
+    let next: DfaNode;
     while (front < queue.length) {
       top = queue[front];
       front += 1;
       idMap[top.id] = top;
-      for (i = 0; i < top.symbols.length; i += 1) {
+      for (let i = 0; i < top.symbols.length; i += 1) {
         symbol = top.symbols[i];
         if (!symbols.hasOwnProperty(symbol)) {
           symbols[symbol] = true;
@@ -488,15 +536,29 @@ function minDfa(dfa) {
     }
     return [Object.keys(symbols), idMap, revEdges];
   }
-  function hopcroft(symbols, idMap, revEdges) {
-    var i, j, k, keys, key, key1, key2, top, group1, group2, symbol, revGroup,
-      ids = Object.keys(idMap).sort(),
-      partitions = {},
-      front = 0,
-      queue = [],
-      visited = {};
+  function hopcroft(symbols: string[], idMap: Record<string, DfaNode>, revEdges: Record<string, Record<string, (string | number)[]>>): string[][] {
+    const ids = Object.keys(idMap).sort();
+    const partitions: Record<string, string[]> = {};
+    const queue: (string | null)[] = [];
+    const visited: Record<string, number> = {};
+
+    let front = 0;
+    let top: string[] | string | null;
+    let i: number;
+    let j: number;
+    let k: number;
+    let keys: string[];
+    let key: string;
+    let key1: string;
+    let key2: string;
+    let group1: string[];
+    let group2: string[];
+    let symbol: string;
+    let revGroup: Record<string, boolean>;
+
     group1 = [];
     group2 = [];
+
     for (i = 0; i < ids.length; i += 1) {
       if (idMap[ids[i]].type === 'accept') {
         group1.push(ids[i]);
@@ -566,11 +628,11 @@ function minDfa(dfa) {
     }
     return Object.values(partitions);
   }
-  function buildMinNfa(start, partitions, idMap, revEdges) {
-    var i, j, temp, node, symbol,
-      nodes = [],
-      group = {},
-      edges = {};
+  function buildMinNfa(start: DfaNode, partitions: string[][], idMap: Record<string, DfaNode>, revEdges: Record<string, Record<string, (string | number)[]>>): DfaNode {
+    const nodes: DfaNode[] = [];
+    const group: Record<string, number> = {};
+    const edges: Record<number, Record<number, Record<string, boolean>>> = {};
+
     partitions.sort(function (a, b) {
       var ka = a.join(','), kb = b.join(',');
       if (ka < kb) {
@@ -581,27 +643,29 @@ function minDfa(dfa) {
       }
       return 0;
     });
-    for (i = 0; i < partitions.length; i += 1) {
-      if (partitions[i].indexOf(start.id) >= 0) {
+    for (let i = 0; i < partitions.length; i += 1) {
+      if (partitions[i].indexOf(start.id.toString()) >= 0) {
         if (i > 0) {
-          temp = partitions[i];
+          const temp = partitions[i];
           partitions[i] = partitions[0];
           partitions[0] = temp;
         }
         break;
       }
     }
-    for (i = 0; i < partitions.length; i += 1) {
-      node = {
-        id: (i + 1).toString(),
-        key: partitions[i].join(','),
-        items: [],
-        symbols: [],
-        type: idMap[partitions[i][0]].type,
-        edges: [],
-        trans: {},
+    for (let i = 0; i < partitions.length; i += 1) {
+      const node: DfaNode = {
+          id: (i + 1).toString(),
+          key: partitions[i].join(','),
+          items: [],
+          symbols: [],
+          type: idMap[partitions[i][0]].type,
+          edges: [],
+          trans: {},
+          nature: 0,
       };
-      for (j = 0; j < partitions[i].length; j += 1) {
+
+      for (let j = 0; j < partitions[i].length; j += 1) {
         node.items.push(idMap[partitions[i][j]]);
         group[partitions[i][j]] = i;
       }
@@ -619,11 +683,11 @@ function minDfa(dfa) {
       });
     });
     Object.keys(edges).forEach(function (from) {
-      Object.keys(edges[from]).forEach(function (to) {
-        symbol = JSON.stringify(Object.keys(edges[from][to]).sort());
-        nodes[from].symbols.push(symbol);
-        nodes[from].edges.push([symbol, nodes[to]]);
-        nodes[from].trans[symbol] = nodes[to];
+      Object.keys(edges[Number(from)]).forEach(function (to) {
+        const symbol = JSON.stringify(Object.keys(edges[Number(from)][Number(to)]).sort());
+        nodes[parseInt(from)].symbols.push(symbol);
+        nodes[parseInt(from)].edges.push([symbol, nodes[parseInt(to)]]);
+        nodes[parseInt(from)].trans[symbol] = nodes[parseInt(to)];
       });
     });
     return nodes[0];
@@ -636,7 +700,7 @@ function minDfa(dfa) {
   return buildMinNfa(dfa, partitions, idMap, revEdges);
 }
 
-function toNature(col) {
+function toNature(col: string): number {
   var i,
     j,
     base = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
@@ -661,25 +725,27 @@ function toNature(col) {
 // const word_char = '(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|_)';
 
 
-function regexToDfa(regex) {
-  let nfa = regexToNfa(regex);
-  let dfa = minDfa(nfaToDfa(nfa));
-  var i,
-    states = {},
-    nodes = [],
-    stack = [dfa],
-    symbols = [],
-    top;
+function regexToDfa(regex: string): string {
+  const nfa = regexToNfa(regex);
+  if (typeof nfa === 'string') {
+      return nfa;
+  }
+  
+  const dfa = minDfa(nfaToDfa(nfa));
+  const states: Record<string, DfaNode> = {};
+  const nodes: DfaNode[] = [];
+  const stack: DfaNode[] = [dfa];
+  const symbols: string[] = [];
 
   while (stack.length > 0) {
-    top = stack.pop();
-    if (!states.hasOwnProperty(top.id)) {
+    const top = stack.pop()!;
+    if (!states.hasOwnProperty(top.id.toString())) {
       states[top.id] = top;
-      top.nature = toNature(top.id);
+      top.nature = toNature(top.id.toString());
       nodes.push(top);
-      for (i = 0; i < top.edges.length; i += 1) {
-        if (top.edges[i][0] !== 'ϵ' && symbols.indexOf(top.edges[i][0]) < 0) {
-          symbols.push(top.edges[i][0]);
+      for (let i = 0; i < top.edges.length; i += 1) {
+        if (top.edges[i][0] !== 'ϵ' && symbols.indexOf(top.edges[i][0] as string) < 0) {
+          symbols.push(top.edges[i][0] as string);
         }
         stack.push(top.edges[i][1]);
       }
@@ -689,9 +755,10 @@ function regexToDfa(regex) {
     return a.nature - b.nature;
   });
   symbols.sort();
-  let graph = [];
+  const graph: Record<string, any>[] = [];
+
   for (let i = 0; i < nodes.length; i += 1) {
-    let curr = {};
+    const curr: Record<string, any> = {};
     curr.type = nodes[i].type;
     curr.edges = {};
     for (let j = 0; j < symbols.length; j += 1) {
@@ -705,7 +772,6 @@ function regexToDfa(regex) {
 
   return JSON.stringify(graph);
 }
-
 
 // function catchAllRegexStr() {
 //   return "(0|1|2|3|4|5|6|7|8|9|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|!|\"|#|$|%|&|'|\\(|\\)|\\*|\\+|,|-|.|/|:|;|<|=|>|\\?|@|\\[|\\\\|\\]|\\^|_|`|{|\\||}|~| |\t|\n|\r|\x0b|\x0c)";
