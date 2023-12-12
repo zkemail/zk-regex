@@ -9,5 +9,8 @@
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true
     },
-    "include": ["./scripts", "./test"]
+    "include": [
+        "./scripts",
+        "./test"
+    ]
 }
