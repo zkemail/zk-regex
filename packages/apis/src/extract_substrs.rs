@@ -333,10 +333,39 @@ mod test {
     }
 
     #[test]
+    fn test_email_domain_valid_different_emails() {
+        let input_str1 = "suegamisora@outlook.com";
+        let idxes1 = extract_email_domain_idxes(input_str1).unwrap();
+        assert_eq!(idxes1, vec![(12, 23)]);
+
+        let input_str2 = "john.doe@example.com";
+        let idxes2 = extract_email_domain_idxes(input_str2).unwrap();
+        assert_eq!(idxes2, vec![(9, 20)]);
+
+        let input_str3 = "jane_smith123@yahoo.co.uk";
+        let idxes3 = extract_email_domain_idxes(input_str3).unwrap();
+        assert_eq!(idxes3, vec![(14, 25)]);
+    }
+
+    #[test]
+    fn test_email_domain_empty() {
+        let input_str = "";
+        let result = extract_email_domain_idxes(input_str);
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn test_email_addr_in_subject_valid() {
         let input_str = "This is sent for suegamisora@gmail.com";
         let idxes = extract_email_addr_idxes(input_str).unwrap();
         assert_eq!(idxes, vec![(17, 38)]);
+    }
+
+    #[test]
+    fn test_email_addr_in_subject_empty() {
+        let input_str = "";
+        let result = extract_email_addr_idxes(input_str);
+        assert!(result.is_err());
     }
 
     #[test]
@@ -355,6 +384,13 @@ mod test {
     }
 
     #[test]
+    fn test_email_addr_with_name_empty() {
+        let input_str = "";
+        let result = extract_email_addr_with_name_idxes(input_str);
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn test_email_from_all_valid() {
         let input_str = "from:dummy@a.com <suegamisora@gmail.com>\r\n";
         let idxes = extract_from_all_idxes(input_str).unwrap();
@@ -362,10 +398,24 @@ mod test {
     }
 
     #[test]
+    fn test_email_from_all_empty() {
+        let input_str = "";
+        let result = extract_from_all_idxes(input_str);
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn test_email_from_addr_valid() {
         let input_str = "from:dummy@a.com <suegamisora@gmail.com>\r\n";
         let idxes = extract_from_addr_idxes(input_str).unwrap();
         assert_eq!(idxes, vec![(18, 39)]);
+    }
+
+    #[test]
+    fn test_email_from_addr_empty() {
+        let input_str = "";
+        let result = extract_from_addr_idxes(input_str);
+        assert!(result.is_err());
     }
 
     #[test]
@@ -393,10 +443,55 @@ mod test {
     }
 
     #[test]
+    fn test_code_in_subject_invalid() {
+        let code_regex = DecomposedRegexConfig {
+            parts: vec![
+                RegexPartConfig {
+                    is_public: false,
+                    regex_def: "CODE:0x".to_string(),
+                },
+                RegexPartConfig {
+                    is_public: true,
+                    regex_def: "(0|1|2|3|4|5|6|7|8|9|a|b|c|d|e|f)+".to_string(),
+                },
+            ],
+        };
+        let input_str = "subject:Email Wallet CODE:0xG123abc"; // Invalid hex code
+        let idxes = extract_substr_idxes(input_str, &code_regex);
+        assert!(idxes.is_err());
+    }
+    
+    #[test]
+    fn test_code_in_subject_empty() {
+        let code_regex = DecomposedRegexConfig {
+            parts: vec![
+                RegexPartConfig {
+                    is_public: false,
+                    regex_def: "CODE:0x".to_string(),
+                },
+                RegexPartConfig {
+                    is_public: true,
+                    regex_def: "(0|1|2|3|4|5|6|7|8|9|a|b|c|d|e|f)+".to_string(),
+                },
+            ],
+        };
+        let input_str = "";
+        let idxes = extract_substr_idxes(input_str, &code_regex);
+        assert!(idxes.is_err());
+    }
+
+    #[test]
     fn test_body_hash_valid() {
         let input_str = "dkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20230601; t=1694989812; x=1695594612; dara=google.com; h=to:subject:message-id:date:from:mime-version:from:to:cc:subject :date:message-id:reply-to; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=";
         let idxes = extract_body_hash_idxes(input_str).unwrap();
         assert_eq!(idxes, vec![(219, 263)]);
+    }
+
+    #[test]
+    fn test_body_hash_empty() {
+        let input_str = "";
+        let idxes = extract_body_hash_idxes(input_str);
+        assert!(idxes.is_err());
     }
 
     #[test]
@@ -407,10 +502,24 @@ mod test {
     }
 
     #[test]
+    fn test_timestamp_empty() {
+        let input_str = "";
+        let idxes = extract_timestamp_idxes(input_str);
+        assert!(idxes.is_err());
+    }
+
+    #[test]
     fn test_message_id_valid() {
         let input_str =
             "message-id:<CAJ7Y6jerCWt6t4HVqfXeeqRthJpj_1vYCpXzAVgowozVFKWbVQ@mail.gmail.com>\r\n";
         let idxes = extract_message_id_idxes(input_str).unwrap();
         assert_eq!(idxes, vec![(11, 79)]);
+    }
+    
+    #[test]
+    fn test_message_id_empty() {
+        let input_str = "";
+        let idxes = extract_message_id_idxes(input_str);
+        assert!(idxes.is_err());
     }
 }

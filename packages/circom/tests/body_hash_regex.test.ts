@@ -46,6 +46,19 @@ describe("Bodyhash Regex", () => {
         }
     });
 
+    it("empty signature field test", async () => {
+        const signatureField = ``;
+        // const revealed = "1694989812";
+        const paddedStr = apis.padString(signatureField, 1024);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        // const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_bodyhash_regex.circom"), option);
+        const witness = await circuit.calculateWitness(circuitInputs);
+        await circuit.checkConstraints(witness);
+        expect(0n).toEqual(witness[1]);
+    });
+
     it("timestamp after new line", async () => {
         const signatureField = `\r\ndkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20230601; t=1694989812; x=1695594612; dara=google.com; h=to:subject:message-id:date:from:mime-version:from:to:cc:subject :date:message-id:reply-to; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=`;
         // const revealed = "1694989812";

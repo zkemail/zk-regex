@@ -47,4 +47,17 @@ describe("Email Domain Regex", () => {
             }
         }
     });
+
+    it("test a regex of an empty email address", async () => {
+        const emailAddr = "";
+        const paddedStr = apis.padString(emailAddr, 256);
+        // const revealed = "";
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        // const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_email_domain_regex.circom"), option);
+        const witness = await circuit.calculateWitness(circuitInputs);
+        await circuit.checkConstraints(witness);
+        expect(0n).toEqual(witness[1]);
+    });
 });
