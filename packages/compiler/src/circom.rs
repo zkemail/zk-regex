@@ -21,7 +21,8 @@ impl RegexAndDFA {
         template_name: &str,
         gen_substrs: bool,
     ) -> Result<(), CompilerError> {
-        let circom = gen_circom_allstr(&self.dfa_val, template_name, &self.regex_str)?;
+        // let all_regex = String::new();
+        let circom = gen_circom_allstr(&self.dfa_val, template_name)?;
         if gen_substrs {
             self.add_substrs_constraints(circom_path, circom)?;
         } else {
@@ -48,7 +49,6 @@ impl RegexAndDFA {
         circom += "\t}\n";
 
         let substr_defs_array = &self.substrs_defs.substr_defs_array;
-        circom += &format!("\t// substrings calculated: {:?}\n", &self.substrs_defs.substr_defs_array);
         for (idx, defs) in substr_defs_array.into_iter().enumerate() {
             let num_defs = defs.len();
             circom += &format!("\tsignal is_substr{}[msg_bytes][{}];\n", idx, num_defs + 1);

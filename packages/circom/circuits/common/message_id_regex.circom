@@ -2,7 +2,6 @@ pragma circom 2.1.5;
 
 include "@zk-email/zk-regex-circom/circuits/regex_helpers.circom";
 
-// regex: ((\n)|^)message-id:<(=|@|\.|\+|_|-|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9)+>\n
 template MessageIdRegex(msg_bytes) {
 	signal input msg[msg_bytes];
 	signal output out;
@@ -271,7 +270,6 @@ template MessageIdRegex(msg_bytes) {
 		is_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][7] * (1 - is_consecutive[msg_bytes-i][1]) + is_consecutive[msg_bytes-i][1];
 		is_consecutive[msg_bytes-1-i][1] <== state_changed[msg_bytes-i].out * is_consecutive[msg_bytes-1-i][0];
 	}
-	// substrings calculated: [{(17, 18), (1, 4), (1, 1), (18, 1)}]
 	signal is_substr0[msg_bytes][5];
 	signal is_reveal0[msg_bytes];
 	signal output reveal0[msg_bytes];

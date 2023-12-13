@@ -47,9 +47,9 @@ pub fn regex_to_dfa(regex: &str) -> Result<Vec<Value>, JsCallerError> {
     Ok(serde_json::from_str(&result)?)
 }
 
-pub fn gen_circom_allstr(graph: &[Value], template_name: &str, regex_str: &str) -> Result<String, JsCallerError> {
+pub fn gen_circom_allstr(graph: &[Value], template_name: &str) -> Result<String, JsCallerError> {
     let code: &'static str = include_str!("gen_circom.js");
     let mut script = Script::from_string(code)?;
-    let result: String = script.call("genCircomAllstr", (graph, template_name, regex_str))?;
+    let result: String = script.call("genCircomAllstr", (graph, template_name))?;
     Ok(result)
 }

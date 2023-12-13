@@ -6,7 +6,7 @@
     },
     {
       "is_public": true,
-      "regex_def": "[a-zA-Z0-9_]+"
+      "regex_def": "[a-zA-Z]+"
     },
     {
       "is_public": false,
