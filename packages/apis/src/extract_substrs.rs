@@ -1,4 +1,4 @@
-use compiler::DecomposedRegexConfig;
+use zk_regex_compiler::DecomposedRegexConfig;
 use fancy_regex::Regex;
 
 use neon::prelude::*;
@@ -321,7 +321,7 @@ pub fn extract_message_id_idxes_node(mut cx: FunctionContext) -> JsResult<JsArra
 
 #[cfg(test)]
 mod test {
-    use compiler::RegexPartConfig;
+    use zk_regex_compiler::RegexPartConfig;
 
     use super::*;
 
