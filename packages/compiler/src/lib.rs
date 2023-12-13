@@ -439,7 +439,7 @@ pub(crate) fn get_accepted_state(dfa_val: &[Value]) -> Option<usize> {
 
 pub(crate) fn get_max_state(dfa_val: &[Value]) -> Result<usize, JsCallerError> {
     let mut max_state = 0;
-    for (i, val) in dfa_val.iter().enumerate() {
+    for (_i, val) in dfa_val.iter().enumerate() {
         for (_, next_node_val) in val["edges"]
             .as_object()
             .ok_or(JsCallerError::InvalidEdges(val["edges"].clone()))?

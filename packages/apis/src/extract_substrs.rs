@@ -1,6 +1,6 @@
 use compiler::DecomposedRegexConfig;
 use fancy_regex::Regex;
-use itertools::Itertools;
+
 use neon::prelude::*;
 use serde_json;
 use thiserror::Error;

@@ -3,16 +3,16 @@ use crate::get_accepted_state;
 use crate::js_caller::*;
 use crate::RegexAndDFA;
 // use crate::{AllstrRegexDef, SubstrRegexDef};
-use fancy_regex::Regex;
-use itertools::Itertools;
-use petgraph::prelude::*;
-use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
-use std::io::BufWriter;
+
+
+
+
+
+
 use std::io::Write;
 use std::path::PathBuf;
-use std::{collections::HashMap, fs::File};
-use thiserror::Error;
+use std::{fs::File};
+
 
 impl RegexAndDFA {
     pub fn gen_circom(
