@@ -15,12 +15,12 @@
   },
   "scripts": {
     "build": "npx tsc && cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
-    "build-debug": "npm run build --",
-    "build-release": "npm run build -- --release",
+    "build-debug": "npx tsc && npm run build --",
+    "build-release": "npx tsc && npm run build -- --release",
     "install": "npx tsc && node-pre-gyp install --fallback-to-build=false || npm run build-release",
-    "test": "cargo test",
-    "package": "node-pre-gyp package",
-    "upload-binary": "npm run package && node-pre-gyp-github publish"
+    "test": "npx tsc && cargo test",
+    "package": "npx tsc && node-pre-gyp package",
+    "upload-binary": "npx tsc && npm run package && node-pre-gyp-github publish"
   },
   "license": "MIT",
   "dependencies": {
