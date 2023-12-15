@@ -2,7 +2,7 @@
 
 use clap::{Parser, Subcommand};
 
-use compiler::*;
+use zk_regex_compiler::*;
 
 #[derive(Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]
