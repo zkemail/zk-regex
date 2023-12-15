@@ -23,6 +23,8 @@ itertools = "0.10.3"
 thiserror = "1.0.40"
 serde_json = "1.0.95"
 
+[dev-dependencies]
+zk-regex-compiler = { path = "../compiler"}
 
 [dependencies.neon]
 version = "0.10"
