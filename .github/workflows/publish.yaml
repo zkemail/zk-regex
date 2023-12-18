@@ -7,10 +7,16 @@ on:
 permissions: write-all
 
 jobs:
+  qemu:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest,linux/amd64,windows/amd64,macos/amd64]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
