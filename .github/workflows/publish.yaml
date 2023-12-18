@@ -16,7 +16,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest,macos-latest-xlarge, linux/amd64]
+        os: [ubuntu-latest, windows-latest, macos-latest,m1max, linux/amd64]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
@@ -43,7 +43,7 @@ jobs:
         if: ${{ matrix.os == 'macos-latest'}}
         run: curl https://github.com/iden3/circom/releases/latest/download/circom-macos-amd64 -o /usr/local/bin/circom && chmod +x /usr/local/bin/circom
       - name: Download circom (Macos ARM64)
-        if: ${{ matrix.os == 'macos-latest'}}
+        if: ${{ matrix.os == 'm1max'}}
         run: curl https://github.com/iden3/circom/releases/latest/download/circom-macos-amd64 -o /usr/local/bin/circom && chmod +x /usr/local/bin/circom
       # - name: Install yarn
       #   run: npm install -g yarn
