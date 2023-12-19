@@ -15,7 +15,7 @@ jobs:
       - name: "Setup Rust"
         uses: ATiltedTree/setup-rust@v1
         with:
-          rust-version: stable
+          rust-version: nightly
           components: clippy
       - name: Download circom (Linux)
         run: wget https://github.com/iden3/circom/releases/latest/download/circom-linux-amd64 -O /usr/local/bin/circom && chmod +x /usr/local/bin/circom
@@ -23,8 +23,6 @@ jobs:
         run: npm install -g yarn
       - name: Install dependencies
         run: yarn
-      - name: Cargo update
-        run: cargo update
       # - name: Create build folder
       #   run: mkdir build
       # - name: Run Linters
