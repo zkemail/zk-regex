@@ -1,7 +1,7 @@
-use std::collections::HashMap;
 
-use js_sandbox::{AnyError, JsError, Script};
-use petgraph::prelude::*;
+
+use js_sandbox::{JsError, Script};
+
 use serde_json::Value;
 use thiserror::Error;
 
