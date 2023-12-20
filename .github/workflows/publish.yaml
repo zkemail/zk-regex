@@ -33,9 +33,6 @@ jobs:
       - name: Download circom (Linux)
         if: ${{ matrix.os == 'ubuntu-latest'}}
         run: wget https://github.com/iden3/circom/releases/latest/download/circom-linux-amd64 -O /usr/local/bin/circom && chmod +x /usr/local/bin/circom
-      - name: Download circom (Linux ARM64)
-        if: ${{ matrix.os == 'ubuntu-latest'}}
-        run: wget https://github.com/iden3/circom/releases/latest/download/circom-linux-amd64 -O /usr/local/bin/circom && chmod +x /usr/local/bin/circom
       - name: Download circom (Windows)
         if: ${{ matrix.os == 'windows-latest'}}
         run: curl https://github.com/iden3/circom/releases/latest/download/circom-windows-amd64.exe -o C:\Windows/circom && icacls C:\Windows/circom /grant Everyone:RX
@@ -43,7 +40,7 @@ jobs:
         if: ${{ matrix.os == 'macos-latest'}}
         run: curl https://github.com/iden3/circom/releases/latest/download/circom-macos-amd64 -o /usr/local/bin/circom && chmod +x /usr/local/bin/circom
       - name: Download circom (Macos ARM64)
-        if: ${{ matrix.os == 'm1max'}}
+        if: ${{ matrix.os == 'macos-latest-xlarge'}}
         run: curl https://github.com/iden3/circom/releases/latest/download/circom-macos-amd64 -o /usr/local/bin/circom && chmod +x /usr/local/bin/circom
       # - name: Install yarn
       #   run: npm install -g yarn
