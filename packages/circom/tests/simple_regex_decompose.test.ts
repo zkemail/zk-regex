@@ -26,7 +26,7 @@ describe("Simple Regex Decomposed", () => {
         circuit = await wasm_tester(path.join(__dirname, "./circuits/test_simple_regex_decomposed.circom"), option);
     });
 
-    it.skip("case 1", async () => {
+    it("case 1", async () => {
         const input = "email was meant for @zkRegex.";
         const paddedStr = apis.padString(input, 64);
         const circuitInputs = {
