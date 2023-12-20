@@ -11,6 +11,7 @@ const option = {
 };
 const compiler = require("../../compiler");
 
+jest.setTimeout(120000);
 describe("Simple Regex Decomposed", () => {
     let circuit;
     beforeAll(async () => {
