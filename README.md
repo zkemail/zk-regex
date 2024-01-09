@@ -32,6 +32,9 @@ To understand the theory behind the regex circuit compiler, please checkout [thi
 
 ### Install
 
+Install yarn v1, or run `yarn set version classic` to set the version.
+Also make sure that [`circom`](https://docs.circom.io/getting-started/installation/) is installed.
+
 Clone the repo and install the dependencies:
 
 ```
