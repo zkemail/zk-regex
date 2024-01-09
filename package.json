@@ -50,5 +50,8 @@
     "prettier-plugin-solidity": "^1.1.3",
     "ts-jest": "^29.1.1",
     "typescript": "^4.5.4"
+  },
+  "engines": {
+    "yarn": "^1.22.0"
   }
 }
