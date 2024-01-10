@@ -44,6 +44,21 @@ describe("Email Address Regex", () => {
         }
     });
 
+    it("with an invalid email address", async () => {
+        const emailAddr = "suegamisora";
+        const paddedStr = apis.padString(emailAddr, 256);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        // const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_email_addr_regex.circom"), option);
+        const witness = await circuit.calculateWitness(circuitInputs);
+        await circuit.checkConstraints(witness);
+        expect(0n).toEqual(witness[1]);
+        for (let idx = 0; idx < 256; ++idx) {
+            expect(0n).toEqual(witness[2 + idx]);
+        }
+    });
+
     it("with a prefix", async () => {
         const prefix = "subject:";
         const emailAddr = "suegamisora@gmail.com";
