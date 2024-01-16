@@ -91,7 +91,6 @@ impl DecomposedRegexConfig {
             all_regex += &config.regex_def;
         }
         let dfa_val = regex_to_dfa(&all_regex)?;
-        // println!("dfa_val {:?}", dfa_val);
         let substrs_defs = self.extract_substr_ids(&dfa_val)?;
         Ok(RegexAndDFA {
             // max_byte_size: self.max_byte_size,
@@ -103,7 +102,7 @@ impl DecomposedRegexConfig {
 
     pub fn extract_substr_ids(&self, dfa_val: &[Value]) -> Result<SubstrsDefs, CompilerError> {
         let part_configs = &self.parts;
-        let mut graph = Graph::<bool, char, Directed, usize>::with_capacity(0, 0);
+        let mut graph = Graph::<bool, u32, Directed, usize>::with_capacity(0, 0);
         let max_state = get_max_state(dfa_val)?;
         add_graph_nodes(dfa_val, &mut graph, None, max_state)?;
         let accepted_state = get_accepted_state(dfa_val).ok_or(JsCallerError::NoAcceptedState)?;
@@ -287,20 +286,29 @@ impl DecomposedRegexConfig {
         debug_assert_eq!(path_states.len(), path_strs.len() + 1);
         let mut concat_str = String::new();
         for str in path_strs.into_iter() {
-            let first_chars = str.as_bytes();
-            concat_str += &(first_chars[0] as char).to_string();
+            concat_str += &(char::from_u32(str.parse::<u32>().expect("Unable to cast"))
+                .expect("Unable to cast"))
+            .to_string();
         }
         let index_ends = part_regexes
             .iter()
             .map(|regex| {
-                // println!("regex {}", regex);
-                // println!("concat_str {}", concat_str);
-                let found = regex.find(&concat_str).unwrap().unwrap();
-                // println!("found {:?}", found);
-                if found.start() == found.end() {
-                    found.end() + 1
+                // Size of concat_str
+                let mut found_start = 0;
+                let mut found_end = 0;
+                if let Ok(Some(mat)) = regex.find(&concat_str) {
+                    // Convert byte indices to character indices
+                    let start_char_index = concat_str[..mat.start()].chars().count();
+                    let end_char_index = concat_str[..mat.end()].chars().count();
+
+                    found_start = start_char_index;
+                    found_end = end_char_index;
+                }
+
+                if found_start == found_end {
+                    found_end + 1
                 } else {
-                    found.end()
+                    found_end
                 }
             })
             .collect_vec();
@@ -314,7 +322,13 @@ impl DecomposedRegexConfig {
             let end = index_ends[*index];
             substr_results.push((
                 path_states[(start)..=end].to_vec(),
-                concat_str[0..=(end - 1)].to_string(),
+                concat_str[0..concat_str
+                    .char_indices()
+                    .take(end)
+                    .last()
+                    .map(|(i, _)| i)
+                    .unwrap_or(0)]
+                    .to_string(),
             ));
         }
         Ok(substr_results)
@@ -355,6 +369,7 @@ pub fn gen_from_decomposed(
     circom_template_name: Option<&str>,
     gen_substrs: Option<bool>,
 ) {
+    println!("decomposed_regex_path: {}", decomposed_regex_path);
     let decomposed_regex_config: DecomposedRegexConfig =
         serde_json::from_reader(File::open(decomposed_regex_path).unwrap()).unwrap();
     let regex_and_dfa = decomposed_regex_config
@@ -461,7 +476,7 @@ pub(crate) fn get_max_state(dfa_val: &[Value]) -> Result<usize, JsCallerError> {
 
 pub(crate) fn add_graph_nodes(
     dfa_val: &[Value],
-    graph: &mut Graph<bool, char, Directed, usize>,
+    graph: &mut Graph<bool, u32, Directed, usize>,
     last_max_state: Option<usize>,
     next_max_state: usize,
 ) -> Result<(), JsCallerError> {
@@ -488,37 +503,20 @@ pub(crate) fn add_graph_nodes(
                     continue;
                 }
             }
+
             let key_list: Vec<String> = serde_json::from_str::<Vec<String>>(&key)?
                 .iter()
                 .filter(|s| s.as_str() != "\u{ff}")
                 .cloned()
                 .collect_vec();
-            // let mut key_str = String::new();
-            // for key_char in key_list.iter() {
-            //     // println!("key_char {}", key_char);
-            //     assert!(key_char.len() == 1);
-            //     // key_str += key_char;
-            // }
-            if key_list.len() == 0 {
+
+            if key_list.is_empty() {
                 continue;
             }
-            let mut key = None;
-            for key_idx in 0..key_list.len() {
-                let char = key_list[key_idx].chars().nth(0).unwrap();
-                if (char as u8) < 10 || (char as u8) > 127 {
-                    continue;
-                }
-                if key_list[key_idx].as_bytes().len() == 1 {
-                    key = Some(char);
-                    break;
-                }
-            }
-            // assert_eq!(key_list[key_idx].as_bytes().len(), 1);
-            graph.add_edge(
-                NodeIndex::from(next_node),
-                NodeIndex::from(i),
-                key.expect("there is no representative character."),
-            );
+
+            let key_char = key_list[0].chars().collect::<Vec<char>>()[0] as u32;
+
+            graph.add_edge(NodeIndex::from(next_node), NodeIndex::from(i), key_char);
         }
     }
     Ok(())
