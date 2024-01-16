@@ -369,7 +369,6 @@ pub fn gen_from_decomposed(
     circom_template_name: Option<&str>,
     gen_substrs: Option<bool>,
 ) {
-    println!("decomposed_regex_path: {}", decomposed_regex_path);
     let decomposed_regex_config: DecomposedRegexConfig =
         serde_json::from_reader(File::open(decomposed_regex_path).unwrap()).unwrap();
     let regex_and_dfa = decomposed_regex_config
