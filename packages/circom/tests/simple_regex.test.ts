@@ -79,6 +79,7 @@ describe("Simple Regex", () => {
         const circuitInputs = {
             msg: paddedStr,
         };
+
         // const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_simple_regex.circom"), option);
         const witness = await circuit.calculateWitness(circuitInputs);
         await circuit.checkConstraints(witness);
@@ -94,6 +95,4 @@ describe("Simple Regex", () => {
             }
         }
     });
-
-
 });

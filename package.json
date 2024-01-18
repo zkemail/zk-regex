@@ -8,10 +8,10 @@
     "packages/*"
   ],
   "contributors": [
-    "Javier Su <javier.su.weijie@gmail.com>",
-    "Kata Choi <kata.choi@gmail.com>",
     "Sora Suegami <suegamisora@gmail.com>",
-    "Yush G <aayushg@mit.edu>"
+    "Yush G <aayushg@mit.edu>",
+    "Javier Su <javier.su.weijie@gmail.com>",
+    "Kata Choi <kata.choi@gmail.com>"
   ],
   "scripts": {
     "install": "yarn workspaces -pt run install",

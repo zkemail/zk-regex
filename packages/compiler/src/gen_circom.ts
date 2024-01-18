@@ -3,8 +3,15 @@ type Graph = {
     edges: Record<string, number>;
 }[];
 
-function genCircomAllstr(graph_json: Graph, template_name: string): string {
-    const N: number = graph_json.length;
+function genCircomAllstr(graph_json: Graph, template_name: string, regex_str = ""): string {
+    /**
+    * This function generates a Circom circuit from a given graph_json, template_name, and regex_str.
+    * @param {Object} graph_json - The graph in JSON format.
+    * @param {string} template_name - The name to be used for the Circom template.
+    * @param {string} regex_str - The regular expression string, used only to print in a comment at the top.
+    */
+
+    const N = graph_json.length;
     // console.log(JSON.stringify(graph_json, null, 2));
     // const graph = Array(N).fill({});
     const rev_graph: Record<number, Record<number, number[]>> = {};
@@ -18,7 +25,7 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
 
     const accept_nodes: Set<number> = new Set();
     for (let i = 0; i < N; i++) {
-        const node = graph_json[i];
+        const node = graph_json[i]; 
         for (let k in node.edges) {
             const v: number = node.edges[k];
             rev_graph[v][i] = Array.from(JSON.parse(k)).map(c => (c as string).charCodeAt(0));
@@ -56,11 +63,11 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
     }
 
     if (accept_nodes.size === 0) {
-        throw new Error("accept node must exist");
+        throw new Error('accept node must not be 0');
     }
     const accept_nodes_array = [...accept_nodes];
     if (accept_nodes_array.length !== 1) {
-        throw new Error("the size of accept nodes must be one");
+        throw new Error('the size of accept nodes must be one');
     }
 
     let eq_i: number = 0;
@@ -76,8 +83,9 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
     const multi_or_checks1: Record<string, number> = {};
     const multi_or_checks2: Record<string, number> = {};
 
+
     let lines: string[] = [];
-    lines.push(`\tfor (var i = 0; i < num_bytes; i++) {`);
+    lines.push('\tfor (var i = 0; i < num_bytes; i++) {');
 
     // const uppercase = new Set(Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ").map(c => c.charCodeAt()));
     // const lowercase = new Set(Array.from("abcdefghijklmnopqrstuvwxyz").map(c => c.charCodeAt()));
@@ -268,13 +276,14 @@ function genCircomAllstr(graph_json: Graph, template_name: string): string {
     }
 
     lines.push(`\t\tstates[i+1][0] <== 1 - state_changed[i].out;`);
-    lines.push(`\t}`);
+    lines.push('\t}');
 
 
     const declarations: string[] = [];
     declarations.push(`pragma circom 2.1.5;\n`);
     declarations.push(`include "@zk-email/zk-regex-circom/circuits/regex_helpers.circom";\n`);
     // declarations.push(`pragma circom 2.1.5;\ninclude "@zk-email/circuits/regexes/regex_helpers.circom";\n`);
+    declarations.push(`// regex: ${regex_str.replace(/\n/g, '\\n')}`);
     declarations.push(`template ${template_name}(msg_bytes) {`);
     declarations.push(`\tsignal input msg[msg_bytes];`);
     declarations.push(`\tsignal output out;\n`);
