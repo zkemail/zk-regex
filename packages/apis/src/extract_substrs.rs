@@ -422,13 +422,13 @@ mod test {
     }
 
     #[test]
-    fn test_code_in_subject_valid() {
+    fn test_code_in_email_address_valid() {
         let code_regex = DecomposedRegexConfig {
             // max_byte_size: 1024,
             parts: vec![
                 RegexPartConfig {
                     is_public: false,
-                    regex_def: "CODE:0x".to_string(),
+                    regex_def: "ACCOUNTKEY.0x".to_string(),
                     // max_size: 7,
                     // solidity: None
                 },
@@ -440,9 +440,9 @@ mod test {
                 },
             ],
         };
-        let input_str = "subject:Email Wallet CODE:0x123abc";
+        let input_str = "sepolia+ACCOUNTKEY.0xabc123@sendeth.org";
         let idxes = extract_substr_idxes(input_str, &code_regex).unwrap();
-        assert_eq!(idxes, vec![(28, 34)]);
+        assert_eq!(idxes, vec![(21, 27)]);
     }
 
     #[test]
