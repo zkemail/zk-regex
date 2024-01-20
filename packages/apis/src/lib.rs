@@ -17,6 +17,8 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     )?;
     cx.export_function("extractFromAllIdxes", extract_from_all_idxes_node)?;
     cx.export_function("extractFromAddrIdxes", extract_from_addr_idxes_node)?;
+    cx.export_function("extractToAllIdxes", extract_to_all_idxes_node)?;
+    cx.export_function("extractToAddrIdxes", extract_to_addr_idxes_node)?;
     cx.export_function("extractSubjectAllIdxes", extract_subject_all_idxes_node)?;
     cx.export_function("extractBodyHashIdxes", extract_body_hash_idxes_node)?;
     cx.export_function("extractTimestampIdxes", extract_timestamp_idxes_node)?;
