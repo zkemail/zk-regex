@@ -15,14 +15,11 @@ jest.setTimeout(120000);
 describe("Simple Regex Decomposed", () => {
     let circuit;
     beforeAll(async () => {
-        compiler.genFromDecomposed(
-            path.join(__dirname, "./circuits/simple_regex_decomposed.json"),
-            {
-                circomFilePath: path.join(__dirname, "./circuits/simple_regex_decomposed.circom"),
-                templateName: "SimpleRegexDecomposed",
-                genSubstrs: true
-            }
-        );
+        compiler.genFromDecomposed(path.join(__dirname, "./circuits/simple_regex_decomposed.json"), {
+            circomFilePath: path.join(__dirname, "./circuits/simple_regex_decomposed.circom"),
+            templateName: "SimpleRegexDecomposed",
+            genSubstrs: true
+        });
         circuit = await wasm_tester(path.join(__dirname, "./circuits/test_simple_regex_decomposed.circom"), option);
     });
 

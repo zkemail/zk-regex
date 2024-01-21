@@ -2,7 +2,7 @@ pragma circom 2.1.5;
 
 include "@zk-email/zk-regex-circom/circuits/regex_helpers.circom";
 
-// regex: email was meant for @[a-zA-Z0-9_]+.
+// regex: email was meant for @(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|_)+
 template SimpleRegexDecomposed(msg_bytes) {
 	signal input msg[msg_bytes];
 	signal output out;
