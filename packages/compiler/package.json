@@ -17,7 +17,8 @@
     "build": "npx tsc && cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
     "build-debug": "npx tsc && npm run build --",
     "build-release": "npx tsc && npm run build -- --release",
-    "install": "npx tsc && node-pre-gyp install --fallback-to-build=false || npm run build-release",
+    "install": "npm run build-debug",
+    "install-release": "node-pre-gyp install --update-binary --fallback-to-build=false || npm run build-release",
     "test": "npx tsc && cargo test",
     "package": "npx tsc && node-pre-gyp package",
     "upload-binary": "npx tsc && npm run package && node-pre-gyp-github publish"

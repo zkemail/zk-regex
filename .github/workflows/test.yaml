@@ -12,11 +12,12 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
-      - name: "Setup Rust"
-        uses: ATiltedTree/setup-rust@v1
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
         with:
-          rust-version: nightly
-          components: clippy
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
       - name: Download circom (Linux)
         run: wget https://github.com/iden3/circom/releases/latest/download/circom-linux-amd64 -O /usr/local/bin/circom && chmod +x /usr/local/bin/circom
       - name: Install yarn
