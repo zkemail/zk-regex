@@ -1,9 +1,8 @@
-use zk_regex_compiler::DecomposedRegexConfig;
 use fancy_regex::Regex;
-
 use neon::prelude::*;
 use serde_json;
 use thiserror::Error;
+use zk_regex_compiler::DecomposedRegexConfig;
 
 /// Error definitions of the compiler.
 #[derive(Error, Debug)]
@@ -99,6 +98,17 @@ pub fn extract_from_addr_idxes(
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config =
         serde_json::from_str(include_str!("./decomposed_defs/from_addr.json")).unwrap();
+    extract_substr_idxes(input_str, &regex_config)
+}
+
+pub fn extract_to_all_idxes(input_str: &str) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
+    let regex_config = serde_json::from_str(include_str!("./decomposed_defs/to_all.json")).unwrap();
+    extract_substr_idxes(input_str, &regex_config)
+}
+
+pub fn extract_to_addr_idxes(input_str: &str) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
+    let regex_config =
+        serde_json::from_str(include_str!("./decomposed_defs/to_addr.json")).unwrap();
     extract_substr_idxes(input_str, &regex_config)
 }
 
@@ -247,6 +257,49 @@ pub fn extract_from_addr_idxes_node(mut cx: FunctionContext) -> JsResult<JsArray
     Ok(js_array)
 }
 
+pub fn extract_to_all_idxes_node(mut cx: FunctionContext) -> JsResult<JsArray> {
+    let input_str = cx.argument::<JsString>(0)?.value(&mut cx);
+
+    let substr_idxes = match extract_to_all_idxes(&input_str) {
+        Ok(substr_idxes) => substr_idxes,
+        Err(e) => return cx.throw_error(e.to_string()),
+    };
+
+    let js_array = JsArray::new(&mut cx, substr_idxes.len() as u32);
+
+    for (i, (start_idx, end_idx)) in substr_idxes.iter().enumerate() {
+        let start_end_array = JsArray::new(&mut cx, 2u32);
+
+        let start_idx = cx.number(*start_idx as f64);
+        start_end_array.set(&mut cx, 0, start_idx)?;
+
+        let end_idx = cx.number(*end_idx as f64);
+        start_end_array.set(&mut cx, 1, end_idx)?;
+
+        js_array.set(&mut cx, i as u32, start_end_array)?;
+    }
+
+    Ok(js_array)
+}
+
+pub fn extract_to_addr_idxes_node(mut cx: FunctionContext) -> JsResult<JsArray> {
+    let input_str = cx.argument::<JsString>(0)?.value(&mut cx);
+    let substr_idxes = match extract_to_addr_idxes(&input_str) {
+        Ok(substr_idxes) => substr_idxes,
+        Err(e) => return cx.throw_error(e.to_string()),
+    };
+    let js_array = JsArray::new(&mut cx, substr_idxes.len() as u32);
+    for (i, (start_idx, end_idx)) in substr_idxes.iter().enumerate() {
+        let start_end_array = JsArray::new(&mut cx, 2u32);
+        let start_idx = cx.number(*start_idx as f64);
+        start_end_array.set(&mut cx, 0, start_idx)?;
+        let end_idx = cx.number(*end_idx as f64);
+        start_end_array.set(&mut cx, 1, end_idx)?;
+        js_array.set(&mut cx, i as u32, start_end_array)?;
+    }
+    Ok(js_array)
+}
+
 pub fn extract_subject_all_idxes_node(mut cx: FunctionContext) -> JsResult<JsArray> {
     let input_str = cx.argument::<JsString>(0)?.value(&mut cx);
     let substr_idxes = match extract_subject_all_idxes(&input_str) {
@@ -369,13 +422,13 @@ mod test {
     }
 
     #[test]
-    fn test_code_in_subject_valid() {
+    fn test_code_in_email_address_valid() {
         let code_regex = DecomposedRegexConfig {
             // max_byte_size: 1024,
             parts: vec![
                 RegexPartConfig {
                     is_public: false,
-                    regex_def: "CODE:0x".to_string(),
+                    regex_def: "ACCOUNTKEY.0x".to_string(),
                     // max_size: 7,
                     // solidity: None
                 },
@@ -387,9 +440,9 @@ mod test {
                 },
             ],
         };
-        let input_str = "subject:Email Wallet CODE:0x123abc";
+        let input_str = "sepolia+ACCOUNTKEY.0xabc123@sendeth.org";
         let idxes = extract_substr_idxes(input_str, &code_regex).unwrap();
-        assert_eq!(idxes, vec![(28, 34)]);
+        assert_eq!(idxes, vec![(21, 27)]);
     }
 
     #[test]
