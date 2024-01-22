@@ -10,7 +10,7 @@ This library provides circom circuits that enables you to prove that
 - the input string satisfies regular expressions (regexes) specified in the chip.
 - the substrings are correctly extracted from the input string according to substring definitions.
 
-This is a JS/Rust adaptation of the Python regex-to-circom work done by [sampriti](https://github.com/sampritipanda/) and [yush_g](https://twitter.com/yush_g) at https://www.zkregex.com
+This is a JS/Rust adaptation of the Python regex-to-circom work done by [sampriti](https://github.com/sampritipanda/) and [yush_g](https://twitter.com/yush_g), along with [sorasue](https://github.com/SoraSuegami/)'s decomposed specifications. You can generate your own regexes via our no-code tool at https://www.zkregex.com
 
 In addition to the original work, this library also supports the following features:
 - CLI to dynamically generate regex circuit based on regex argument
@@ -22,6 +22,7 @@ You can define a regex to be proved and its substring patterns to be revealed.
 Specifically, there are two ways to define them:
 1. (manual way) converting the regex into an equivalent determistic finite automaton (DFA), selecting state transitions for each substring pattern, and writing the transitions in a json file.
 2. (automatic way) writing a decomposed version of the regex in a json file with specifying which part of the regex is revealed.
+3. (no code way) put the regex into zkregex.com > tool, highlight your chosen part, and copy the generated circuit
 While the manual way supports more kinds of regexes than the automatic way, the latter is easier and sufficient for most regexes.
 
 ### Theory
@@ -58,7 +59,7 @@ For example, if you want to verify the regex of `email was meant for @(a|b|c|d|e
          },
          {
              "is_public": true,
-             "regex_def": "(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z)+"
+             "regex_def": "[a-z]+"
          },
          {
              "is_public": false,
@@ -75,7 +76,7 @@ You can generate its regex circom as follows.
 #### `zk-regex raw -r <RAW_REGEX> -s <SUBSTRS_JSON_PATH> -c <CIRCOM_FILE_PATH> -t <TEMPLATE_NAME> -g <GEN_SUBSTRS (true/false)>`
 This command generates a regex circom from a raw string of the regex definition and a json file that defines state transitions in DFA to be revealed.
 For example, to verify the regex `1=(a|b) (2=(b|c)+ )+d` and reveal its alphabets,
-1. Visualize DFA of the regex using [this website](https://mindfa.onrender.com/min_dfa).
+1. Visualize DFA of the regex using [this website](https://zkregex.com).
 2. Find state transitions matching with the substrings to be revealed. In this case, they are `2->3` for the alphabets after `1=`, `6->7` and `7->7` for those after `2=`, and `8->9` for `d`. 
 3. Make a json file at `./simple_regex_substrs.json` that defines the state transitions. For example,
     ```
