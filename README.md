@@ -142,6 +142,20 @@ Welcome any questions, suggestions or PRs!
 yarn test
 ```
 
+## Cite this Work
+
+Use this bibtex citation.
+```
+@misc{zk-regex,
+  author = {Gupta, Aayush and Panda, Sampriti and Suegami, Sora},
+  title = {zk-regex},
+  year = {2022},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/zkemail/zk-regex/}},
+}
+```
+
 <!-- ### better align with regex grammar
 
 - [ ] support character class regex grammar (so as to simplify the regular expressions)
