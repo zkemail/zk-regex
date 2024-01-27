@@ -31,6 +31,7 @@ serde = { version = "1.0.159", features = ["derive"] }
 js-sandbox = { version = "0.2.0-rc.2", git = "https://github.com/Bromeon/js-sandbox.git", tag = "0.2.0-rc.2" }
 itertools = "0.10.3"
 clap = { version = "=4.2.1", features = ["derive"] }
+ahash = "=0.8.4"
 
 [dependencies.neon]
 version = "0.10"
