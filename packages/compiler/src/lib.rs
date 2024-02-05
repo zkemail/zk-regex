@@ -3,6 +3,7 @@ use std::{collections::HashMap, fs::File};
 pub mod circom;
 pub mod halo2;
 pub mod js_caller;
+pub mod regex;
 
 pub mod node;
 
@@ -10,6 +11,7 @@ pub mod node;
 // mod tests;
 
 use crate::node::*;
+use crate::regex::*;
 use neon;
 
 use crate::js_caller::*;
@@ -90,7 +92,7 @@ impl DecomposedRegexConfig {
         for config in part_configs.iter() {
             all_regex += &config.regex_def;
         }
-        let dfa_val = regex_to_dfa(&all_regex)?;
+        let dfa_val = regex_to_dfa(&all_regex);
         let substrs_defs = self.extract_substr_ids(&dfa_val)?;
         Ok(RegexAndDFA {
             // max_byte_size: self.max_byte_size,
@@ -341,7 +343,7 @@ impl RegexAndDFA {
         regex_str: &str,
         substrs_defs_json: SubstrsDefsJson,
     ) -> Result<RegexAndDFA, CompilerError> {
-        let dfa_val = regex_to_dfa(regex_str)?;
+        let dfa_val = regex_to_dfa(regex_str);
         let substr_defs_array = substrs_defs_json
             .transitions
             .into_iter()

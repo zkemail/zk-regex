@@ -1745,6 +1745,8 @@ dependencies = [
  "js-sandbox",
  "neon",
  "petgraph",
+ "regex",
+ "regex-automata",
  "serde",
  "serde_json",
  "tabbycat",
