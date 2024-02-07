@@ -36,7 +36,6 @@ describe("Simple Regex", () => {
         // const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_simple_regex.circom"), option);
         const witness = await circuit.calculateWitness(circuitInputs);
         await circuit.checkConstraints(witness);
-        // console.log(witness);
         expect(1n).toEqual(witness[1]);
         const revealedIdx = [[2], [6], [8]];
         for (let substr_idx = 0; substr_idx < 3; ++substr_idx) {

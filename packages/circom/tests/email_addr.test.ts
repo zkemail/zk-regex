@@ -33,7 +33,6 @@ describe("Email Address Regex", () => {
         // const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_email_addr_regex.circom"), option);
         const witness = await circuit.calculateWitness(circuitInputs);
         await circuit.checkConstraints(witness);
-        console.log(witness);
         expect(1n).toEqual(witness[1]);
         const prefixIdxes = apis.extractEmailAddrIdxes(emailAddr)[0];
         for (let idx = 0; idx < 256; ++idx) {

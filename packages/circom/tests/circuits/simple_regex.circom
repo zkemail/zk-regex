@@ -2,6 +2,7 @@ pragma circom 2.1.5;
 
 include "@zk-email/zk-regex-circom/circuits/regex_helpers.circom";
 
+// regex: 1=(a|b) (2=(b|c)+ )+d
 template SimpleRegex(msg_bytes) {
 	signal input msg[msg_bytes];
 	signal output out;
@@ -68,10 +69,10 @@ template SimpleRegex(msg_bytes) {
 		eq[5][i].in[0] <== in[i];
 		eq[5][i].in[1] <== 50;
 		and[4][i] = AND();
-		and[4][i].a <== states[i][4];
+		and[4][i].a <== states[i][8];
 		and[4][i].b <== eq[5][i].out;
 		and[5][i] = AND();
-		and[5][i].a <== states[i][8];
+		and[5][i].a <== states[i][4];
 		and[5][i].b <== eq[5][i].out;
 		multi_or[1][i] = MultiOR(2);
 		multi_or[1][i].in[0] <== and[4][i].out;
@@ -121,13 +122,13 @@ template SimpleRegex(msg_bytes) {
 		final_state_result.in[i] <== states[i][9];
 	}
 	out <== final_state_result.out;
-
 	signal is_consecutive[msg_bytes+1][2];
 	is_consecutive[msg_bytes][1] <== 1;
 	for (var i = 0; i < msg_bytes; i++) {
 		is_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][9] * (1 - is_consecutive[msg_bytes-i][1]) + is_consecutive[msg_bytes-i][1];
 		is_consecutive[msg_bytes-1-i][1] <== state_changed[msg_bytes-i].out * is_consecutive[msg_bytes-1-i][0];
 	}
+	// substrings calculated: [{(2, 3)}, {(6, 7), (7, 7)}, {(8, 9)}]
 	signal is_substr0[msg_bytes][2];
 	signal is_reveal0[msg_bytes];
 	signal output reveal0[msg_bytes];

@@ -116,7 +116,7 @@ impl DecomposedRegexConfig {
         add_graph_nodes(dfa_val, &mut graph, None, max_state);
         let accepted_state = get_accepted_state(dfa_val).unwrap();
         let accepted_state_index = NodeIndex::from(accepted_state);
-        let mut pathes = Vec::<Vec<NodeIndex<usize>>>::new();
+        let mut paths = Vec::<Vec<NodeIndex<usize>>>::new();
         let mut stack = Vec::<(NodeIndex<usize>, Vec<NodeIndex<usize>>)>::new();
         stack.push((accepted_state_index, vec![accepted_state_index]));
         let mut self_nodes = HashSet::new();
@@ -141,7 +141,7 @@ impl DecomposedRegexConfig {
                 }
                 if !path.contains(&parent) {
                     if parent.index() == 0 {
-                        pathes.push(path.to_vec());
+                        paths.push(path.to_vec());
                         continue;
                     }
                     stack.push((parent, vec![path.clone(), vec![parent]].concat()));
@@ -206,7 +206,7 @@ impl DecomposedRegexConfig {
         let mut substr_endpoints_array = (0..num_public_parts)
             .map(|_| (HashSet::<usize>::new(), HashSet::<usize>::new()))
             .collect_vec();
-        for path in pathes.iter_mut() {
+        for path in paths.iter_mut() {
             let n = path.len();
             path.append(&mut vec![NodeIndex::from(0)]);
             let edges = (0..n)
@@ -345,30 +345,30 @@ impl DecomposedRegexConfig {
 }
 
 impl RegexAndDFA {
-    // pub fn from_regex_str_and_substr_defs(
-    //     // max_byte_size: usize,
-    //     regex_str: &str,
-    //     substrs_defs_json: SubstrsDefsJson,
-    // ) -> Result<RegexAndDFA, CompilerError> {
-    //     let dfa_val = regex_to_dfa(regex_str);
-    //     let substr_defs_array = substrs_defs_json
-    //         .transitions
-    //         .into_iter()
-    //         .map(|transitions_array| HashSet::<(usize, usize)>::from_iter(transitions_array))
-    //         .collect_vec();
-    //     let substrs_defs = SubstrsDefs {
-    //         substr_defs_array,
-    //         substr_endpoints_array: None,
-    //         // max_bytes: None,
-    //     };
+    pub fn from_regex_str_and_substr_defs(
+        // max_byte_size: usize,
+        regex_str: &str,
+        substrs_defs_json: SubstrsDefsJson,
+    ) -> Result<RegexAndDFA, CompilerError> {
+        let dfa_val = regex_to_dfa(regex_str);
+        let substr_defs_array = substrs_defs_json
+            .transitions
+            .into_iter()
+            .map(|transitions_array| HashSet::<(usize, usize)>::from_iter(transitions_array))
+            .collect_vec();
+        let substrs_defs = SubstrsDefs {
+            substr_defs_array,
+            substr_endpoints_array: None,
+            // max_bytes: None,
+        };
 
-    //     Ok(RegexAndDFA {
-    //         // max_byte_size,
-    //         regex_str: regex_str.to_string(),
-    //         dfa_val,
-    //         substrs_defs,
-    //     })
-    // }
+        Ok(RegexAndDFA {
+            // max_byte_size,
+            regex_str: regex_str.to_string(),
+            dfa_val,
+            substrs_defs,
+        })
+    }
 }
 
 pub fn gen_from_decomposed(
@@ -410,48 +410,48 @@ pub fn gen_from_decomposed(
     }
 }
 
-// pub fn gen_from_raw(
-//     raw_regex: &str,
-//     // max_bytes: usize,
-//     substrs_json_path: Option<&str>,
-//     // halo2_dir_path: Option<&str>,
-//     circom_file_path: Option<&str>,
-//     template_name: Option<&str>,
-//     gen_substrs: Option<bool>,
-// ) {
-//     let substrs_defs_json = if let Some(substrs_json_path) = substrs_json_path {
-//         let substrs_json_path = PathBuf::from(substrs_json_path);
-//         let substrs_defs_json: SubstrsDefsJson =
-//             serde_json::from_reader(File::open(substrs_json_path).unwrap()).unwrap();
-//         substrs_defs_json
-//     } else {
-//         SubstrsDefsJson {
-//             transitions: vec![vec![]],
-//         }
-//     };
-//     // let num_public_parts = substrs_defs_json.transitions.len();
-//     let regex_and_dfa = RegexAndDFA::from_regex_str_and_substr_defs(raw_regex, substrs_defs_json)
-//         .expect("failed to convert the raw regex and state transitions to dfa");
-//     let gen_substrs = gen_substrs.unwrap_or(true);
-//     // if let Some(halo2_dir_path) = halo2_dir_path {
-//     //     let halo2_dir_path = PathBuf::from(halo2_dir_path);
-//     //     let allstr_file_path = halo2_dir_path.join("allstr.txt");
-//     //     let substr_file_pathes = (0..num_public_parts)
-//     //         .map(|idx| halo2_dir_path.join(format!("substr_{}.txt", idx)))
-//     //         .collect_vec();
-//     //     regex_and_dfa
-//     //         .gen_halo2_tables(&allstr_file_path, &substr_file_pathes, gen_substrs)
-//     //         .expect("failed to generate halo2 tables");
-//     // }
-//     if let Some(circom_file_path) = circom_file_path {
-//         let circom_file_path = PathBuf::from(circom_file_path);
-//         let template_name = template_name
-//             .expect("circom template name must be specified if circom file path is specified");
-//         regex_and_dfa
-//             .gen_circom(&circom_file_path, &template_name, gen_substrs)
-//             .expect("failed to generate circom");
-//     }
-// }
+pub fn gen_from_raw(
+    raw_regex: &str,
+    // max_bytes: usize,
+    substrs_json_path: Option<&str>,
+    // halo2_dir_path: Option<&str>,
+    circom_file_path: Option<&str>,
+    template_name: Option<&str>,
+    gen_substrs: Option<bool>,
+) {
+    let substrs_defs_json = if let Some(substrs_json_path) = substrs_json_path {
+        let substrs_json_path = PathBuf::from(substrs_json_path);
+        let substrs_defs_json: SubstrsDefsJson =
+            serde_json::from_reader(File::open(substrs_json_path).unwrap()).unwrap();
+        substrs_defs_json
+    } else {
+        SubstrsDefsJson {
+            transitions: vec![vec![]],
+        }
+    };
+    // let num_public_parts = substrs_defs_json.transitions.len();
+    let regex_and_dfa = RegexAndDFA::from_regex_str_and_substr_defs(raw_regex, substrs_defs_json)
+        .expect("failed to convert the raw regex and state transitions to dfa");
+    let gen_substrs = gen_substrs.unwrap_or(true);
+    // if let Some(halo2_dir_path) = halo2_dir_path {
+    //     let halo2_dir_path = PathBuf::from(halo2_dir_path);
+    //     let allstr_file_path = halo2_dir_path.join("allstr.txt");
+    //     let substr_file_pathes = (0..num_public_parts)
+    //         .map(|idx| halo2_dir_path.join(format!("substr_{}.txt", idx)))
+    //         .collect_vec();
+    //     regex_and_dfa
+    //         .gen_halo2_tables(&allstr_file_path, &substr_file_pathes, gen_substrs)
+    //         .expect("failed to generate halo2 tables");
+    // }
+    if let Some(circom_file_path) = circom_file_path {
+        let circom_file_path = PathBuf::from(circom_file_path);
+        let template_name = template_name
+            .expect("circom template name must be specified if circom file path is specified");
+        regex_and_dfa
+            .gen_circom(&circom_file_path, &template_name, gen_substrs)
+            .expect("failed to generate circom");
+    }
+}
 
 pub(crate) fn get_accepted_state(dfa_val: &DFAGraph) -> Option<usize> {
     for i in 0..dfa_val.states.len() {
@@ -504,9 +504,7 @@ pub(crate) fn add_graph_nodes(
                 continue;
             }
 
-            for key_char in key_list {
-                graph.add_edge(NodeIndex::from(next_node), NodeIndex::from(i), key_char);
-            }
+            graph.add_edge(NodeIndex::from(i), NodeIndex::from(next_node), key_list[0]);
         }
     }
 }
@@ -515,7 +513,7 @@ pub(crate) fn add_graph_nodes(
 #[neon::main]
 fn main(mut cx: neon::prelude::ModuleContext) -> neon::prelude::NeonResult<()> {
     cx.export_function("genFromDecomposed", gen_from_decomposed_node)?;
-    // cx.export_function("genFromRaw", gen_from_raw_node)?;
+    cx.export_function("genFromRaw", gen_from_raw_node)?;
     Ok(())
 }
 

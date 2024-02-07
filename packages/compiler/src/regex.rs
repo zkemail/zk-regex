@@ -142,6 +142,9 @@ fn dfa_to_graph(dfa_info: &DFAGraphInfo) -> DFAGraph {
             } else {
                 let mut key: &str = key;
                 let index;
+                if key == "' '" {
+                    key = " ";
+                }
                 if key.starts_with("\\x") {
                     key = &key[2..];
                     index = u8::from_str_radix(key, 16).unwrap();
@@ -172,7 +175,6 @@ pub fn regex_to_dfa(regex: &str) -> DFAGraph {
     config = config.start_kind(StartKind::Anchored);
     config = config.byte_classes(false);
     config = config.accelerate(true);
-    let regex = "[^a]";
     let re = DFA::builder()
         .configure(config)
         .build(&format!(r"^{}$", regex))

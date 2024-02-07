@@ -32,7 +32,7 @@ describe("Negate Regex", () => {
         // const circuit = await wasm_tester(path.join(__dirname, "./circuits/test_negate1_regex.circom"), option);
         const witness = await circuit.calculateWitness(circuitInputs);
         await circuit.checkConstraints(witness);
-        // console.log(witness);
+        console.log(witness);
         expect(1n).toEqual(witness[1]);
         const revealedIdx = [[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]];
         for (let substr_idx = 0; substr_idx < 1; ++substr_idx) {

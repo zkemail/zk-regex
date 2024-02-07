@@ -26,7 +26,7 @@ describe("Message Id Regex", () => {
     });
 
     it("message id from beginning", async () => {
-        const messageIdStr = "message-id:<CAJ7Y6jdOGRFj4RbA=JU034DwHUnRapUZzqLN4hGkG3ou23dFbw@mail.gmail.com>\r\n";
+        const messageIdStr = `message-id:<CAJ7Y6jdOGRFj4RbA=JU034DwHUnRapUZzqLN4hGkG3ou23dFbw@mail.gmail.com>\r\n`;
         // const revealed = "This is a test.";
         // const prefixLen = "subject:".length;
         const paddedStr = apis.padString(messageIdStr, 256);
