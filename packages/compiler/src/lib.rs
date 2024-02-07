@@ -2,10 +2,8 @@ use std::iter::FromIterator;
 use std::{collections::HashMap, fs::File};
 pub mod circom;
 pub mod halo2;
-pub mod js_caller;
-pub mod regex;
-
 pub mod node;
+pub mod regex;
 
 // #[cfg(test)]
 // mod tests;
@@ -14,13 +12,12 @@ use crate::node::*;
 use crate::regex::*;
 use neon;
 
-use crate::js_caller::*;
 use fancy_regex::Regex;
 use itertools::Itertools;
 use petgraph::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 use std::path::PathBuf;
 use thiserror::Error;
 
@@ -29,8 +26,6 @@ use thiserror::Error;
 pub enum CompilerError {
     #[error("No edge from {:?} to {:?} in the graph",.0,.1)]
     NoEdge(NodeIndex<usize>, NodeIndex<usize>),
-    #[error(transparent)]
-    JsCallerError(#[from] JsCallerError),
     #[error(transparent)]
     IoError(#[from] std::io::Error),
     #[error(transparent)]
@@ -65,11 +60,23 @@ pub enum SoldityType {
 }
 
 #[derive(Debug, Clone)]
+pub struct DFAState {
+    r#type: String,
+    state: usize,
+    edges: HashMap<usize, BTreeSet<u8>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct DFAGraph {
+    states: Vec<DFAState>,
+}
+
+#[derive(Debug, Clone)]
 pub struct RegexAndDFA {
     // pub max_byte_size: usize,
     // Original regex string, only here to be printed in generated file to make it more reproducible
     pub regex_str: String,
-    pub dfa_val: Vec<Value>,
+    pub dfa_val: DFAGraph,
     pub substrs_defs: SubstrsDefs,
 }
 
@@ -102,12 +109,12 @@ impl DecomposedRegexConfig {
         })
     }
 
-    pub fn extract_substr_ids(&self, dfa_val: &[Value]) -> Result<SubstrsDefs, CompilerError> {
+    pub fn extract_substr_ids(&self, dfa_val: &DFAGraph) -> Result<SubstrsDefs, CompilerError> {
         let part_configs = &self.parts;
-        let mut graph = Graph::<bool, u32, Directed, usize>::with_capacity(0, 0);
-        let max_state = get_max_state(dfa_val)?;
-        add_graph_nodes(dfa_val, &mut graph, None, max_state)?;
-        let accepted_state = get_accepted_state(dfa_val).ok_or(JsCallerError::NoAcceptedState)?;
+        let mut graph = Graph::<bool, u8, Directed, usize>::with_capacity(0, 0);
+        let max_state = get_max_state(dfa_val);
+        add_graph_nodes(dfa_val, &mut graph, None, max_state);
+        let accepted_state = get_accepted_state(dfa_val).unwrap();
         let accepted_state_index = NodeIndex::from(accepted_state);
         let mut pathes = Vec::<Vec<NodeIndex<usize>>>::new();
         let mut stack = Vec::<(NodeIndex<usize>, Vec<NodeIndex<usize>>)>::new();
@@ -338,30 +345,30 @@ impl DecomposedRegexConfig {
 }
 
 impl RegexAndDFA {
-    pub fn from_regex_str_and_substr_defs(
-        // max_byte_size: usize,
-        regex_str: &str,
-        substrs_defs_json: SubstrsDefsJson,
-    ) -> Result<RegexAndDFA, CompilerError> {
-        let dfa_val = regex_to_dfa(regex_str);
-        let substr_defs_array = substrs_defs_json
-            .transitions
-            .into_iter()
-            .map(|transitions_array| HashSet::<(usize, usize)>::from_iter(transitions_array))
-            .collect_vec();
-        let substrs_defs = SubstrsDefs {
-            substr_defs_array,
-            substr_endpoints_array: None,
-            // max_bytes: None,
-        };
+    // pub fn from_regex_str_and_substr_defs(
+    //     // max_byte_size: usize,
+    //     regex_str: &str,
+    //     substrs_defs_json: SubstrsDefsJson,
+    // ) -> Result<RegexAndDFA, CompilerError> {
+    //     let dfa_val = regex_to_dfa(regex_str);
+    //     let substr_defs_array = substrs_defs_json
+    //         .transitions
+    //         .into_iter()
+    //         .map(|transitions_array| HashSet::<(usize, usize)>::from_iter(transitions_array))
+    //         .collect_vec();
+    //     let substrs_defs = SubstrsDefs {
+    //         substr_defs_array,
+    //         substr_endpoints_array: None,
+    //         // max_bytes: None,
+    //     };
 
-        Ok(RegexAndDFA {
-            // max_byte_size,
-            regex_str: regex_str.to_string(),
-            dfa_val,
-            substrs_defs,
-        })
-    }
+    //     Ok(RegexAndDFA {
+    //         // max_byte_size,
+    //         regex_str: regex_str.to_string(),
+    //         dfa_val,
+    //         substrs_defs,
+    //     })
+    // }
 }
 
 pub fn gen_from_decomposed(
@@ -403,84 +410,77 @@ pub fn gen_from_decomposed(
     }
 }
 
-pub fn gen_from_raw(
-    raw_regex: &str,
-    // max_bytes: usize,
-    substrs_json_path: Option<&str>,
-    // halo2_dir_path: Option<&str>,
-    circom_file_path: Option<&str>,
-    template_name: Option<&str>,
-    gen_substrs: Option<bool>,
-) {
-    let substrs_defs_json = if let Some(substrs_json_path) = substrs_json_path {
-        let substrs_json_path = PathBuf::from(substrs_json_path);
-        let substrs_defs_json: SubstrsDefsJson =
-            serde_json::from_reader(File::open(substrs_json_path).unwrap()).unwrap();
-        substrs_defs_json
-    } else {
-        SubstrsDefsJson {
-            transitions: vec![vec![]],
-        }
-    };
-    // let num_public_parts = substrs_defs_json.transitions.len();
-    let regex_and_dfa = RegexAndDFA::from_regex_str_and_substr_defs(raw_regex, substrs_defs_json)
-        .expect("failed to convert the raw regex and state transitions to dfa");
-    let gen_substrs = gen_substrs.unwrap_or(true);
-    // if let Some(halo2_dir_path) = halo2_dir_path {
-    //     let halo2_dir_path = PathBuf::from(halo2_dir_path);
-    //     let allstr_file_path = halo2_dir_path.join("allstr.txt");
-    //     let substr_file_pathes = (0..num_public_parts)
-    //         .map(|idx| halo2_dir_path.join(format!("substr_{}.txt", idx)))
-    //         .collect_vec();
-    //     regex_and_dfa
-    //         .gen_halo2_tables(&allstr_file_path, &substr_file_pathes, gen_substrs)
-    //         .expect("failed to generate halo2 tables");
-    // }
-    if let Some(circom_file_path) = circom_file_path {
-        let circom_file_path = PathBuf::from(circom_file_path);
-        let template_name = template_name
-            .expect("circom template name must be specified if circom file path is specified");
-        regex_and_dfa
-            .gen_circom(&circom_file_path, &template_name, gen_substrs)
-            .expect("failed to generate circom");
-    }
-}
+// pub fn gen_from_raw(
+//     raw_regex: &str,
+//     // max_bytes: usize,
+//     substrs_json_path: Option<&str>,
+//     // halo2_dir_path: Option<&str>,
+//     circom_file_path: Option<&str>,
+//     template_name: Option<&str>,
+//     gen_substrs: Option<bool>,
+// ) {
+//     let substrs_defs_json = if let Some(substrs_json_path) = substrs_json_path {
+//         let substrs_json_path = PathBuf::from(substrs_json_path);
+//         let substrs_defs_json: SubstrsDefsJson =
+//             serde_json::from_reader(File::open(substrs_json_path).unwrap()).unwrap();
+//         substrs_defs_json
+//     } else {
+//         SubstrsDefsJson {
+//             transitions: vec![vec![]],
+//         }
+//     };
+//     // let num_public_parts = substrs_defs_json.transitions.len();
+//     let regex_and_dfa = RegexAndDFA::from_regex_str_and_substr_defs(raw_regex, substrs_defs_json)
+//         .expect("failed to convert the raw regex and state transitions to dfa");
+//     let gen_substrs = gen_substrs.unwrap_or(true);
+//     // if let Some(halo2_dir_path) = halo2_dir_path {
+//     //     let halo2_dir_path = PathBuf::from(halo2_dir_path);
+//     //     let allstr_file_path = halo2_dir_path.join("allstr.txt");
+//     //     let substr_file_pathes = (0..num_public_parts)
+//     //         .map(|idx| halo2_dir_path.join(format!("substr_{}.txt", idx)))
+//     //         .collect_vec();
+//     //     regex_and_dfa
+//     //         .gen_halo2_tables(&allstr_file_path, &substr_file_pathes, gen_substrs)
+//     //         .expect("failed to generate halo2 tables");
+//     // }
+//     if let Some(circom_file_path) = circom_file_path {
+//         let circom_file_path = PathBuf::from(circom_file_path);
+//         let template_name = template_name
+//             .expect("circom template name must be specified if circom file path is specified");
+//         regex_and_dfa
+//             .gen_circom(&circom_file_path, &template_name, gen_substrs)
+//             .expect("failed to generate circom");
+//     }
+// }
 
-pub(crate) fn get_accepted_state(dfa_val: &[Value]) -> Option<usize> {
-    for i in 0..dfa_val.len() {
-        if dfa_val[i]["type"] == "accept" {
+pub(crate) fn get_accepted_state(dfa_val: &DFAGraph) -> Option<usize> {
+    for i in 0..dfa_val.states.len() {
+        if dfa_val.states[i].r#type == "accept" {
             return Some(i as usize);
         }
     }
     None
 }
 
-pub(crate) fn get_max_state(dfa_val: &[Value]) -> Result<usize, JsCallerError> {
+pub(crate) fn get_max_state(dfa_val: &DFAGraph) -> usize {
     let mut max_state = 0;
-    for (_i, val) in dfa_val.iter().enumerate() {
-        for (_, next_node_val) in val["edges"]
-            .as_object()
-            .ok_or(JsCallerError::InvalidEdges(val["edges"].clone()))?
-            .iter()
-        {
-            let next_node = next_node_val
-                .as_u64()
-                .ok_or(JsCallerError::InvalidNodeValue(next_node_val.clone()))?
-                as usize;
+    for (_i, val) in dfa_val.states.iter().enumerate() {
+        for (next_node_val, _) in val.edges.iter() {
+            let next_node = next_node_val.clone();
             if next_node > max_state {
                 max_state = next_node;
             }
         }
     }
-    Ok(max_state)
+    max_state
 }
 
 pub(crate) fn add_graph_nodes(
-    dfa_val: &[Value],
-    graph: &mut Graph<bool, u32, Directed, usize>,
+    dfa_val: &DFAGraph,
+    graph: &mut Graph<bool, u8, Directed, usize>,
     last_max_state: Option<usize>,
     next_max_state: usize,
-) -> Result<(), JsCallerError> {
+) {
     let first_new_state = match last_max_state {
         Some(v) => v + 1,
         None => 0,
@@ -489,45 +489,33 @@ pub(crate) fn add_graph_nodes(
         graph.add_node(idx == next_max_state);
     }
 
-    for (i, val) in dfa_val.iter().enumerate() {
-        for (key, next_node_val) in val["edges"]
-            .as_object()
-            .ok_or(JsCallerError::InvalidEdges(val["edges"].clone()))?
-            .iter()
-        {
-            let next_node = next_node_val
-                .as_u64()
-                .ok_or(JsCallerError::InvalidNodeValue(next_node_val.clone()))?
-                as usize;
+    for (i, val) in dfa_val.states.iter().enumerate() {
+        for (next_node_val, key) in val.edges.iter() {
+            let next_node = next_node_val.clone();
             if let Some(max) = last_max_state {
                 if i <= max && next_node <= max {
                     continue;
                 }
             }
 
-            let key_list: Vec<String> = serde_json::from_str::<Vec<String>>(&key)?
-                .iter()
-                .filter(|s| s.as_str() != "\u{ff}")
-                .cloned()
-                .collect_vec();
+            let key_list: Vec<u8> = key.iter().cloned().collect();
 
             if key_list.is_empty() {
                 continue;
             }
 
-            let key_char = key_list[0].chars().collect::<Vec<char>>()[0] as u32;
-
-            graph.add_edge(NodeIndex::from(next_node), NodeIndex::from(i), key_char);
+            for key_char in key_list {
+                graph.add_edge(NodeIndex::from(next_node), NodeIndex::from(i), key_char);
+            }
         }
     }
-    Ok(())
 }
 
 #[cfg(feature = "export_neon_main")]
 #[neon::main]
 fn main(mut cx: neon::prelude::ModuleContext) -> neon::prelude::NeonResult<()> {
     cx.export_function("genFromDecomposed", gen_from_decomposed_node)?;
-    cx.export_function("genFromRaw", gen_from_raw_node)?;
+    // cx.export_function("genFromRaw", gen_from_raw_node)?;
     Ok(())
 }
 

@@ -14,21 +14,20 @@
     "url": "git+https://github.com/zkemail/zk-regex.git"
   },
   "scripts": {
-    "build": "npx tsc && cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
-    "build-debug": "npx tsc && npm run build --",
-    "build-release": "npx tsc && npm run build -- --release",
+    "build": "cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
+    "build-debug": "npm run build --",
+    "build-release": "npm run build -- --release",
     "install": "npm run build-debug",
     "install-release": "node-pre-gyp install --update-binary --fallback-to-build=false || npm run build-release",
-    "test": "npx tsc && cargo test",
-    "package": "npx tsc && node-pre-gyp package",
-    "upload-binary": "npx tsc && npm run package && node-pre-gyp-github publish"
+    "test": "cargo test",
+    "package": "node-pre-gyp package",
+    "upload-binary": "npm run package && node-pre-gyp-github publish"
   },
   "license": "MIT",
   "dependencies": {
     "@mapbox/node-pre-gyp": "^1.0",
     "cargo-cp-artifact": "^0.1",
-    "node-pre-gyp-github": "https://github.com/ultamatt/node-pre-gyp-github.git",
-    "typescript": "^5.2.2"
+    "node-pre-gyp-github": "https://github.com/ultamatt/node-pre-gyp-github.git"
   },
   "binary": {
     "module_name": "index",
