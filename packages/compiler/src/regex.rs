@@ -110,7 +110,20 @@ fn dfa_to_graph(dfa_info: &DFAGraphInfo) -> DFAGraph {
     let mut graph = DFAGraph { states: Vec::new() };
     for state in &dfa_info.states {
         let mut edges = HashMap::new();
+        let key_mappings: HashMap<&str, u8> = [
+            ("\\n", 10),
+            ("\\r", 13),
+            ("\\t", 9),
+            ("\\v", 11),
+            ("\\f", 12),
+            ("\\0", 0),
+        ]
+        .into();
         for (key, value) in &state.edges {
+            let mut key: &str = key;
+            if key == "' '" {
+                key = " ";
+            }
             let re = Regex::new(r"(.+)-(.+)").unwrap();
             if re.is_match(key) {
                 let capture = re.captures_iter(key).next().unwrap();
@@ -120,7 +133,11 @@ fn dfa_to_graph(dfa_info: &DFAGraphInfo) -> DFAGraph {
                     start = &start[2..];
                     start_index = u8::from_str_radix(start, 16).unwrap();
                 } else {
-                    start_index = start.as_bytes()[0];
+                    if key_mappings.contains_key(start) {
+                        start_index = *key_mappings.get(start).unwrap();
+                    } else {
+                        start_index = start.as_bytes()[0];
+                    }
                 }
                 let mut end = &capture[2];
                 let end_index;
@@ -128,7 +145,11 @@ fn dfa_to_graph(dfa_info: &DFAGraphInfo) -> DFAGraph {
                     end = &end[2..];
                     end_index = u8::from_str_radix(end, 16).unwrap();
                 } else {
-                    end_index = end.as_bytes()[0];
+                    if key_mappings.contains_key(end) {
+                        end_index = *key_mappings.get(end).unwrap();
+                    } else {
+                        end_index = end.as_bytes()[0];
+                    }
                 }
                 let char_range: Vec<u8> = (start_index..=end_index).collect();
                 if edges.contains_key(value) {
@@ -140,16 +161,16 @@ fn dfa_to_graph(dfa_info: &DFAGraphInfo) -> DFAGraph {
                     edges.insert(*value, char_range.into_iter().collect());
                 }
             } else {
-                let mut key: &str = key;
                 let index;
-                if key == "' '" {
-                    key = " ";
-                }
                 if key.starts_with("\\x") {
                     key = &key[2..];
                     index = u8::from_str_radix(key, 16).unwrap();
                 } else {
-                    index = key.as_bytes()[0];
+                    if key_mappings.contains_key(key) {
+                        index = *key_mappings.get(key).unwrap();
+                    } else {
+                        index = key.as_bytes()[0];
+                    }
                 }
                 if edges.contains_key(value) {
                     let edge: &mut BTreeSet<u8> = edges.get_mut(value).unwrap();

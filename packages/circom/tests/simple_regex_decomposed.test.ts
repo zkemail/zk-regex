@@ -37,6 +37,7 @@ describe("Simple Regex Decomposed", () => {
     const witness = await circuit.calculateWitness(circuitInputs);
     await circuit.checkConstraints(witness);
     expect(1n).toEqual(witness[1]);
+    console.log(witness);
     const revealedIdx = [[21, 22, 23, 24, 25, 26, 27]];
     for (let substr_idx = 0; substr_idx < 1; ++substr_idx) {
       for (let idx = 0; idx < 64; ++idx) {

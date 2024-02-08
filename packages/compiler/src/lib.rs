@@ -16,7 +16,6 @@ use fancy_regex::Regex;
 use itertools::Itertools;
 use petgraph::prelude::*;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::collections::{BTreeSet, HashSet};
 use std::path::PathBuf;
 use thiserror::Error;
@@ -111,9 +110,9 @@ impl DecomposedRegexConfig {
 
     pub fn extract_substr_ids(&self, dfa_val: &DFAGraph) -> Result<SubstrsDefs, CompilerError> {
         let part_configs = &self.parts;
-        let mut graph = Graph::<bool, u8, Directed, usize>::with_capacity(0, 0);
+        let mut graph = Graph::<bool, Vec<u8>, Directed, usize>::with_capacity(0, 0);
         let max_state = get_max_state(dfa_val);
-        add_graph_nodes(dfa_val, &mut graph, None, max_state);
+        add_graph_nodes(dfa_val, &mut graph, max_state);
         let accepted_state = get_accepted_state(dfa_val).unwrap();
         let accepted_state_index = NodeIndex::from(accepted_state);
         let mut paths = Vec::<Vec<NodeIndex<usize>>>::new();
@@ -124,9 +123,10 @@ impl DecomposedRegexConfig {
         for state in 0..=max_state {
             let node = NodeIndex::from(state);
             if let Some(edge) = graph.find_edge(node, node) {
-                let str = graph.edge_weight(edge).unwrap().to_string();
-                let bytes = str.as_bytes();
-                self_nodes_char.insert(node.index(), bytes[0]);
+                let edge_weight = graph.edge_weight(edge).unwrap();
+                for byte in edge_weight.iter() {
+                    self_nodes_char.insert(node.index(), *byte);
+                }
             }
         }
 
@@ -465,11 +465,8 @@ pub(crate) fn get_accepted_state(dfa_val: &DFAGraph) -> Option<usize> {
 pub(crate) fn get_max_state(dfa_val: &DFAGraph) -> usize {
     let mut max_state = 0;
     for (_i, val) in dfa_val.states.iter().enumerate() {
-        for (next_node_val, _) in val.edges.iter() {
-            let next_node = next_node_val.clone();
-            if next_node > max_state {
-                max_state = next_node;
-            }
+        if val.state > max_state {
+            max_state = val.state;
         }
     }
     max_state
@@ -477,34 +474,18 @@ pub(crate) fn get_max_state(dfa_val: &DFAGraph) -> usize {
 
 pub(crate) fn add_graph_nodes(
     dfa_val: &DFAGraph,
-    graph: &mut Graph<bool, u8, Directed, usize>,
-    last_max_state: Option<usize>,
-    next_max_state: usize,
+    graph: &mut Graph<bool, Vec<u8>, Directed, usize>,
+    number_of_states: usize,
 ) {
-    let first_new_state = match last_max_state {
-        Some(v) => v + 1,
-        None => 0,
-    };
-    for idx in first_new_state..=next_max_state {
-        graph.add_node(idx == next_max_state);
+    for idx in 0..=number_of_states {
+        graph.add_node(false);
     }
 
     for (i, val) in dfa_val.states.iter().enumerate() {
-        for (next_node_val, key) in val.edges.iter() {
-            let next_node = next_node_val.clone();
-            if let Some(max) = last_max_state {
-                if i <= max && next_node <= max {
-                    continue;
-                }
-            }
-
+        for (next_node, key) in val.edges.iter() {
             let key_list: Vec<u8> = key.iter().cloned().collect();
 
-            if key_list.is_empty() {
-                continue;
-            }
-
-            graph.add_edge(NodeIndex::from(i), NodeIndex::from(next_node), key_list[0]);
+            graph.add_edge(NodeIndex::from(i), NodeIndex::from(*next_node), key_list);
         }
     }
 }
