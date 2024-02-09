@@ -110,7 +110,7 @@ impl DecomposedRegexConfig {
 
     pub fn extract_substr_ids(&self, dfa_val: &DFAGraph) -> Result<SubstrsDefs, CompilerError> {
         let part_configs = &self.parts;
-        let mut graph = Graph::<bool, Vec<u8>, Directed, usize>::with_capacity(0, 0);
+        let mut graph = Graph::<bool, u8, Directed, usize>::with_capacity(0, 0);
         let max_state = get_max_state(dfa_val);
         add_graph_nodes(dfa_val, &mut graph, max_state);
         let accepted_state = get_accepted_state(dfa_val).unwrap();
@@ -123,10 +123,9 @@ impl DecomposedRegexConfig {
         for state in 0..=max_state {
             let node = NodeIndex::from(state);
             if let Some(edge) = graph.find_edge(node, node) {
-                let edge_weight = graph.edge_weight(edge).unwrap();
-                for byte in edge_weight.iter() {
-                    self_nodes_char.insert(node.index(), *byte);
-                }
+                let str = graph.edge_weight(edge).unwrap().to_string();
+                let bytes = str.as_bytes();
+                self_nodes_char.insert(node.index(), bytes[0]);
             }
         }
 
@@ -393,11 +392,11 @@ pub fn gen_from_decomposed(
     //             num_public_parts += 1;
     //         }
     //     }
-    //     let substr_file_pathes = (0..num_public_parts)
+    //     let substr_file_paths = (0..num_public_parts)
     //         .map(|idx| halo2_dir_path.join(format!("substr_{}.txt", idx)))
     //         .collect_vec();
     //     regex_and_dfa
-    //         .gen_halo2_tables(&allstr_file_path, &substr_file_pathes, gen_substrs)
+    //         .gen_halo2_tables(&allstr_file_path, &substr_file_paths, gen_substrs)
     //         .expect("failed to generate halo2 tables");
     // }
     if let Some(circom_file_path) = circom_file_path {
@@ -436,11 +435,11 @@ pub fn gen_from_raw(
     // if let Some(halo2_dir_path) = halo2_dir_path {
     //     let halo2_dir_path = PathBuf::from(halo2_dir_path);
     //     let allstr_file_path = halo2_dir_path.join("allstr.txt");
-    //     let substr_file_pathes = (0..num_public_parts)
+    //     let substr_file_paths = (0..num_public_parts)
     //         .map(|idx| halo2_dir_path.join(format!("substr_{}.txt", idx)))
     //         .collect_vec();
     //     regex_and_dfa
-    //         .gen_halo2_tables(&allstr_file_path, &substr_file_pathes, gen_substrs)
+    //         .gen_halo2_tables(&allstr_file_path, &substr_file_paths, gen_substrs)
     //         .expect("failed to generate halo2 tables");
     // }
     if let Some(circom_file_path) = circom_file_path {
@@ -474,10 +473,10 @@ pub(crate) fn get_max_state(dfa_val: &DFAGraph) -> usize {
 
 pub(crate) fn add_graph_nodes(
     dfa_val: &DFAGraph,
-    graph: &mut Graph<bool, Vec<u8>, Directed, usize>,
+    graph: &mut Graph<bool, u8, Directed, usize>,
     number_of_states: usize,
 ) {
-    for idx in 0..=number_of_states {
+    for _idx in 0..=number_of_states {
         graph.add_node(false);
     }
 
@@ -485,7 +484,7 @@ pub(crate) fn add_graph_nodes(
         for (next_node, key) in val.edges.iter() {
             let key_list: Vec<u8> = key.iter().cloned().collect();
 
-            graph.add_edge(NodeIndex::from(i), NodeIndex::from(*next_node), key_list);
+            graph.add_edge(NodeIndex::from(*next_node), NodeIndex::from(i), key_list[0]);
         }
     }
 }
