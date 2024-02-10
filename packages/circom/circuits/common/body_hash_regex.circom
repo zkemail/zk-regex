@@ -2,6 +2,7 @@ pragma circom 2.1.5;
 
 include "@zk-email/zk-regex-circom/circuits/regex_helpers.circom";
 
+// regex: ((\n)|^)dkim-signature:((a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z)+=[^;]+; )+bh=(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|\+|/|=)+;
 template BodyHashRegex(msg_bytes) {
 	signal input msg[msg_bytes];
 	signal output out;
@@ -508,6 +509,7 @@ template BodyHashRegex(msg_bytes) {
 	signal output reveal0[msg_bytes];
 	for (var i = 0; i < msg_bytes; i++) {
 		is_substr0[i][0] <== 0;
+		 // the 0-th substring transitions: [(3, 5), (5, 5)]
 		is_substr0[i][1] <== is_substr0[i][0] + states[i+1][3] * states[i+2][5];
 		is_substr0[i][2] <== is_substr0[i][1] + states[i+1][5] * states[i+2][5];
 		is_reveal0[i] <== is_substr0[i][2] * is_consecutive[i][1];

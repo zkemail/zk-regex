@@ -2,6 +2,7 @@ pragma circom 2.1.5;
 
 include "@zk-email/zk-regex-circom/circuits/regex_helpers.circom";
 
+// regex: ((\n)|^)to:[^\n]+\n
 template ToAllRegex(msg_bytes) {
 	signal input msg[msg_bytes];
 	signal output out;
@@ -182,6 +183,7 @@ template ToAllRegex(msg_bytes) {
 	signal output reveal0[msg_bytes];
 	for (var i = 0; i < msg_bytes; i++) {
 		is_substr0[i][0] <== 0;
+		 // the 0-th substring transitions: [(1, 1), (6, 1)]
 		is_substr0[i][1] <== is_substr0[i][0] + states[i+1][1] * states[i+2][1];
 		is_substr0[i][2] <== is_substr0[i][1] + states[i+1][6] * states[i+2][1];
 		is_reveal0[i] <== is_substr0[i][2] * is_consecutive[i][1];

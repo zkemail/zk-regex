@@ -1,6 +1,6 @@
 [package]
 name = "zk-regex-apis"
-version = "1.1.6"
+version = "1.1.7"
 license = "MIT"
 edition = "2018"
 exclude = ["index.node"]
@@ -17,7 +17,7 @@ crate-type = ["rlib", "cdylib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-zk-regex-compiler = { path = "../compiler"}
+zk-regex-compiler = { path = "../compiler", default-features = false }
 fancy-regex = "0.11.0"
 itertools = "0.10.3"
 thiserror = "1.0.40"
