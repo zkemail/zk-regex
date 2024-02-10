@@ -27,26 +27,26 @@ function regexToMinDFASpec(str: string): string {
     .replaceAll("\\s", slash_s);
   // .replaceAll("\\w", A2Z_nosep + r0to9_nosep + a2z_nosep); // I think that there's also an underscore here
 
-  function addPipeInsideBrackets(str: string):string {
-    let result: string = "";
-    let insideBrackets: boolean = false;
-    for (let i = 0; i < str.length; i++) {
-      if (str[i] === "[") {
-        result += str[i];
-        insideBrackets = true;
-        continue;
-      } else if (str[i] === "]") {
-        insideBrackets = false;
-      }
-      let str_to_add = str[i];
-      if (str[i] === "\\") {
-        i++;
-        str_to_add += str[i];
-      }
-      result += insideBrackets ? "|" + str_to_add : str_to_add;
-    }
-    return result.replaceAll("[|", "[").replaceAll("[", "(").replaceAll("]", ")");
-  }
+  // function addPipeInsideBrackets(str: string): string {
+  //   let result: string = "";
+  //   let insideBrackets: boolean = false;
+  //   for (let i = 0; i < str.length; i++) {
+  //     if (str[i] === "[") {
+  //       result += str[i];
+  //       insideBrackets = true;
+  //       continue;
+  //     } else if (str[i] === "]") {
+  //       insideBrackets = false;
+  //     }
+  //     let str_to_add = str[i];
+  //     if (str[i] === "\\") {
+  //       i++;
+  //       str_to_add += str[i];
+  //     }
+  //     result += insideBrackets ? "|" + str_to_add : str_to_add;
+  //   }
+  //   return result.replaceAll("[|", "[").replaceAll("[", "(").replaceAll("]", ")");
+  // }
 
   //   function makeCurlyBracesFallback(str) {
   //   let result = "";
@@ -64,86 +64,86 @@ function regexToMinDFASpec(str: string): string {
   //   return result.replaceAll("[|", "[").replaceAll("[", "(").replaceAll("]", ")");
   //   }
 
-  function checkIfBracketsHavePipes(str: string): boolean {
-    let result: boolean = true;
-    let insideBrackets: boolean = false;
-    let insideParens: number = 0;
-    let indexAt: number = 0;
-    for (let i = 0; i < str.length; i++) {
-      if (indexAt >= str.length) break;
-      if (str[indexAt] === "[") {
-        insideBrackets = true;
-        indexAt++;
-        continue;
-      } else if (str[indexAt] === "]") {
-        insideBrackets = false;
-      }
-      if (str[indexAt] === "(") {
-        insideParens++;
-      } else if (str[indexAt] === ")") {
-        insideParens--;
-      }
-      if (insideBrackets) {
-        if (str[indexAt] === "|") {
-          indexAt++;
-        } else {
-          result = false;
-          return result;
-        }
-      }
-      if (!insideParens && str[indexAt] === "|") {
-        console.log("Error: | outside of parens!");
-      }
-      if (str[indexAt] === "\\") {
-        indexAt++;
-      }
-      indexAt++;
-    }
-    return result;
-  }
+  // function checkIfBracketsHavePipes(str: string): boolean {
+  //   let result: boolean = true;
+  //   let insideBrackets: boolean = false;
+  //   let insideParens: number = 0;
+  //   let indexAt: number = 0;
+  //   for (let i = 0; i < str.length; i++) {
+  //     if (indexAt >= str.length) break;
+  //     if (str[indexAt] === "[") {
+  //       insideBrackets = true;
+  //       indexAt++;
+  //       continue;
+  //     } else if (str[indexAt] === "]") {
+  //       insideBrackets = false;
+  //     }
+  //     if (str[indexAt] === "(") {
+  //       insideParens++;
+  //     } else if (str[indexAt] === ")") {
+  //       insideParens--;
+  //     }
+  //     if (insideBrackets) {
+  //       if (str[indexAt] === "|") {
+  //         indexAt++;
+  //       } else {
+  //         result = false;
+  //         return result;
+  //       }
+  //     }
+  //     if (!insideParens && str[indexAt] === "|") {
+  //       console.log("Error: | outside of parens!");
+  //     }
+  //     if (str[indexAt] === "\\") {
+  //       indexAt++;
+  //     }
+  //     indexAt++;
+  //   }
+  //   return result;
+  // }
 
-  let combined;
-  if (!checkIfBracketsHavePipes(combined_nosep)) {
-    // console.log("Adding pipes within brackets between everything!");
-    combined = addPipeInsideBrackets(combined_nosep);
-    if (!checkIfBracketsHavePipes(combined)) {
-      console.log("Did not add brackets correctly!");
-    }
-  } else {
-    combined = combined_nosep;
-  }
+  // let combined;
+  // if (!checkIfBracketsHavePipes(combined_nosep)) {
+  //   // console.log("Adding pipes within brackets between everything!");
+  //   combined = addPipeInsideBrackets(combined_nosep);
+  //   if (!checkIfBracketsHavePipes(combined)) {
+  //     console.log("Did not add brackets correctly!");
+  //   }
+  // } else {
+  //   combined = combined_nosep;
+  // }
 
-  return combined;
+  return combined_nosep;
 }
 
 type CusNode = {
-    type?: string;
-    sub?: CusNode;
-    parts?: CusNode[];
-    text?: string | [string];
-    begin: number;
-    end: number;
+  type?: string;
+  sub?: CusNode;
+  parts?: CusNode[];
+  text?: string | [string];
+  begin: number;
+  end: number;
 }
 
 type NfaEdge = [string | [string], NfaNode];
 
 type NfaNode = {
-    type: string;
-    edges: NfaEdge[];
-    id?: string | number;
+  type: string;
+  edges: NfaEdge[];
+  id?: string | number;
 };
 
 type DfaEdge = [string | [string], DfaNode];
 
 type DfaNode = {
-    id: string | number;
-    key: string,
-    items: NfaNode[],
-    symbols: (string | [string])[],
-    type: string,
-    edges: DfaEdge[],
-    trans: Record<string, DfaNode>;
-    nature: number;
+  id: string | number;
+  key: string,
+  items: NfaNode[],
+  symbols: (string | [string])[],
+  type: string,
+  edges: DfaEdge[],
+  trans: Record<string, DfaNode>;
+  nature: number;
 };
 
 
@@ -168,147 +168,247 @@ type DfaNode = {
  */
 function parseRegex(text: string): CusNode | string {
   text = regexToMinDFASpec(text);
-  "use strict";
+  'use strict';
   function parseSub(text: (string | [string])[], begin: number, end: number, first: boolean): CusNode | string {
     var i: number,
       sub: CusNode | string,
       last: number = 0,
       node: CusNode = {
-          begin: begin,
-          end: end,
+        begin: begin,
+        end: end,
       },
       virNode: CusNode,
       tempNode: CusNode,
       stack: number = 0,
       parts: CusNode[] = [];
     if (text.length === 0) {
-    return "Error: empty input at " + begin + ".";
+      return 'Error: empty input at ' + begin + '.';
     }
     if (first) {
-    for (i = 0; i <= text.length; i += 1) {
-      if (i === text.length || (text[i] === "|" && stack === 0)) {
-      if (last === 0 && i === text.length) {
-        return parseSub(text, begin + last, begin + i, false);
-      }
-      sub = parseSub(text.slice(last, i), begin + last, begin + i, true);
-      if (typeof sub === "string") {
-        return sub;
-      }
-      parts.push(sub);
-      last = i + 1;
-      } else if (text[i] === "(") {
-      stack += 1;
-      } else if (text[i] === ")") {
-      stack -= 1;
-      }
-    }
-    if (parts.length === 1) {
-      return parts[0];
-    }
-    node.type = "or";
-    node.parts = parts;
-    } else {
-    for (i = 0; i < text.length; i += 1) {
-      if (text[i] === "(") {
-      last = i + 1;
-      i += 1;
-      stack = 1;
-      while (i < text.length && stack !== 0) {
-        if (text[i] === "(") {
-        stack += 1;
-        } else if (text[i] === ")") {
-        stack -= 1;
+      for (i = 0; i <= text.length; i += 1) {
+        if (i === text.length || (text[i] === '|' && stack === 0)) {
+          if (last === 0 && i === text.length) {
+            return parseSub(text, begin + last, begin + i, false);
+          }
+          sub = parseSub(text.slice(last, i), begin + last, begin + i, true);
+          if (typeof sub === 'string') {
+            return sub;
+          }
+          parts.push(sub);
+          last = i + 1;
+        } else if (text[i] === '(') {
+          stack += 1;
+        } else if (text[i] === ')') {
+          stack -= 1;
         }
-        i += 1;
       }
-      if (stack !== 0) {
-        return "Error: missing right bracket for " + (begin + last) + ".";
+
+      if (parts.length === 1) {
+        return parts[0];
       }
-      i -= 1;
-      sub = parseSub(text.slice(last, i), begin + last, begin + i, true);
-      if (typeof sub === "string") {
-        return sub;
+      node.type = 'or';
+      node.parts = parts;
+    } else {
+      for (i = 0; i < text.length; i += 1) {
+        if (text[i] === '(') {
+          last = i + 1;
+          i += 1;
+          stack = 1;
+          while (i < text.length && stack !== 0) {
+            if (text[i] === '(') {
+              stack += 1;
+            } else if (text[i] === ')') {
+              stack -= 1;
+            }
+            i += 1;
+          }
+          if (stack !== 0) {
+            return `Error: missing right parentheses for ${begin + last}.`;
+          }
+          i -= 1;
+          sub = parseSub(text.slice(last, i), begin + last, begin + i, true);
+          if (typeof sub === 'string') {
+            return sub;
+          }
+          sub.begin -= 1;
+          sub.end += 1;
+          parts.push(sub);
+          // } else if (text[i] === '[') {
+          //     last = i + 1;
+          //     i += 1;
+          //     if (text[i] === '^') {
+          //         text[i] = '\u{ff}';
+          //     }
+          //     stack = 1;
+          //     while (i < text.length && stack !== 0) {
+          //         if (text[i] === ']') {
+          //             stack -= 1;
+          //         }
+          //         i += 1;
+          //     }
+          //     if (stack !== 0) {
+          //         return 'Error: missing right brakets for ' + (begin + last) + '.';
+          //     }
+          //     i -= 1;
+          //     sub = parseSub(text.slice(last, i), begin + last, begin + i, true);
+          //     if (typeof sub === 'string') {
+          //         return sub;
+          //     }
+          //     sub.begin -= 1;
+          //     sub.end += 1;
+          //     parts.push(sub);
+        } else if (text[i] === '*') {
+          if (parts.length === 0) {
+            return `Error: unexpected * at ${begin + i}.`;
+          }
+          tempNode = { begin: parts[parts.length - 1].begin, end: parts[parts.length - 1].end + 1 };
+          tempNode.type = 'star';
+          tempNode.sub = parts[parts.length - 1];
+          parts[parts.length - 1] = tempNode;
+        } else if (text[i] === '+') {
+          if (parts.length === 0) {
+            return `Error: unexpected + at ${begin + i}.`;
+          }
+          virNode = { begin: parts[parts.length - 1].begin, end: parts[parts.length - 1].end + 1 };
+          virNode.type = 'star';
+          virNode.sub = parts[parts.length - 1];
+          tempNode = { begin: parts[parts.length - 1].begin, end: parts[parts.length - 1].end + 1 };
+          tempNode.type = 'cat';
+          tempNode.parts = [parts[parts.length - 1], virNode];
+          parts[parts.length - 1] = tempNode;
+        } else if (text[i] === '?') {
+          if (parts.length === 0) {
+            return `Error: unexpected ? at ${begin + i}.`;
+          }
+          virNode = { begin: parts[parts.length - 1].begin, end: parts[parts.length - 1].end + 1 };
+          virNode.type = 'empty';
+          virNode.sub = parts[parts.length - 1];
+          tempNode = { begin: parts[parts.length - 1].begin, end: parts[parts.length - 1].end + 1 };
+          tempNode.type = 'or';
+          tempNode.parts = [parts[parts.length - 1], virNode];
+          parts[parts.length - 1] = tempNode;
+        } else if (text[i] === 'ϵ') {
+          tempNode = { begin: begin + i, end: begin + i + 1 };
+          tempNode.type = 'empty';
+          parts.push(tempNode);
+        } else if (Array.isArray(text[i])) {
+          tempNode = { begin: begin + i, end: begin + i + 1 };
+          tempNode.type = 'text';
+          tempNode.text = text[i][0];
+          parts.push(tempNode);
+        } else {
+          tempNode = { begin: begin + i, end: begin + i + 1 };
+          tempNode.type = 'text';
+          tempNode.text = text[i];
+          parts.push(tempNode);
+        }
       }
-      sub.begin -= 1;
-      sub.end += 1;
-      parts.push(sub);
-      } else if (text[i] === "*") {
-      if (parts.length === 0) {
-        return "Error: unexpected * at " + (begin + i) + ".";
+      // console.log(`parts ${JSON.stringify(parts)}`);
+      if (parts.length === 1) {
+        return parts[0];
       }
-      tempNode = { begin: parts[parts.length - 1].begin, end: parts[parts.length - 1].end + 1 };
-      tempNode.type = "star";
-      tempNode.sub = parts[parts.length - 1];
-      parts[parts.length - 1] = tempNode;
-      } else if (text[i] === "+") {
-      if (parts.length === 0) {
-        return "Error: unexpected + at " + (begin + i) + ".";
-      }
-      virNode = { begin: parts[parts.length - 1].begin, end: parts[parts.length - 1].end + 1 };
-      virNode.type = "star";
-      virNode.sub = parts[parts.length - 1];
-      tempNode = { begin: parts[parts.length - 1].begin, end: parts[parts.length - 1].end + 1 };
-      tempNode.type = "cat";
-      tempNode.parts = [parts[parts.length - 1], virNode];
-      parts[parts.length - 1] = tempNode;
-      } else if (text[i] === "?") {
-      if (parts.length === 0) {
-        return "Error: unexpected + at " + (begin + i) + ".";
-      }
-      virNode = { begin: parts[parts.length - 1].begin, end: parts[parts.length - 1].end + 1 };
-      virNode.type = "empty";
-      virNode.sub = parts[parts.length - 1];
-      tempNode = { begin: parts[parts.length - 1].begin, end: parts[parts.length - 1].end + 1 };
-      tempNode.type = "or";
-      tempNode.parts = [parts[parts.length - 1], virNode];
-      parts[parts.length - 1] = tempNode;
-      } else if (text[i] === "ϵ") {
-      tempNode = { begin: begin + i, end: begin + i + 1 };
-      tempNode.type = "empty";
-      parts.push(tempNode);
-      } else if (Array.isArray(text[i])) {
-      tempNode = { begin: begin + i, end: begin + i + 1 };
-      tempNode.type = "text";
-      tempNode.text = text[i][0];
-      parts.push(tempNode);
-      } else {
-      tempNode = { begin: begin + i, end: begin + i + 1 };
-      tempNode.type = "text";
-      tempNode.text = text[i];
-      parts.push(tempNode);
-      }
-    }
-    if (parts.length === 1) {
-      return parts[0];
-    }
-    node.type = "cat";
-    node.parts = parts;
+      node.type = 'cat';
+      node.parts = parts;
     }
     return node;
   }
-  
-  let new_text: string[] = [];
-  let i = 0;
+
+  let char: string | [string];
+  let new_text: (string | [string])[] = [];
+  let i: number = 0;
+  let is_in_brancket: boolean = false;
+  let brancket_text: (string | [string])[] = [];
   while (i < text.length) {
-    if (text[i] === "\\") {
-    const escapeMap = new Map<string, string>([
-        ["n", "\n"],
-        ["r", "\r"],
-        ["t", "\t"],
-        ["v", "\v"],
-        ["f", "\f"],
-        ["^", String.fromCharCode(128)],
-    ]);
-    const char: string = text[i + 1];
-    new_text.push(escapeMap.get(char) ?? char);
-    i += 2;
+    char = text[i];
+
+    if (text[i] == '\\') {
+      char = [text[i + 1]];
+      // new_text.push([text[i + 1]]);
+      i += 1;
+    }
+
+    if (char === '[') {
+      if (is_in_brancket) {
+        return `Error: unexpected [ at ${i}.`;
+      }
+      is_in_brancket = true;
+      brancket_text = [];
+      // new_text.push(char);
+      i += 1;
+    } else if (char === ']') {
+      if (!is_in_brancket) {
+        return `Error: unexpected ] at ${i}.`;
+      }
+      is_in_brancket = false;
+
+      if (brancket_text[0] === '^') {
+        brancket_text.shift();
+        let rev_text: (string | [string])[] = [];
+        let code_char: string | [string] = '';
+        const brancket_text_jsons = brancket_text.map(val => JSON.stringify(val));
+        for (let idx = 0; idx < 255; idx++) {
+          code_char = String.fromCodePoint(idx);
+
+          if ([
+            '(',
+            ')',
+            '*',
+            '+',
+            '.',
+            '?',
+            '[',
+            '\\',
+            ']',
+            '^',
+            '`',
+            '|',
+            '-'
+          ].indexOf(code_char) != -1) {
+            code_char = [code_char];
+          }
+
+          if (brancket_text_jsons.indexOf(JSON.stringify(code_char)) === -1) {
+            rev_text.push(code_char);
+          }
+        }
+
+        brancket_text = rev_text;
+      }
+
+      new_text.push('(');
+
+      for (const c of brancket_text) {
+        new_text.push(c);
+        new_text.push('|');
+      }
+
+      new_text = new_text.slice(0, -1);
+      new_text.push(')');
+      i += 1;
+    } else if (is_in_brancket) {
+      if (!Array.isArray(char) && ['(', ')', '[', '*', '+', '?', 'ϵ'].includes(char)) {
+        return `Error: unexpected ${char} at ${i}.`;
+      }
+
+      if (char === '^' && text[i - 1] !== '[') {
+        return `Error: unexpected ^ at ${i}.`;
+      }
+      // new_text.push(char);
+      // new_text.push('|');
+      brancket_text.push(char);
+      i += 1;
     } else {
-    new_text.push(text[i]);
-    i += 1;
+      new_text.push(char);
+      i += 1;
     }
   }
-  return parseSub(new_text, 0, new_text.length, true);
+
+  if (is_in_brancket) {
+    return `Error: missing right brackets.`;
   }
+
+  return parseSub(new_text, 0, new_text.length, true);
+}
 
 
 /**
@@ -418,11 +518,11 @@ function nfaToDfa(nfa: NfaNode): DfaNode {
       }
     }
     closure.sort((a, b) => {
-            if (a.id && b.id) {
-                return a.id > b.id ? 1 : -1;
-            }
-            return 0;
-        });
+      if (a.id && b.id) {
+        return a.id > b.id ? 1 : -1;
+      }
+      return 0;
+    });
     symbols.sort();
     return {
       id: '',
@@ -680,12 +780,12 @@ function minDfa(dfa: DfaNode) {
       });
     });
     Object.keys(edges).forEach((from) => {
-        Object.keys(edges[Number(from)]).forEach((to) => {
-            const symbol = JSON.stringify(Object.keys(edges[Number(from)][Number(to)]).sort());
-            nodes[parseInt(from)].symbols.push(symbol);
-            nodes[parseInt(from)].edges.push([symbol, nodes[parseInt(to)]]);
-            nodes[parseInt(from)].trans[symbol] = nodes[parseInt(to)];
-        });
+      Object.keys(edges[Number(from)]).forEach((to) => {
+        const symbol = JSON.stringify(Object.keys(edges[Number(from)][Number(to)]).sort());
+        nodes[parseInt(from)].symbols.push(symbol);
+        nodes[parseInt(from)].edges.push([symbol, nodes[parseInt(to)]]);
+        nodes[parseInt(from)].trans[symbol] = nodes[parseInt(to)];
+      });
     });
     return nodes[0];
   }

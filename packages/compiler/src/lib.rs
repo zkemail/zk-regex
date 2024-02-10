@@ -69,7 +69,7 @@ pub enum SoldityType {
 pub struct RegexAndDFA {
     // pub max_byte_size: usize,
     // Original regex string, only here to be printed in generated file to make it more reproducible
-    pub regex_str: String, 
+    pub regex_str: String,
     pub dfa_val: Vec<Value>,
     pub substrs_defs: SubstrsDefs,
 }
@@ -296,8 +296,8 @@ impl DecomposedRegexConfig {
         let index_ends = part_regexes
             .iter()
             .map(|regex| {
-                println!("regex {}", regex);
-                println!("concat_str {}", concat_str);
+                // println!("regex {}", regex);
+                // println!("concat_str {}", concat_str);
                 let found = regex.find(&concat_str).unwrap().unwrap();
                 // println!("found {:?}", found);
                 if found.start() == found.end() {

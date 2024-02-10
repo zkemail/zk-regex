@@ -249,7 +249,7 @@ template EmailAddrRegex(msg_bytes) {
 		is_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][3] * (1 - is_consecutive[msg_bytes-i][1]) + is_consecutive[msg_bytes-i][1];
 		is_consecutive[msg_bytes-1-i][1] <== state_changed[msg_bytes-i].out * is_consecutive[msg_bytes-1-i][0];
 	}
-	// substrings calculated: [{(1, 2), (1, 1), (0, 1), (3, 3), (2, 3)}]
+	// substrings calculated: [{(1, 1), (0, 1), (3, 3), (1, 2), (2, 3)}]
 	signal is_substr0[msg_bytes][6];
 	signal is_reveal0[msg_bytes];
 	signal output reveal0[msg_bytes];

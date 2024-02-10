@@ -271,7 +271,7 @@ template MessageIdRegex(msg_bytes) {
 		is_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][7] * (1 - is_consecutive[msg_bytes-i][1]) + is_consecutive[msg_bytes-i][1];
 		is_consecutive[msg_bytes-1-i][1] <== state_changed[msg_bytes-i].out * is_consecutive[msg_bytes-1-i][0];
 	}
-	// substrings calculated: [{(17, 18), (1, 4), (1, 1), (18, 1)}]
+	// substrings calculated: [{(1, 1), (1, 4), (17, 18), (18, 1)}]
 	signal is_substr0[msg_bytes][5];
 	signal is_reveal0[msg_bytes];
 	signal output reveal0[msg_bytes];

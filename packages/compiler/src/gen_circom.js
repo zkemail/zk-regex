@@ -1,5 +1,11 @@
 "use strict";
-function genCircomAllstr(graph_json, template_name) {
+function genCircomAllstr(graph_json, template_name, regex_str = "") {
+    /**
+     * This function generates a Circom circuit from a given graph_json, template_name, and regex_str.
+     * @param {Object} graph_json - The graph in JSON format.
+     * @param {string} template_name - The name to be used for the Circom template.
+     * @param {string} regex_str - The regular expression string, used only to print in a comment at the top.
+     */
     const N = graph_json.length;
     // console.log(JSON.stringify(graph_json, null, 2));
     // const graph = Array(N).fill({});
@@ -15,7 +21,7 @@ function genCircomAllstr(graph_json, template_name) {
         const node = graph_json[i];
         for (let k in node.edges) {
             const v = node.edges[k];
-            rev_graph[v][i] = Array.from(JSON.parse(k)).map(c => c.charCodeAt(0));
+            rev_graph[v][i] = Array.from(JSON.parse(k)).map((c) => c.charCodeAt(0));
             if (i === 0) {
                 const index = rev_graph[v][i].indexOf(94);
                 if (index !== -1) {
@@ -43,7 +49,8 @@ function genCircomAllstr(graph_json, template_name) {
             if (rev_graph[going_state_num][init_going_state] == null) {
                 rev_graph[going_state_num][init_going_state] = [];
             }
-            rev_graph[going_state_num][init_going_state] = rev_graph[going_state_num][init_going_state].concat(chars);
+            rev_graph[going_state_num][init_going_state] =
+                rev_graph[going_state_num][init_going_state].concat(chars);
         }
     }
     if (accept_nodes.size === 0) {
@@ -171,14 +178,14 @@ function genCircomAllstr(graph_json, template_name) {
                     lines.push(`\t\tand[${and_i}][i] = AND();`);
                     lines.push(`\t\tand[${and_i}][i].a <== lt[${lt_i}][i].out;`);
                     lines.push(`\t\tand[${and_i}][i].b <== lt[${lt_i + 1}][i].out;`);
-                    eq_outputs.push(['and', and_i]);
+                    eq_outputs.push(["and", and_i]);
                     range_checks[min][max] = [lt_i, and_i];
                     lt_i += 2;
                     and_i += 1;
                 }
                 else {
                     let [_, and_i] = range_checks[min][max];
-                    eq_outputs.push(['and', and_i]);
+                    eq_outputs.push(["and", and_i]);
                 }
             }
             for (let code of vals) {
@@ -186,12 +193,12 @@ function genCircomAllstr(graph_json, template_name) {
                     lines.push(`\t\teq[${eq_i}][i] = IsEqual();`);
                     lines.push(`\t\teq[${eq_i}][i].in[0] <== in[i];`);
                     lines.push(`\t\teq[${eq_i}][i].in[1] <== ${code};`);
-                    eq_outputs.push(['eq', eq_i]);
+                    eq_outputs.push(["eq", eq_i]);
                     eq_checks[code] = eq_i;
                     eq_i += 1;
                 }
                 else {
-                    eq_outputs.push(['eq', eq_checks[code]]);
+                    eq_outputs.push(["eq", eq_checks[code]]);
                 }
             }
             lines.push(`\t\tand[${and_i}][i] = AND();`);
@@ -248,11 +255,12 @@ function genCircomAllstr(graph_json, template_name) {
         lines.push(`\t\tstate_changed[i].in[${i - 1}] <== states[i+1][${i}];`);
     }
     lines.push(`\t\tstates[i+1][0] <== 1 - state_changed[i].out;`);
-    lines.push(`\t}`);
+    lines.push("\t}");
     const declarations = [];
     declarations.push(`pragma circom 2.1.5;\n`);
     declarations.push(`include "@zk-email/zk-regex-circom/circuits/regex_helpers.circom";\n`);
     // declarations.push(`pragma circom 2.1.5;\ninclude "@zk-email/circuits/regexes/regex_helpers.circom";\n`);
+    declarations.push(`// regex: ${regex_str.replace(/\n/g, "\\n")}`);
     declarations.push(`template ${template_name}(msg_bytes) {`);
     declarations.push(`\tsignal input msg[msg_bytes];`);
     declarations.push(`\tsignal output out;\n`);
