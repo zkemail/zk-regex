@@ -4,15 +4,9 @@ use crate::js_caller::*;
 use crate::RegexAndDFA;
 // use crate::{AllstrRegexDef, SubstrRegexDef};
 
-
-
-
-
-
+use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
-use std::{fs::File};
-
 
 impl RegexAndDFA {
     pub fn gen_circom(
@@ -48,7 +42,11 @@ impl RegexAndDFA {
         circom += "\t}\n";
 
         let substr_defs_array = &self.substrs_defs.substr_defs_array;
-        circom += &format!("\t// substrings calculated: {:?}\n", &self.substrs_defs.substr_defs_array);
+        // circom += &format!(
+        //     "\t// substrings calculated: {:?}\n",
+        //     &self.substrs_defs.substr_defs_array
+        // );
+
         for (idx, defs) in substr_defs_array.into_iter().enumerate() {
             let num_defs = defs.len();
             circom += &format!("\tsignal is_substr{}[msg_bytes][{}];\n", idx, num_defs + 1);
@@ -66,6 +64,7 @@ impl RegexAndDFA {
                     start_cmp
                 }
             });
+            circom += &format!("\t\t // the {}-th substring transitions: {:?}\n", idx, defs);
             for (j, (cur, next)) in defs.iter().enumerate() {
                 circom += &format!(
                     "\t\tis_substr{}[i][{}] <== is_substr{}[i][{}] + ",

@@ -401,12 +401,12 @@ template TimestampRegex(msg_bytes) {
 		is_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][5] * (1 - is_consecutive[msg_bytes-i][1]) + is_consecutive[msg_bytes-i][1];
 		is_consecutive[msg_bytes-1-i][1] <== state_changed[msg_bytes-i].out * is_consecutive[msg_bytes-1-i][0];
 	}
-	// substrings calculated: [{(26, 3), (3, 3)}]
 	signal is_substr0[msg_bytes][3];
 	signal is_reveal0[msg_bytes];
 	signal output reveal0[msg_bytes];
 	for (var i = 0; i < msg_bytes; i++) {
 		is_substr0[i][0] <== 0;
+		 // the 0-th substring transitions: [(3, 3), (26, 3)]
 		is_substr0[i][1] <== is_substr0[i][0] + states[i+1][3] * states[i+2][3];
 		is_substr0[i][2] <== is_substr0[i][1] + states[i+1][26] * states[i+2][3];
 		is_reveal0[i] <== is_substr0[i][2] * is_consecutive[i][1];

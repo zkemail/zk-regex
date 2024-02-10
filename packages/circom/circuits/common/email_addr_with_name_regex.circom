@@ -581,12 +581,12 @@ template EmailAddrWithNameRegex(msg_bytes) {
 		is_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][3] * (1 - is_consecutive[msg_bytes-i][1]) + is_consecutive[msg_bytes-i][1];
 		is_consecutive[msg_bytes-1-i][1] <== state_changed[msg_bytes-i].out * is_consecutive[msg_bytes-1-i][0];
 	}
-	// substrings calculated: [{(5, 4), (2, 2), (4, 5), (4, 4), (6, 2), (6, 4), (5, 6), (5, 5), (2, 4)}]
 	signal is_substr0[msg_bytes][10];
 	signal is_reveal0[msg_bytes];
 	signal output reveal0[msg_bytes];
 	for (var i = 0; i < msg_bytes; i++) {
 		is_substr0[i][0] <== 0;
+		 // the 0-th substring transitions: [(2, 2), (2, 4), (4, 4), (4, 5), (5, 4), (5, 5), (5, 6), (6, 2), (6, 4)]
 		is_substr0[i][1] <== is_substr0[i][0] + states[i+1][2] * states[i+2][2];
 		is_substr0[i][2] <== is_substr0[i][1] + states[i+1][2] * states[i+2][4];
 		is_substr0[i][3] <== is_substr0[i][2] + states[i+1][4] * states[i+2][4];

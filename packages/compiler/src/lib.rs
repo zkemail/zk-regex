@@ -542,14 +542,16 @@ mod tests {
 
     #[test]
     fn test_gen_from_decomposed() {
-        let decomposed_regex_path = Path::new("../circuits/common/subject_all.json");
-        let circom_file_path = Some("../circuits/common/subject_all_regex.circom");
+        let project_root = PathBuf::new().join(env!("CARGO_MANIFEST_DIR"));
+        let decomposed_regex_path = project_root.join("../circom/circuits/common/subject_all.json");
+        let circom_file_path =
+            project_root.join("../circom/circuits/common/subject_all_regex.circom");
         let circom_template_name = Some("SubjectAllRegex");
         let gen_substrs = Some(true);
 
         let result = gen_from_decomposed(
             decomposed_regex_path.to_str().unwrap(),
-            circom_file_path.map(|s| s),
+            Some(circom_file_path.to_str().unwrap()),
             circom_template_name.map(|s| s),
             gen_substrs,
         );

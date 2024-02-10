@@ -129,12 +129,12 @@ template SimpleRegex(msg_bytes) {
 		is_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][9] * (1 - is_consecutive[msg_bytes-i][1]) + is_consecutive[msg_bytes-i][1];
 		is_consecutive[msg_bytes-1-i][1] <== state_changed[msg_bytes-i].out * is_consecutive[msg_bytes-1-i][0];
 	}
-	// substrings calculated: [{(2, 3)}, {(6, 7), (7, 7)}, {(8, 9)}]
 	signal is_substr0[msg_bytes][2];
 	signal is_reveal0[msg_bytes];
 	signal output reveal0[msg_bytes];
 	for (var i = 0; i < msg_bytes; i++) {
 		is_substr0[i][0] <== 0;
+		 // the 0-th substring transitions: [(2, 3)]
 		is_substr0[i][1] <== is_substr0[i][0] + states[i+1][2] * states[i+2][3];
 		is_reveal0[i] <== is_substr0[i][1] * is_consecutive[i][1];
 		reveal0[i] <== in[i+1] * is_reveal0[i];
@@ -144,6 +144,7 @@ template SimpleRegex(msg_bytes) {
 	signal output reveal1[msg_bytes];
 	for (var i = 0; i < msg_bytes; i++) {
 		is_substr1[i][0] <== 0;
+		 // the 1-th substring transitions: [(6, 7), (7, 7)]
 		is_substr1[i][1] <== is_substr1[i][0] + states[i+1][6] * states[i+2][7];
 		is_substr1[i][2] <== is_substr1[i][1] + states[i+1][7] * states[i+2][7];
 		is_reveal1[i] <== is_substr1[i][2] * is_consecutive[i][1];
@@ -154,6 +155,7 @@ template SimpleRegex(msg_bytes) {
 	signal output reveal2[msg_bytes];
 	for (var i = 0; i < msg_bytes; i++) {
 		is_substr2[i][0] <== 0;
+		 // the 2-th substring transitions: [(8, 9)]
 		is_substr2[i][1] <== is_substr2[i][0] + states[i+1][8] * states[i+2][9];
 		is_reveal2[i] <== is_substr2[i][1] * is_consecutive[i][1];
 		reveal2[i] <== in[i+1] * is_reveal2[i];
