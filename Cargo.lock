@@ -1728,9 +1728,9 @@ dependencies = [
  "fancy-regex",
  "itertools",
  "neon",
+ "serde",
  "serde_json",
  "thiserror",
- "zk-regex-compiler",
 ]
 
 [[package]]

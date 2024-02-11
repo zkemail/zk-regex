@@ -1,8 +1,28 @@
 use fancy_regex::Regex;
 use neon::prelude::*;
+use serde::{Deserialize, Serialize};
 use serde_json;
 use thiserror::Error;
-use zk_regex_compiler::DecomposedRegexConfig;
+// use zk_regex_compiler::DecomposedRegexConfig;
+
+/// A configuration of decomposed regexes.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DecomposedRegexConfig {
+    pub parts: Vec<RegexPartConfig>,
+}
+
+/// Decomposed regex part.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RegexPartConfig {
+    /// A flag indicating whether the substring matching with `regex_def` should be exposed.
+    pub is_public: bool,
+    /// A regex string.
+    pub regex_def: String,
+    // Maximum byte size of the substring in this part.
+    // pub max_size: usize,
+    // (Optional) A solidity type of the substring in this part, e.g., "String", "Int", "Decimal".
+    // pub solidity: Option<SoldityType>,
+}
 
 /// Error definitions of the compiler.
 #[derive(Error, Debug)]
@@ -374,8 +394,6 @@ pub fn extract_message_id_idxes_node(mut cx: FunctionContext) -> JsResult<JsArra
 
 #[cfg(test)]
 mod test {
-    use zk_regex_compiler::RegexPartConfig;
-
     use super::*;
 
     #[test]

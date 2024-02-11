@@ -38,9 +38,6 @@ pub enum CompilerError {
 /// A configuration of decomposed regexes.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DecomposedRegexConfig {
-    /// Maximum byte size of the input string.
-    // pub max_byte_size: usize,
-    /// A vector of decomposed regexes.
     pub parts: Vec<RegexPartConfig>,
 }
 
