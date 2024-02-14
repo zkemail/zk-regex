@@ -195,25 +195,25 @@ template SimpleRegexDecomposed(msg_bytes) {
 		and[22][i].b <== lt[3][i].out;
 		eq[14][i] = IsEqual();
 		eq[14][i].in[0] <== in[i];
-		eq[14][i].in[1] <== 51;
+		eq[14][i].in[1] <== 53;
 		eq[15][i] = IsEqual();
 		eq[15][i].in[0] <== in[i];
-		eq[15][i].in[1] <== 49;
+		eq[15][i].in[1] <== 51;
 		eq[16][i] = IsEqual();
 		eq[16][i].in[0] <== in[i];
 		eq[16][i].in[1] <== 52;
 		eq[17][i] = IsEqual();
 		eq[17][i].in[0] <== in[i];
-		eq[17][i].in[1] <== 54;
+		eq[17][i].in[1] <== 55;
 		eq[18][i] = IsEqual();
 		eq[18][i].in[0] <== in[i];
-		eq[18][i].in[1] <== 50;
+		eq[18][i].in[1] <== 57;
 		eq[19][i] = IsEqual();
 		eq[19][i].in[0] <== in[i];
-		eq[19][i].in[1] <== 55;
+		eq[19][i].in[1] <== 54;
 		eq[20][i] = IsEqual();
 		eq[20][i].in[0] <== in[i];
-		eq[20][i].in[1] <== 53;
+		eq[20][i].in[1] <== 49;
 		eq[21][i] = IsEqual();
 		eq[21][i].in[0] <== in[i];
 		eq[21][i].in[1] <== 56;
@@ -222,7 +222,7 @@ template SimpleRegexDecomposed(msg_bytes) {
 		eq[22][i].in[1] <== 95;
 		eq[23][i] = IsEqual();
 		eq[23][i].in[0] <== in[i];
-		eq[23][i].in[1] <== 57;
+		eq[23][i].in[1] <== 50;
 		eq[24][i] = IsEqual();
 		eq[24][i].in[0] <== in[i];
 		eq[24][i].in[1] <== 48;
@@ -248,17 +248,17 @@ template SimpleRegexDecomposed(msg_bytes) {
 		multi_or[1][i] = MultiOR(13);
 		multi_or[1][i].in[0] <== and[21][i].out;
 		multi_or[1][i].in[1] <== and[22][i].out;
-		multi_or[1][i].in[2] <== eq[24][i].out;
-		multi_or[1][i].in[3] <== eq[14][i].out;
-		multi_or[1][i].in[4] <== eq[17][i].out;
-		multi_or[1][i].in[5] <== eq[22][i].out;
-		multi_or[1][i].in[6] <== eq[21][i].out;
-		multi_or[1][i].in[7] <== eq[19][i].out;
-		multi_or[1][i].in[8] <== eq[23][i].out;
-		multi_or[1][i].in[9] <== eq[15][i].out;
-		multi_or[1][i].in[10] <== eq[16][i].out;
-		multi_or[1][i].in[11] <== eq[20][i].out;
-		multi_or[1][i].in[12] <== eq[18][i].out;
+		multi_or[1][i].in[2] <== eq[21][i].out;
+		multi_or[1][i].in[3] <== eq[20][i].out;
+		multi_or[1][i].in[4] <== eq[19][i].out;
+		multi_or[1][i].in[5] <== eq[14][i].out;
+		multi_or[1][i].in[6] <== eq[22][i].out;
+		multi_or[1][i].in[7] <== eq[15][i].out;
+		multi_or[1][i].in[8] <== eq[16][i].out;
+		multi_or[1][i].in[9] <== eq[17][i].out;
+		multi_or[1][i].in[10] <== eq[18][i].out;
+		multi_or[1][i].in[11] <== eq[24][i].out;
+		multi_or[1][i].in[12] <== eq[23][i].out;
 		and[24][i].b <== multi_or[1][i].out;
 		multi_or[2][i] = MultiOR(2);
 		multi_or[2][i].in[0] <== and[23][i].out;
@@ -287,12 +287,13 @@ template SimpleRegexDecomposed(msg_bytes) {
 		is_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][23] * (1 - is_consecutive[msg_bytes-i][1]) + is_consecutive[msg_bytes-i][1];
 		is_consecutive[msg_bytes-1-i][1] <== state_changed[msg_bytes-i].out * is_consecutive[msg_bytes-1-i][0];
 	}
-	// substrings calculated: [{(22, 22), (21, 22)}]
+	// substrings calculated: [{(21, 22), (22, 22)}]
 	signal is_substr0[msg_bytes][3];
 	signal is_reveal0[msg_bytes];
 	signal output reveal0[msg_bytes];
 	for (var i = 0; i < msg_bytes; i++) {
 		is_substr0[i][0] <== 0;
+		 // the 0-th substring transitions: [(21, 22), (22, 22)]
 		is_substr0[i][1] <== is_substr0[i][0] + states[i+1][21] * states[i+2][22];
 		is_substr0[i][2] <== is_substr0[i][1] + states[i+1][22] * states[i+2][22];
 		is_reveal0[i] <== is_substr0[i][2] * is_consecutive[i][1];

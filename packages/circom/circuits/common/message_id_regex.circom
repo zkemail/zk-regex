@@ -2,13 +2,7 @@ pragma circom 2.1.5;
 
 include "@zk-email/zk-regex-circom/circuits/regex_helpers.circom";
 
-<<<<<<< HEAD
-// regex: ((
-\n)|^)message-id:<(=|@|\.|\+|_|-|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9)+>
-\n
-=======
 // regex: ((\r\n)|^)message-id:<[A-Za-z0-9=@\.\+_-]+>\r\n
->>>>>>> 8d92570 (quite a few changes)
 template MessageIdRegex(msg_bytes) {
 	signal input msg[msg_bytes];
 	signal output out;
@@ -38,10 +32,10 @@ template MessageIdRegex(msg_bytes) {
 		eq[0][i].in[0] <== in[i];
 		eq[0][i].in[1] <== 109;
 		and[0][i] = AND();
-		and[0][i].a <== states[i][0];
+		and[0][i].a <== states[i][4];
 		and[0][i].b <== eq[0][i].out;
 		and[1][i] = AND();
-		and[1][i].a <== states[i][4];
+		and[1][i].a <== states[i][0];
 		and[1][i].b <== eq[0][i].out;
 		multi_or[0][i] = MultiOR(2);
 		multi_or[0][i].in[0] <== and[0][i].out;
@@ -166,48 +160,48 @@ template MessageIdRegex(msg_bytes) {
 		and[16][i].b <== lt[3][i].out;
 		eq[12][i] = IsEqual();
 		eq[12][i].in[0] <== in[i];
-		eq[12][i].in[1] <== 43;
+		eq[12][i].in[1] <== 48;
 		eq[13][i] = IsEqual();
 		eq[13][i].in[0] <== in[i];
-		eq[13][i].in[1] <== 61;
+		eq[13][i].in[1] <== 54;
 		eq[14][i] = IsEqual();
 		eq[14][i].in[0] <== in[i];
-		eq[14][i].in[1] <== 46;
+		eq[14][i].in[1] <== 52;
 		eq[15][i] = IsEqual();
 		eq[15][i].in[0] <== in[i];
 		eq[15][i].in[1] <== 56;
 		eq[16][i] = IsEqual();
 		eq[16][i].in[0] <== in[i];
-		eq[16][i].in[1] <== 51;
+		eq[16][i].in[1] <== 53;
 		eq[17][i] = IsEqual();
 		eq[17][i].in[0] <== in[i];
-		eq[17][i].in[1] <== 50;
+		eq[17][i].in[1] <== 51;
 		eq[18][i] = IsEqual();
 		eq[18][i].in[0] <== in[i];
-		eq[18][i].in[1] <== 52;
+		eq[18][i].in[1] <== 49;
 		eq[19][i] = IsEqual();
 		eq[19][i].in[0] <== in[i];
-		eq[19][i].in[1] <== 54;
+		eq[19][i].in[1] <== 61;
 		eq[20][i] = IsEqual();
 		eq[20][i].in[0] <== in[i];
-		eq[20][i].in[1] <== 57;
+		eq[20][i].in[1] <== 95;
 		eq[21][i] = IsEqual();
 		eq[21][i].in[0] <== in[i];
-		eq[21][i].in[1] <== 55;
+		eq[21][i].in[1] <== 43;
 		eq[22][i] = IsEqual();
 		eq[22][i].in[0] <== in[i];
-		eq[22][i].in[1] <== 48;
+		eq[22][i].in[1] <== 57;
 		eq[23][i] = IsEqual();
 		eq[23][i].in[0] <== in[i];
-		eq[23][i].in[1] <== 53;
+		eq[23][i].in[1] <== 46;
 		eq[24][i] = IsEqual();
 		eq[24][i].in[0] <== in[i];
-		eq[24][i].in[1] <== 95;
+		eq[24][i].in[1] <== 50;
 		eq[25][i] = IsEqual();
 		eq[25][i].in[0] <== in[i];
-		eq[25][i].in[1] <== 49;
+		eq[25][i].in[1] <== 55;
 		and[17][i] = AND();
-		and[17][i].a <== states[i][15];
+		and[17][i].a <== states[i][14];
 		multi_or[1][i] = MultiOR(17);
 		multi_or[1][i].in[0] <== and[15][i].out;
 		multi_or[1][i].in[1] <== and[16][i].out;
@@ -215,12 +209,12 @@ template MessageIdRegex(msg_bytes) {
 		multi_or[1][i].in[3] <== eq[13][i].out;
 		multi_or[1][i].in[4] <== eq[14][i].out;
 		multi_or[1][i].in[5] <== eq[15][i].out;
-		multi_or[1][i].in[6] <== eq[7][i].out;
-		multi_or[1][i].in[7] <== eq[16][i].out;
-		multi_or[1][i].in[8] <== eq[17][i].out;
-		multi_or[1][i].in[9] <== eq[18][i].out;
-		multi_or[1][i].in[10] <== eq[19][i].out;
-		multi_or[1][i].in[11] <== eq[20][i].out;
+		multi_or[1][i].in[6] <== eq[16][i].out;
+		multi_or[1][i].in[7] <== eq[17][i].out;
+		multi_or[1][i].in[8] <== eq[18][i].out;
+		multi_or[1][i].in[9] <== eq[19][i].out;
+		multi_or[1][i].in[10] <== eq[20][i].out;
+		multi_or[1][i].in[11] <== eq[7][i].out;
 		multi_or[1][i].in[12] <== eq[21][i].out;
 		multi_or[1][i].in[13] <== eq[22][i].out;
 		multi_or[1][i].in[14] <== eq[23][i].out;
@@ -228,25 +222,25 @@ template MessageIdRegex(msg_bytes) {
 		multi_or[1][i].in[16] <== eq[25][i].out;
 		and[17][i].b <== multi_or[1][i].out;
 		and[18][i] = AND();
-		and[18][i].a <== states[i][14];
+		and[18][i].a <== states[i][15];
 		multi_or[2][i] = MultiOR(17);
 		multi_or[2][i].in[0] <== and[15][i].out;
 		multi_or[2][i].in[1] <== and[16][i].out;
-		multi_or[2][i].in[2] <== eq[7][i].out;
-		multi_or[2][i].in[3] <== eq[22][i].out;
-		multi_or[2][i].in[4] <== eq[24][i].out;
-		multi_or[2][i].in[5] <== eq[14][i].out;
-		multi_or[2][i].in[6] <== eq[18][i].out;
+		multi_or[2][i].in[2] <== eq[19][i].out;
+		multi_or[2][i].in[3] <== eq[13][i].out;
+		multi_or[2][i].in[4] <== eq[25][i].out;
+		multi_or[2][i].in[5] <== eq[24][i].out;
+		multi_or[2][i].in[6] <== eq[17][i].out;
 		multi_or[2][i].in[7] <== eq[16][i].out;
-		multi_or[2][i].in[8] <== eq[19][i].out;
-		multi_or[2][i].in[9] <== eq[21][i].out;
-		multi_or[2][i].in[10] <== eq[25][i].out;
-		multi_or[2][i].in[11] <== eq[12][i].out;
-		multi_or[2][i].in[12] <== eq[15][i].out;
-		multi_or[2][i].in[13] <== eq[13][i].out;
-		multi_or[2][i].in[14] <== eq[17][i].out;
-		multi_or[2][i].in[15] <== eq[23][i].out;
-		multi_or[2][i].in[16] <== eq[20][i].out;
+		multi_or[2][i].in[8] <== eq[18][i].out;
+		multi_or[2][i].in[9] <== eq[14][i].out;
+		multi_or[2][i].in[10] <== eq[15][i].out;
+		multi_or[2][i].in[11] <== eq[22][i].out;
+		multi_or[2][i].in[12] <== eq[23][i].out;
+		multi_or[2][i].in[13] <== eq[21][i].out;
+		multi_or[2][i].in[14] <== eq[20][i].out;
+		multi_or[2][i].in[15] <== eq[12][i].out;
+		multi_or[2][i].in[16] <== eq[7][i].out;
 		and[18][i].b <== multi_or[2][i].out;
 		multi_or[3][i] = MultiOR(2);
 		multi_or[3][i].in[0] <== and[17][i].out;
@@ -285,12 +279,13 @@ template MessageIdRegex(msg_bytes) {
 		is_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][18] * (1 - is_consecutive[msg_bytes-i][1]) + is_consecutive[msg_bytes-i][1];
 		is_consecutive[msg_bytes-1-i][1] <== state_changed[msg_bytes-i].out * is_consecutive[msg_bytes-1-i][0];
 	}
-	// substrings calculated: [{(15, 15), (13, 14), (15, 16), (14, 15)}]
+	// substrings calculated: [{(15, 15), (13, 14), (14, 15), (15, 16)}]
 	signal is_substr0[msg_bytes][5];
 	signal is_reveal0[msg_bytes];
 	signal output reveal0[msg_bytes];
 	for (var i = 0; i < msg_bytes; i++) {
 		is_substr0[i][0] <== 0;
+		 // the 0-th substring transitions: [(13, 14), (14, 15), (15, 15), (15, 16)]
 		is_substr0[i][1] <== is_substr0[i][0] + states[i+1][13] * states[i+2][14];
 		is_substr0[i][2] <== is_substr0[i][1] + states[i+1][14] * states[i+2][15];
 		is_substr0[i][3] <== is_substr0[i][2] + states[i+1][15] * states[i+2][15];
