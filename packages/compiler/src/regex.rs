@@ -1,7 +1,7 @@
-use crate::{DFAGraph, DFAState};
+use crate::{DFAGraph, DFAState, DecomposedRegexConfig, RegexAndDFA, SubstrsDefs};
 use regex::Regex;
 use regex_automata::dfa::{dense::DFA, StartKind};
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 #[derive(Debug, Clone)]
 struct DFAInfoState {
@@ -37,7 +37,10 @@ fn parse_dfa_output(output: &str) -> DFAGraphInfo {
             let transition_vec = trimmed_transition.split("=>").collect::<Vec<&str>>();
             let mut transition_vec_iter = transition_vec.iter();
             let mut src = transition_vec_iter.next().unwrap().trim().to_string();
-            if src.len() > 2 && src.chars().nth(2).unwrap() == '\\' {
+            if src.len() > 2
+                && src.chars().nth(2).unwrap() == '\\'
+                && !(src.chars().nth(3).unwrap() == 'x')
+            {
                 src = format!("{}{}", &src[0..2], &src[3..]);
             }
             let dst = transition_vec_iter.next().unwrap().trim();
@@ -191,7 +194,148 @@ fn dfa_to_graph(dfa_info: &DFAGraphInfo) -> DFAGraph {
     graph
 }
 
-pub fn regex_to_dfa(regex: &str) -> DFAGraph {
+fn rename_states(dfa_info: &DFAGraph, base: usize) -> DFAGraph {
+    let mut dfa_info = dfa_info.clone();
+    // Rename the sources
+    let mut switch_states = HashMap::new();
+    for (i, state) in dfa_info.states.iter_mut().enumerate() {
+        let temp = state.state;
+        state.state = i + base;
+        switch_states.insert(temp, state.state);
+    }
+
+    // Iterate over all edges of all states and rename the states
+    for state in &mut dfa_info.states {
+        let mut new_edges = HashMap::new();
+        for (key, value) in &state.edges {
+            new_edges.insert(*switch_states.get(key).unwrap(), value.clone());
+        }
+        state.edges = new_edges;
+    }
+
+    dfa_info
+}
+
+fn add_dfa(net_dfa: &DFAGraph, graph: &DFAGraph) -> DFAGraph {
+    if net_dfa.states.is_empty() {
+        return graph.clone();
+    }
+    let mut net_dfa = net_dfa.clone();
+
+    let start_state = graph.states.iter().next().unwrap();
+
+    for state in &mut net_dfa.states {
+        if state.r#type == "accept" {
+            for (k, v) in &start_state.edges {
+                for edge_value in v {
+                    for (_, v) in &mut state.edges {
+                        if v.contains(edge_value) {
+                            v.retain(|val| val != edge_value);
+                        }
+                    }
+                }
+                state.edges.insert(*k, v.clone());
+            }
+            state.r#type = "".to_string();
+        }
+    }
+
+    for state in &graph.states {
+        if state.state != start_state.state {
+            net_dfa.states.push(state.clone());
+        }
+    }
+
+    net_dfa
+}
+
+pub fn regex_and_dfa(decomposed_regex: &DecomposedRegexConfig) -> RegexAndDFA {
+    let mut config = DFA::config().minimize(true);
+    config = config.start_kind(StartKind::Anchored);
+    config = config.byte_classes(false);
+    config = config.accelerate(true);
+
+    let mut net_dfa = DFAGraph { states: Vec::new() };
+    let mut substr_defs_array = Vec::new();
+
+    for regex in decomposed_regex.parts.iter() {
+        let re = DFA::builder()
+            .configure(config.clone())
+            .build(&format!(r"^{}$", regex.regex_def))
+            .unwrap();
+        let re_str = format!("{:?}", re);
+        let mut graph = dfa_to_graph(&parse_dfa_output(&re_str));
+
+        // Find max state in net_dfa
+        let mut max_state_index = 0;
+        for state in net_dfa.states.iter() {
+            if state.state > max_state_index {
+                max_state_index = state.state;
+            }
+        }
+
+        graph = rename_states(&graph, max_state_index);
+
+        if regex.is_public {
+            let mut accepting_states = Vec::new();
+            for state in &net_dfa.states {
+                if state.r#type == "accept" {
+                    accepting_states.push(state);
+                }
+            }
+
+            let mut public_edges = HashSet::new();
+            for state in &graph.states {
+                for (key, _) in &state.edges {
+                    public_edges.insert((state.state, *key));
+                }
+            }
+
+            if max_state_index != 0 {
+                for public_edge in &public_edges.clone() {
+                    if public_edge.0 == max_state_index && public_edge.1 == max_state_index {
+                        public_edges.remove(&(public_edge.0, public_edge.1));
+                        for accept_state in &accepting_states {
+                            for accept_state_ in &accepting_states {
+                                public_edges.insert((accept_state.state, accept_state_.state));
+                            }
+                        }
+                    } else if public_edge.0 == max_state_index {
+                        public_edges.remove(&(public_edge.0, public_edge.1));
+                        for accept_state in &accepting_states {
+                            public_edges.insert((accept_state.state, public_edge.1));
+                        }
+                    } else if public_edge.1 == max_state_index {
+                        public_edges.remove(&(public_edge.0, public_edge.1));
+                        for accept_state in &accepting_states {
+                            public_edges.insert((public_edge.0, accept_state.state));
+                        }
+                    }
+                }
+            }
+
+            substr_defs_array.push(public_edges);
+        }
+
+        net_dfa = add_dfa(&net_dfa, &graph);
+    }
+
+    let mut regex_str = String::new();
+    for regex in decomposed_regex.parts.iter() {
+        regex_str += &regex.regex_def;
+    }
+
+    RegexAndDFA {
+        regex_str: regex_str,
+        dfa_val: net_dfa,
+        substrs_defs: SubstrsDefs {
+            substr_defs_array: substr_defs_array,
+            substr_endpoints_array: None,
+        },
+    }
+}
+
+pub fn dfa_from_regex_str(regex: &str) -> DFAGraph {
     let mut config = DFA::config().minimize(true);
     config = config.start_kind(StartKind::Anchored);
     config = config.byte_classes(false);
