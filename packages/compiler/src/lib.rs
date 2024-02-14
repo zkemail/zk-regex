@@ -12,7 +12,6 @@ use crate::node::*;
 use crate::regex::*;
 use neon;
 
-use fancy_regex::Regex;
 use itertools::Itertools;
 use petgraph::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -215,15 +214,15 @@ pub(crate) fn get_accepted_state(dfa_val: &DFAGraph) -> Option<usize> {
     None
 }
 
-pub(crate) fn get_max_state(dfa_val: &DFAGraph) -> usize {
-    let mut max_state = 0;
-    for (_i, val) in dfa_val.states.iter().enumerate() {
-        if val.state > max_state {
-            max_state = val.state;
-        }
-    }
-    max_state
-}
+// pub(crate) fn get_max_state(dfa_val: &DFAGraph) -> usize {
+//     let mut max_state = 0;
+//     for (_i, val) in dfa_val.states.iter().enumerate() {
+//         if val.state > max_state {
+//             max_state = val.state;
+//         }
+//     }
+//     max_state
+// }
 
 #[cfg(feature = "export_neon_main")]
 #[neon::main]
@@ -247,13 +246,11 @@ mod tests {
         let circom_template_name = Some("SubjectAllRegex");
         let gen_substrs = Some(true);
 
-        let result = gen_from_decomposed(
+        let _result = gen_from_decomposed(
             decomposed_regex_path.to_str().unwrap(),
             Some(circom_file_path.to_str().unwrap()),
             circom_template_name.map(|s| s),
             gen_substrs,
         );
-
-        // assert!(result.is_ok());
     }
 }

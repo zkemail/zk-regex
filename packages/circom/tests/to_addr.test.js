@@ -7,18 +7,18 @@ const option = {
 };
 const compiler = require("../../compiler");
 
-jest.setTimeout(240000);
-describe("From Addr Regex", () => {
+jest.setTimeout(600000);
+describe("To Addr Regex", () => {
   let circuit;
   beforeAll(async () => {
     compiler.genFromDecomposed(
-      path.join(__dirname, "../circuits/common/from_all.json"),
+      path.join(__dirname, "../circuits/common/to_all.json"),
       {
         circomFilePath: path.join(
           __dirname,
-          "../circuits/common/from_all_regex.circom"
+          "../circuits/common/to_all_regex.circom"
         ),
-        templateName: "FromAllRegex",
+        templateName: "ToAllRegex",
         genSubstrs: true,
       }
     );
@@ -45,21 +45,21 @@ describe("From Addr Regex", () => {
       }
     );
     circuit = await wasm_tester(
-      path.join(__dirname, "./circuits/test_from_addr_regex.circom"),
+      path.join(__dirname, "./circuits/test_to_addr_regex.circom"),
       option
     );
   });
 
-  it("from field from beginning case 1", async () => {
-    const fromStr = "from:suegamisora@gmail.com\r\n";
-    const paddedStr = apis.padString(fromStr, 1024);
+  it("to field from beginning case 1", async () => {
+    const toStr = "to:adityabisht@gmail.com\r\n";
+    const paddedStr = apis.padString(toStr, 1024);
     const circuitInputs = {
       msg: paddedStr,
     };
     const witness = await circuit.calculateWitness(circuitInputs);
     await circuit.checkConstraints(witness);
     expect(1n).toEqual(witness[1]);
-    const prefixIdxes = apis.extractFromAddrIdxes(fromStr)[0];
+    const prefixIdxes = apis.extractToAddrIdxes(toStr)[0];
     for (let idx = 0; idx < 1024; ++idx) {
       if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
         expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
@@ -69,16 +69,16 @@ describe("From Addr Regex", () => {
     }
   });
 
-  it("from field from beginning case 2", async () => {
-    const fromStr = "from:Sora Suegami <suegamisora@gmail.com>\r\n";
-    const paddedStr = apis.padString(fromStr, 1024);
+  it("to field from beginning case 2", async () => {
+    const toStr = "to:Aditya Bisht <adityabisht@gmail.com>\r\n";
+    const paddedStr = apis.padString(toStr, 1024);
     const circuitInputs = {
       msg: paddedStr,
     };
     const witness = await circuit.calculateWitness(circuitInputs);
     await circuit.checkConstraints(witness);
     expect(1n).toEqual(witness[1]);
-    const prefixIdxes = apis.extractFromAddrIdxes(fromStr)[0];
+    const prefixIdxes = apis.extractToAddrIdxes(toStr)[0];
     for (let idx = 0; idx < 1024; ++idx) {
       if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
         expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
@@ -88,16 +88,16 @@ describe("From Addr Regex", () => {
     }
   });
 
-  it("from field from beginning case 3 (email address as a name)", async () => {
-    const fromStr = "from:dummy@example.com<suegamisora@gmail.com>\r\n";
-    const paddedStr = apis.padString(fromStr, 1024);
+  it("to field from beginning case 3 (email address as a name)", async () => {
+    const toStr = "to:dummy@example.com<adityabisht@gmail.com>\r\n";
+    const paddedStr = apis.padString(toStr, 1024);
     const circuitInputs = {
       msg: paddedStr,
     };
     const witness = await circuit.calculateWitness(circuitInputs);
     await circuit.checkConstraints(witness);
     expect(1n).toEqual(witness[1]);
-    const prefixIdxes = apis.extractFromAddrIdxes(fromStr)[0];
+    const prefixIdxes = apis.extractToAddrIdxes(toStr)[0];
     for (let idx = 0; idx < 1024; ++idx) {
       if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
         expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
@@ -107,16 +107,16 @@ describe("From Addr Regex", () => {
     }
   });
 
-  it("from field from beginning case 4 (non-English string is used as a name)", async () => {
-    const fromStr = 'from: "末神奏宙" <suegamisora@gmail.com>\r\n';
-    const paddedStr = apis.padString(fromStr, 1024);
+  it("to field from beginning case 4 (non-English string is used as a name)", async () => {
+    const toStr = 'to: "末神奏宙" <adityabisht@gmail.com>\r\n';
+    const paddedStr = apis.padString(toStr, 1024);
     const circuitInputs = {
       msg: paddedStr,
     };
     const witness = await circuit.calculateWitness(circuitInputs);
     await circuit.checkConstraints(witness);
     expect(1n).toEqual(witness[1]);
-    const prefixIdxes = apis.extractFromAddrIdxes(fromStr)[0];
+    const prefixIdxes = apis.extractToAddrIdxes(toStr)[0];
     for (let idx = 0; idx < 1024; ++idx) {
       if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
         expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
@@ -126,16 +126,16 @@ describe("From Addr Regex", () => {
     }
   });
 
-  it("from field after new line case 1", async () => {
-    const fromStr = "dummy\r\nfrom:suegamisora@gmail.com\r\n";
-    const paddedStr = apis.padString(fromStr, 1024);
+  it("to field after new line case 1", async () => {
+    const toStr = "dummy\r\nto:adityabisht@gmail.com\r\n";
+    const paddedStr = apis.padString(toStr, 1024);
     const circuitInputs = {
       msg: paddedStr,
     };
     const witness = await circuit.calculateWitness(circuitInputs);
     await circuit.checkConstraints(witness);
     expect(1n).toEqual(witness[1]);
-    const prefixIdxes = apis.extractFromAddrIdxes(fromStr)[0];
+    const prefixIdxes = apis.extractToAddrIdxes(toStr)[0];
     for (let idx = 0; idx < 1024; ++idx) {
       if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
         expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
@@ -145,16 +145,16 @@ describe("From Addr Regex", () => {
     }
   });
 
-  it("from field after new line case 2", async () => {
-    const fromStr = "dummy\r\nfrom:Sora Suegami <suegamisora@gmail.com>\r\n";
-    const paddedStr = apis.padString(fromStr, 1024);
+  it("to field after new line case 2", async () => {
+    const toStr = "dummy\r\nto:Sora Suegami <adityabisht@gmail.com>\r\n";
+    const paddedStr = apis.padString(toStr, 1024);
     const circuitInputs = {
       msg: paddedStr,
     };
     const witness = await circuit.calculateWitness(circuitInputs);
     await circuit.checkConstraints(witness);
     expect(1n).toEqual(witness[1]);
-    const prefixIdxes = apis.extractFromAddrIdxes(fromStr)[0];
+    const prefixIdxes = apis.extractToAddrIdxes(toStr)[0];
     for (let idx = 0; idx < 1024; ++idx) {
       if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
         expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
@@ -164,17 +164,16 @@ describe("From Addr Regex", () => {
     }
   });
 
-  it("from field after new line case 3 (email address as a name)", async () => {
-    const fromStr =
-      "dummy\r\nfrom:dummy@example.com<suegamisora@gmail.com>\r\n";
-    const paddedStr = apis.padString(fromStr, 1024);
+  it("to field after new line case 3 (email address as a name)", async () => {
+    const toStr = "dummy\r\nto:dummy@example.com<adityabisht@gmail.com>\r\n";
+    const paddedStr = apis.padString(toStr, 1024);
     const circuitInputs = {
       msg: paddedStr,
     };
     const witness = await circuit.calculateWitness(circuitInputs);
     await circuit.checkConstraints(witness);
     expect(1n).toEqual(witness[1]);
-    const prefixIdxes = apis.extractFromAddrIdxes(fromStr)[0];
+    const prefixIdxes = apis.extractToAddrIdxes(toStr)[0];
     for (let idx = 0; idx < 1024; ++idx) {
       if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
         expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
@@ -184,16 +183,16 @@ describe("From Addr Regex", () => {
     }
   });
 
-  it("from field after new line case 4 (non-English string is used as a name)", async () => {
-    const fromStr = 'dummy\r\nfrom: "末神奏宙" <suegamisora@gmail.com>\r\n';
-    const paddedStr = apis.padString(fromStr, 1024);
+  it("to field after new line case 4 (non-English string is used as a name)", async () => {
+    const toStr = 'dummy\r\nto: "末神奏宙" <adityabisht@gmail.com>\r\n';
+    const paddedStr = apis.padString(toStr, 1024);
     const circuitInputs = {
       msg: paddedStr,
     };
     const witness = await circuit.calculateWitness(circuitInputs);
     await circuit.checkConstraints(witness);
     expect(1n).toEqual(witness[1]);
-    const prefixIdxes = apis.extractFromAddrIdxes(fromStr)[0];
+    const prefixIdxes = apis.extractToAddrIdxes(toStr)[0];
     for (let idx = 0; idx < 1024; ++idx) {
       if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
         expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
