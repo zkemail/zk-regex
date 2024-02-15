@@ -1,5 +1,3 @@
-
-
 use clap::{Parser, Subcommand};
 
 use zk_regex_compiler::*;
@@ -80,43 +78,43 @@ fn main() {
                 gen_substrs,
             );
         } // Commands::GenHalo2Texts {
-          //     decomposed_regex_path,
-          //     allstr_file_path,
-          //     substrs_dir_path,
-          // } => {
-          //     let regex_decomposed: DecomposedRegexConfig =
-          //         serde_json::from_reader(File::open(decomposed_regex_path).unwrap()).unwrap();
-          //     let num_public_part = regex_decomposed
-          //         .parts
-          //         .iter()
-          //         .filter(|part| part.is_public)
-          //         .collect_vec()
-          //         .len();
-          //     let substr_file_pathes = (0..num_public_part)
-          //         .map(|idx| {
-          //             PathBuf::new()
-          //                 .join(&substrs_dir_path)
-          //                 .join(&format!("substr{}.txt", idx))
-          //         })
-          //         .collect_vec();
-          //     regex_decomposed
-          //         .gen_regex_files(
-          //             &Path::new(&allstr_file_path).to_path_buf(),
-          //             &substr_file_pathes,
-          //         )
-          //         .unwrap();
-          // }
-          // Commands::GenCircom {
-          //     decomposed_regex_path,
-          //     circom_file_path,
-          //     template_name,
-          // } => {
-          //     let regex_decomposed: DecomposedRegexConfig =
-          //         serde_json::from_reader(File::open(decomposed_regex_path).unwrap()).unwrap();
-          //     let circom_path = PathBuf::from(circom_file_path);
-          //     regex_decomposed
-          //         .gen_circom(&circom_path, &template_name)
-          //         .unwrap();
-          // }
+          //       decomposed_regex_path,
+          //       allstr_file_path,
+          //       substrs_dir_path,
+          //   } => {
+          //       let regex_decomposed: DecomposedRegexConfig =
+          //           serde_json::from_reader(File::open(decomposed_regex_path).unwrap()).unwrap();
+          //       let num_public_part = regex_decomposed
+          //           .parts
+          //           .iter()
+          //           .filter(|part| part.is_public)
+          //           .collect_vec()
+          //           .len();
+          //       let substr_file_pathes = (0..num_public_part)
+          //           .map(|idx| {
+          //               PathBuf::new()
+          //                   .join(&substrs_dir_path)
+          //                   .join(&format!("substr{}.txt", idx))
+          //           })
+          //           .collect_vec();
+          //       regex_decomposed
+          //           .gen_regex_files(
+          //               &Path::new(&allstr_file_path).to_path_buf(),
+          //               &substr_file_pathes,
+          //           )
+          //           .unwrap();
+          //   }
+          //   Commands::GenCircom {
+          //       decomposed_regex_path,
+          //       circom_file_path,
+          //       template_name,
+          //   } => {
+          //       let regex_decomposed: DecomposedRegexConfig =
+          //           serde_json::from_reader(File::open(decomposed_regex_path).unwrap()).unwrap();
+          //       let circom_path = PathBuf::from(circom_file_path);
+          //       regex_decomposed
+          //           .gen_circom(&circom_path, &template_name)
+          //           .unwrap();
+          //   }
     }
 }

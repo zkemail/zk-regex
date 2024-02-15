@@ -7,12 +7,12 @@ pub(crate) fn gen_from_decomposed_node(mut cx: FunctionContext) -> JsResult<JsNu
     let decomposed_regex_path = cx.argument::<JsString>(0)?.value(&mut cx);
     println!("Decomposed regex path: {}", decomposed_regex_path);
     let obj = cx.argument::<JsObject>(1)?;
-    println!("Object: {:?}", obj);
 
     let circom_file_path = obj
         .get_opt::<JsString, _, _>(&mut cx, "circomFilePath")?
         .map(|v| {
-            let path = v.to_string(&mut cx)
+            let path = v
+                .to_string(&mut cx)
                 .expect("circomFilePath must be null or string")
                 .value(&mut cx);
             println!("Circom file path: {}", path);
@@ -21,7 +21,8 @@ pub(crate) fn gen_from_decomposed_node(mut cx: FunctionContext) -> JsResult<JsNu
     let circom_template_name = obj
         .get_opt::<JsString, _, _>(&mut cx, "templateName")?
         .map(|v| {
-            let name = v.to_string(&mut cx)
+            let name = v
+                .to_string(&mut cx)
                 .expect("templateName must be null or string")
                 .value(&mut cx);
             println!("Circom template name: {}", name);
@@ -30,7 +31,8 @@ pub(crate) fn gen_from_decomposed_node(mut cx: FunctionContext) -> JsResult<JsNu
     let gen_substrs = obj
         .get_opt::<JsBoolean, _, _>(&mut cx, "genSubstrs")?
         .map(|v| {
-            let gen = v.as_value(&mut cx)
+            let gen = v
+                .as_value(&mut cx)
                 .downcast::<JsBoolean, _>(&mut cx)
                 .expect("genSubstrs must be null or boolean")
                 .value(&mut cx);

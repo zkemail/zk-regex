@@ -2,7 +2,7 @@ pragma circom 2.1.5;
 
 include "@zk-email/zk-regex-circom/circuits/regex_helpers.circom";
 
-// regex: (a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|!|#|$|%|&|'|\*|\+|-|/|=|\?|^|_|`|{|\||}|~|\.)+@(a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|0|1|2|3|4|5|6|7|8|9|\.|-)+
+// regex: [A-Za-z0-9!#$%&'*+=?^_`{|}~.]+@[A-Za-z0-9.-]+
 template EmailAddrRegex(msg_bytes) {
 	signal input msg[msg_bytes];
 	signal output out;
@@ -14,7 +14,7 @@ template EmailAddrRegex(msg_bytes) {
 		in[i+1] <== msg[i];
 	}
 
-	component eq[25][num_bytes];
+	component eq[24][num_bytes];
 	component lt[8][num_bytes];
 	component and[9][num_bytes];
 	component multi_or[5][num_bytes];
@@ -72,55 +72,49 @@ template EmailAddrRegex(msg_bytes) {
 		eq[7][i].in[1] <== 43;
 		eq[8][i] = IsEqual();
 		eq[8][i].in[0] <== in[i];
-		eq[8][i].in[1] <== 45;
+		eq[8][i].in[1] <== 46;
 		eq[9][i] = IsEqual();
 		eq[9][i].in[0] <== in[i];
-		eq[9][i].in[1] <== 46;
+		eq[9][i].in[1] <== 48;
 		eq[10][i] = IsEqual();
 		eq[10][i].in[0] <== in[i];
-		eq[10][i].in[1] <== 47;
+		eq[10][i].in[1] <== 49;
 		eq[11][i] = IsEqual();
 		eq[11][i].in[0] <== in[i];
-		eq[11][i].in[1] <== 48;
+		eq[11][i].in[1] <== 50;
 		eq[12][i] = IsEqual();
 		eq[12][i].in[0] <== in[i];
-		eq[12][i].in[1] <== 49;
+		eq[12][i].in[1] <== 51;
 		eq[13][i] = IsEqual();
 		eq[13][i].in[0] <== in[i];
-		eq[13][i].in[1] <== 50;
+		eq[13][i].in[1] <== 52;
 		eq[14][i] = IsEqual();
 		eq[14][i].in[0] <== in[i];
-		eq[14][i].in[1] <== 51;
+		eq[14][i].in[1] <== 53;
 		eq[15][i] = IsEqual();
 		eq[15][i].in[0] <== in[i];
-		eq[15][i].in[1] <== 52;
+		eq[15][i].in[1] <== 54;
 		eq[16][i] = IsEqual();
 		eq[16][i].in[0] <== in[i];
-		eq[16][i].in[1] <== 53;
+		eq[16][i].in[1] <== 55;
 		eq[17][i] = IsEqual();
 		eq[17][i].in[0] <== in[i];
-		eq[17][i].in[1] <== 54;
+		eq[17][i].in[1] <== 56;
 		eq[18][i] = IsEqual();
 		eq[18][i].in[0] <== in[i];
-		eq[18][i].in[1] <== 55;
+		eq[18][i].in[1] <== 57;
 		eq[19][i] = IsEqual();
 		eq[19][i].in[0] <== in[i];
-		eq[19][i].in[1] <== 56;
+		eq[19][i].in[1] <== 61;
 		eq[20][i] = IsEqual();
 		eq[20][i].in[0] <== in[i];
-		eq[20][i].in[1] <== 57;
+		eq[20][i].in[1] <== 63;
 		eq[21][i] = IsEqual();
 		eq[21][i].in[0] <== in[i];
-		eq[21][i].in[1] <== 61;
-		eq[22][i] = IsEqual();
-		eq[22][i].in[0] <== in[i];
-		eq[22][i].in[1] <== 63;
-		eq[23][i] = IsEqual();
-		eq[23][i].in[0] <== in[i];
-		eq[23][i].in[1] <== 255;
+		eq[21][i].in[1] <== 255;
 		and[2][i] = AND();
 		and[2][i].a <== states[i][0];
-		multi_or[0][i] = MultiOR(26);
+		multi_or[0][i] = MultiOR(24);
 		multi_or[0][i].in[0] <== and[0][i].out;
 		multi_or[0][i].in[1] <== and[1][i].out;
 		multi_or[0][i].in[2] <== eq[0][i].out;
@@ -145,8 +139,6 @@ template EmailAddrRegex(msg_bytes) {
 		multi_or[0][i].in[21] <== eq[19][i].out;
 		multi_or[0][i].in[22] <== eq[20][i].out;
 		multi_or[0][i].in[23] <== eq[21][i].out;
-		multi_or[0][i].in[24] <== eq[22][i].out;
-		multi_or[0][i].in[25] <== eq[23][i].out;
 		and[2][i].b <== multi_or[0][i].out;
 		lt[4][i] = LessEqThan(8);
 		lt[4][i].in[0] <== 94;
@@ -159,7 +151,7 @@ template EmailAddrRegex(msg_bytes) {
 		and[3][i].b <== lt[5][i].out;
 		and[4][i] = AND();
 		and[4][i].a <== states[i][1];
-		multi_or[1][i] = MultiOR(25);
+		multi_or[1][i] = MultiOR(23);
 		multi_or[1][i].in[0] <== and[0][i].out;
 		multi_or[1][i].in[1] <== and[3][i].out;
 		multi_or[1][i].in[2] <== eq[0][i].out;
@@ -183,20 +175,18 @@ template EmailAddrRegex(msg_bytes) {
 		multi_or[1][i].in[20] <== eq[18][i].out;
 		multi_or[1][i].in[21] <== eq[19][i].out;
 		multi_or[1][i].in[22] <== eq[20][i].out;
-		multi_or[1][i].in[23] <== eq[21][i].out;
-		multi_or[1][i].in[24] <== eq[22][i].out;
 		and[4][i].b <== multi_or[1][i].out;
 		multi_or[2][i] = MultiOR(2);
 		multi_or[2][i].in[0] <== and[2][i].out;
 		multi_or[2][i].in[1] <== and[4][i].out;
 		states[i+1][1] <== multi_or[2][i].out;
 		state_changed[i].in[0] <== states[i+1][1];
-		eq[24][i] = IsEqual();
-		eq[24][i].in[0] <== in[i];
-		eq[24][i].in[1] <== 64;
+		eq[22][i] = IsEqual();
+		eq[22][i].in[0] <== in[i];
+		eq[22][i].in[1] <== 64;
 		and[5][i] = AND();
 		and[5][i].a <== states[i][1];
-		and[5][i].b <== eq[24][i].out;
+		and[5][i].b <== eq[22][i].out;
 		states[i+1][2] <== and[5][i].out;
 		state_changed[i].in[1] <== states[i+1][2];
 		lt[6][i] = LessEqThan(8);
@@ -208,23 +198,26 @@ template EmailAddrRegex(msg_bytes) {
 		and[6][i] = AND();
 		and[6][i].a <== lt[6][i].out;
 		and[6][i].b <== lt[7][i].out;
+		eq[23][i] = IsEqual();
+		eq[23][i].in[0] <== in[i];
+		eq[23][i].in[1] <== 45;
 		and[7][i] = AND();
 		and[7][i].a <== states[i][2];
 		multi_or[3][i] = MultiOR(14);
 		multi_or[3][i].in[0] <== and[0][i].out;
 		multi_or[3][i].in[1] <== and[6][i].out;
-		multi_or[3][i].in[2] <== eq[8][i].out;
-		multi_or[3][i].in[3] <== eq[9][i].out;
-		multi_or[3][i].in[4] <== eq[11][i].out;
-		multi_or[3][i].in[5] <== eq[12][i].out;
-		multi_or[3][i].in[6] <== eq[13][i].out;
-		multi_or[3][i].in[7] <== eq[14][i].out;
-		multi_or[3][i].in[8] <== eq[15][i].out;
-		multi_or[3][i].in[9] <== eq[16][i].out;
-		multi_or[3][i].in[10] <== eq[17][i].out;
-		multi_or[3][i].in[11] <== eq[18][i].out;
-		multi_or[3][i].in[12] <== eq[19][i].out;
-		multi_or[3][i].in[13] <== eq[20][i].out;
+		multi_or[3][i].in[2] <== eq[23][i].out;
+		multi_or[3][i].in[3] <== eq[8][i].out;
+		multi_or[3][i].in[4] <== eq[9][i].out;
+		multi_or[3][i].in[5] <== eq[10][i].out;
+		multi_or[3][i].in[6] <== eq[11][i].out;
+		multi_or[3][i].in[7] <== eq[12][i].out;
+		multi_or[3][i].in[8] <== eq[13][i].out;
+		multi_or[3][i].in[9] <== eq[14][i].out;
+		multi_or[3][i].in[10] <== eq[15][i].out;
+		multi_or[3][i].in[11] <== eq[16][i].out;
+		multi_or[3][i].in[12] <== eq[17][i].out;
+		multi_or[3][i].in[13] <== eq[18][i].out;
 		and[7][i].b <== multi_or[3][i].out;
 		and[8][i] = AND();
 		and[8][i].a <== states[i][3];
@@ -242,13 +235,13 @@ template EmailAddrRegex(msg_bytes) {
 		final_state_result.in[i] <== states[i][3];
 	}
 	out <== final_state_result.out;
-
 	signal is_consecutive[msg_bytes+1][2];
 	is_consecutive[msg_bytes][1] <== 1;
 	for (var i = 0; i < msg_bytes; i++) {
 		is_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][3] * (1 - is_consecutive[msg_bytes-i][1]) + is_consecutive[msg_bytes-i][1];
 		is_consecutive[msg_bytes-1-i][1] <== state_changed[msg_bytes-i].out * is_consecutive[msg_bytes-1-i][0];
 	}
+	// substrings calculated: [{(0, 1), (1, 1), (1, 2), (2, 3), (3, 3)}]
 	signal is_substr0[msg_bytes][6];
 	signal is_reveal0[msg_bytes];
 	signal output reveal0[msg_bytes];

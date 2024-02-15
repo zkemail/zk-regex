@@ -1,0 +1,52 @@
+{
+  "parts": [
+    {
+      "is_public": false,
+      "regex_def": "Latin-Extension="
+    },
+    {
+      "is_public": true,
+      "regex_def": "[¡-ƿ]+"
+    },
+    {
+      "is_public": false,
+      "regex_def": " Greek="
+    },
+    {
+      "is_public": true,
+      "regex_def": "[Ͱ-Ͽ]+"
+    },
+    {
+      "is_public": false,
+      "regex_def": " Cyrillic="
+    },
+    {
+      "is_public": true,
+      "regex_def": "[Ѐ-ӿ]+"
+    },
+    {
+      "is_public": false,
+      "regex_def": " Arabic="
+    },
+    {
+      "is_public": true,
+      "regex_def": "[؀-ۿ]+"
+    },
+    {
+      "is_public": false,
+      "regex_def": " Devanagari="
+    },
+    {
+      "is_public": true,
+      "regex_def": "[ऀ-ॿ]+"
+    },
+    {
+      "is_public": false,
+      "regex_def": " Hiragana&Katakana="
+    },
+    {
+      "is_public": true,
+      "regex_def": "[ぁ-ヿ]+"
+    }
+  ]
+}

@@ -122,13 +122,13 @@ template SimpleRegex(msg_bytes) {
 		final_state_result.in[i] <== states[i][9];
 	}
 	out <== final_state_result.out;
-
 	signal is_consecutive[msg_bytes+1][2];
 	is_consecutive[msg_bytes][1] <== 1;
 	for (var i = 0; i < msg_bytes; i++) {
 		is_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][9] * (1 - is_consecutive[msg_bytes-i][1]) + is_consecutive[msg_bytes-i][1];
 		is_consecutive[msg_bytes-1-i][1] <== state_changed[msg_bytes-i].out * is_consecutive[msg_bytes-1-i][0];
 	}
+	// substrings calculated: [{(2, 3)}, {(6, 7), (7, 7)}, {(8, 9)}]
 	signal is_substr0[msg_bytes][2];
 	signal is_reveal0[msg_bytes];
 	signal output reveal0[msg_bytes];
