@@ -16,7 +16,7 @@ template SimpleRegex(msg_bytes) {
 
 	component eq[8][num_bytes];
 	component and[11][num_bytes];
-	component multi_or[5][num_bytes];
+	component multi_or[4][num_bytes];
 	signal states[num_bytes+1][10];
 	component state_changed[num_bytes];
 
@@ -45,10 +45,10 @@ template SimpleRegex(msg_bytes) {
 		state_changed[i].in[1] <== states[i+1][2];
 		eq[2][i] = IsEqual();
 		eq[2][i].in[0] <== in[i];
-		eq[2][i].in[1] <== 98;
+		eq[2][i].in[1] <== 97;
 		eq[3][i] = IsEqual();
 		eq[3][i].in[0] <== in[i];
-		eq[3][i].in[1] <== 97;
+		eq[3][i].in[1] <== 98;
 		and[2][i] = AND();
 		and[2][i].a <== states[i][2];
 		multi_or[0][i] = MultiOR(2);
@@ -90,19 +90,16 @@ template SimpleRegex(msg_bytes) {
 		and[7][i] = AND();
 		and[7][i].a <== states[i][6];
 		multi_or[2][i] = MultiOR(2);
-		multi_or[2][i].in[0] <== eq[2][i].out;
+		multi_or[2][i].in[0] <== eq[3][i].out;
 		multi_or[2][i].in[1] <== eq[6][i].out;
 		and[7][i].b <== multi_or[2][i].out;
 		and[8][i] = AND();
 		and[8][i].a <== states[i][7];
+		and[8][i].b <== multi_or[2][i].out;
 		multi_or[3][i] = MultiOR(2);
-		multi_or[3][i].in[0] <== eq[6][i].out;
-		multi_or[3][i].in[1] <== eq[2][i].out;
-		and[8][i].b <== multi_or[3][i].out;
-		multi_or[4][i] = MultiOR(2);
-		multi_or[4][i].in[0] <== and[7][i].out;
-		multi_or[4][i].in[1] <== and[8][i].out;
-		states[i+1][7] <== multi_or[4][i].out;
+		multi_or[3][i].in[0] <== and[7][i].out;
+		multi_or[3][i].in[1] <== and[8][i].out;
+		states[i+1][7] <== multi_or[3][i].out;
 		state_changed[i].in[6] <== states[i+1][7];
 		and[9][i] = AND();
 		and[9][i].a <== states[i][7];

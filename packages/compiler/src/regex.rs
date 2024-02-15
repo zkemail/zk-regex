@@ -1,13 +1,13 @@
 use crate::{DFAGraph, DFAState, DecomposedRegexConfig, RegexAndDFA, SubstrsDefs};
 use regex::Regex;
 use regex_automata::dfa::{dense::DFA, StartKind};
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Debug, Clone)]
 struct DFAInfoState {
     typ: String,
     source: usize,
-    edges: HashMap<String, usize>,
+    edges: BTreeMap<String, usize>,
 }
 
 #[derive(Debug)]
@@ -24,7 +24,7 @@ fn parse_dfa_output(output: &str) -> DFAGraphInfo {
         let mut state = DFAInfoState {
             source: src,
             typ: String::new(),
-            edges: HashMap::new(),
+            edges: BTreeMap::new(),
         };
         if &captures[0][0..1] == "*" {
             state.typ = String::from("accept");
@@ -92,7 +92,7 @@ fn parse_dfa_output(output: &str) -> DFAGraphInfo {
     }
 
     // Rename the sources
-    let mut switch_states = HashMap::new();
+    let mut switch_states = BTreeMap::new();
     for (i, state) in sorted_states.states.iter_mut().enumerate() {
         let temp = state.source;
         state.source = i as usize;
@@ -112,8 +112,8 @@ fn parse_dfa_output(output: &str) -> DFAGraphInfo {
 fn dfa_to_graph(dfa_info: &DFAGraphInfo) -> DFAGraph {
     let mut graph = DFAGraph { states: Vec::new() };
     for state in &dfa_info.states {
-        let mut edges = HashMap::new();
-        let key_mappings: HashMap<&str, u8> = [
+        let mut edges = BTreeMap::new();
+        let key_mappings: BTreeMap<&str, u8> = [
             ("\\n", 10),
             ("\\r", 13),
             ("\\t", 9),
@@ -197,7 +197,7 @@ fn dfa_to_graph(dfa_info: &DFAGraphInfo) -> DFAGraph {
 fn rename_states(dfa_info: &DFAGraph, base: usize) -> DFAGraph {
     let mut dfa_info = dfa_info.clone();
     // Rename the sources
-    let mut switch_states = HashMap::new();
+    let mut switch_states = BTreeMap::new();
     for (i, state) in dfa_info.states.iter_mut().enumerate() {
         let temp = state.state;
         state.state = i + base;
@@ -206,7 +206,7 @@ fn rename_states(dfa_info: &DFAGraph, base: usize) -> DFAGraph {
 
     // Iterate over all edges of all states and rename the states
     for state in &mut dfa_info.states {
-        let mut new_edges = HashMap::new();
+        let mut new_edges = BTreeMap::new();
         for (key, value) in &state.edges {
             new_edges.insert(*switch_states.get(key).unwrap(), value.clone());
         }
@@ -284,7 +284,7 @@ pub fn regex_and_dfa(decomposed_regex: &DecomposedRegexConfig) -> RegexAndDFA {
                 }
             }
 
-            let mut public_edges = HashSet::new();
+            let mut public_edges = BTreeSet::new();
             for state in &graph.states {
                 for (key, _) in &state.edges {
                     public_edges.insert((state.state, *key));

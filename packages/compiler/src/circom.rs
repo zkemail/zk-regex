@@ -2,7 +2,7 @@ use super::CompilerError;
 use crate::get_accepted_state;
 use crate::DFAGraph;
 use crate::RegexAndDFA;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 
 use std::fs::File;
 use std::io::Write;
@@ -10,16 +10,16 @@ use std::path::PathBuf;
 
 fn gen_circom_allstr(dfa_graph: &DFAGraph, template_name: &str, regex_str: &str) -> String {
     let n = dfa_graph.states.len();
-    let mut rev_graph = HashMap::<usize, HashMap<usize, Vec<u8>>>::new();
+    let mut rev_graph = BTreeMap::<usize, BTreeMap<usize, Vec<u8>>>::new();
     let mut to_init_graph = vec![];
     let mut init_going_state: Option<usize> = None;
 
     for i in 0..n {
-        rev_graph.insert(i, HashMap::new());
+        rev_graph.insert(i, BTreeMap::new());
         to_init_graph.push(vec![]);
     }
 
-    let mut accept_nodes = HashSet::<usize>::new();
+    let mut accept_nodes = BTreeSet::<usize>::new();
 
     for i in 0..n {
         let node = &dfa_graph.states[i];
@@ -91,8 +91,8 @@ fn gen_circom_allstr(dfa_graph: &DFAGraph, template_name: &str, regex_str: &str)
 
     let mut range_checks = vec![vec![None; 256]; 256];
     let mut eq_checks = vec![None; 256];
-    let mut multi_or_checks1 = HashMap::<String, usize>::new();
-    let mut multi_or_checks2 = HashMap::<String, usize>::new();
+    let mut multi_or_checks1 = BTreeMap::<String, usize>::new();
+    let mut multi_or_checks2 = BTreeMap::<String, usize>::new();
 
     let mut lines = vec![];
 
@@ -108,7 +108,7 @@ fn gen_circom_allstr(dfa_graph: &DFAGraph, template_name: &str, regex_str: &str)
             k.sort();
 
             let mut eq_outputs = vec![];
-            let mut vals = k.clone().into_iter().collect::<HashSet<u8>>();
+            let mut vals = k.clone().into_iter().collect::<BTreeSet<u8>>();
 
             if vals.is_empty() {
                 continue;

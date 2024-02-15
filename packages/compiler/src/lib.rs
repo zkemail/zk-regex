@@ -1,5 +1,5 @@
+use std::fs::File;
 use std::iter::FromIterator;
-use std::{collections::HashMap, fs::File};
 pub mod circom;
 pub mod halo2;
 pub mod node;
@@ -15,7 +15,7 @@ use neon;
 use itertools::Itertools;
 use petgraph::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use thiserror::Error;
 
@@ -61,7 +61,7 @@ pub enum SoldityType {
 pub struct DFAState {
     r#type: String,
     state: usize,
-    edges: HashMap<usize, BTreeSet<u8>>,
+    edges: BTreeMap<usize, BTreeSet<u8>>,
 }
 
 #[derive(Debug, Clone)]
@@ -80,8 +80,8 @@ pub struct RegexAndDFA {
 
 #[derive(Debug, Clone)]
 pub struct SubstrsDefs {
-    pub substr_defs_array: Vec<HashSet<(usize, usize)>>,
-    pub substr_endpoints_array: Option<Vec<(HashSet<usize>, HashSet<usize>)>>,
+    pub substr_defs_array: Vec<BTreeSet<(usize, usize)>>,
+    pub substr_endpoints_array: Option<Vec<(BTreeSet<usize>, BTreeSet<usize>)>>,
     // pub max_bytes: Option<Vec<usize>>,
 }
 
@@ -106,7 +106,7 @@ impl RegexAndDFA {
         let substr_defs_array = substrs_defs_json
             .transitions
             .into_iter()
-            .map(|transitions_array| HashSet::<(usize, usize)>::from_iter(transitions_array))
+            .map(|transitions_array| BTreeSet::<(usize, usize)>::from_iter(transitions_array))
             .collect_vec();
         let substrs_defs = SubstrsDefs {
             substr_defs_array,
@@ -235,7 +235,6 @@ fn main(mut cx: neon::prelude::ModuleContext) -> neon::prelude::NeonResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::Path;
 
     #[test]
     fn test_gen_from_decomposed() {
