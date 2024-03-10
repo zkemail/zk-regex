@@ -5,6 +5,11 @@
 */
 export function greet(name: string): void;
 /**
+* @param {string} name
+* @returns {string}
+*/
+export function reverse_string(name: string): string;
+/**
 * @param {string} raw_regex
 * @param {string} substrs_json
 * @param {string} template_name
@@ -17,6 +22,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly greet: (a: number, b: number) => void;
+  readonly reverse_string: (a: number, b: number, c: number) => void;
   readonly gen_from_raw_memory: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;

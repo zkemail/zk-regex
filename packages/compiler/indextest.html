@@ -6,9 +6,11 @@
   </head>
   <body>
     <script type="module">
-      import init, { greet } from "./pkg/zk_regex_compiler.js";
+      import init, { reverse_string } from "./pkg/zk_regex_compiler.js";
       init().then(() => {
-        greet("WebAssembly");
+        let input = "Hello, World!";
+		let output = reverse_string(input);
+		document.body.innerHTML = output;
       });
     </script>
   </body>

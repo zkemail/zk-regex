@@ -175,6 +175,13 @@ pub fn greet(name: &str) {
 }
 
 
+#[wasm_bindgen]
+pub fn reverse_string(name: &str) -> String {
+    name.chars().rev().collect::<String>()
+}
+
+
+
 pub fn gen_from_raw(
     raw_regex: &str,
     // max_bytes: usize,
