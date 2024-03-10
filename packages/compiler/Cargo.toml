@@ -33,12 +33,5 @@ clap = { version = "=4.2.1", features = ["derive"] }
 ahash = "=0.8.7"
 regex-automata = "0.4.5"
 regex = "1.10.3"
+getrandom = { version = "0.2", features = ["js"] }
 
-[dependencies.neon]
-version = "0.10"
-default-features = false
-features = ["napi-6"]
-
-[features]
-default = ["export_neon_main"]
-export_neon_main = []

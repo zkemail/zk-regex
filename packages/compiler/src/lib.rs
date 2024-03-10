@@ -2,15 +2,12 @@ use std::fs::File;
 use std::iter::FromIterator;
 pub mod circom;
 pub mod halo2;
-pub mod node;
 pub mod regex;
 
 // #[cfg(test)]
 // mod tests;
 
-use crate::node::*;
 use crate::regex::*;
-use neon;
 
 use itertools::Itertools;
 use petgraph::prelude::*;
