@@ -1,4 +1,4 @@
-use crate::{gen_from_decomposed, gen_from_raw};
+//use crate::{gen_from_decomposed, gen_from_raw};
 use neon::context::Context;
 use neon::prelude::*;
 
@@ -40,7 +40,7 @@ pub(crate) fn gen_from_decomposed_node(mut cx: FunctionContext) -> JsResult<JsNu
             gen
         });
     println!("Calling gen_from_decomposed function");
-    gen_from_decomposed(
+    zk_regex_compiler::gen_from_decomposed(
         &decomposed_regex_path,
         circom_file_path.as_ref().map(|s| s.as_str()),
         circom_template_name.as_ref().map(|s| s.as_str()),
@@ -90,7 +90,7 @@ pub(crate) fn gen_from_raw_node(mut cx: FunctionContext) -> JsResult<JsNull> {
                 .expect("genSubstrs must be null or boolean")
                 .value(&mut cx)
         });
-    gen_from_raw(
+    zk_regex_compiler::gen_from_raw(
         &raw_regex,
         substrs_json_path.as_ref().map(|s| s.as_str()),
         // halo2_dir_path.as_ref().map(|s| s.as_str()),
@@ -99,4 +99,12 @@ pub(crate) fn gen_from_raw_node(mut cx: FunctionContext) -> JsResult<JsNull> {
         gen_substrs,
     );
     Ok(cx.null())
+}
+
+#[cfg(feature = "export_neon_main")]
+#[neon::main]
+fn main(mut cx: neon::prelude::ModuleContext) -> neon::prelude::NeonResult<()> {
+    cx.export_function("genFromDecomposed", gen_from_decomposed_node)?;
+    cx.export_function("genFromRaw", gen_from_raw_node)?;
+    Ok(())
 }

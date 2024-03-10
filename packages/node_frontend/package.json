@@ -1,0 +1,39 @@
+{
+  "name": "@zk-email/zk-regex-compiler",
+  "version": "1.1.0",
+  "description": "a compiler to generate a regex verification circuit in circom from a user-defined regex. Please check [zk-regex](https://github.com/zkemail/zk-regex/tree/main) for the detail.",
+  "main": "index.node",
+  "contributors": [
+    "Javier Su <javier.su.weijie@gmail.com>",
+    "Kata Choi <kata.choi@gmail.com>",
+    "Sora Suegami <suegamisora@gmail.com>",
+    "Yush G <aayushg@mit.edu>"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zkemail/zk-regex.git"
+  },
+  "scripts": {
+    "build": "cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
+    "build-debug": "npm run build --",
+    "build-release": "npm run build -- --release",
+    "install": "npm run build-debug",
+    "install-release": "node-pre-gyp install --update-binary --fallback-to-build=false || npm run build-release",
+    "test": "cargo test",
+    "package": "node-pre-gyp package",
+    "upload-binary": "npm run package && node-pre-gyp-github publish"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@mapbox/node-pre-gyp": "^1.0",
+    "cargo-cp-artifact": "^0.1",
+    "node-pre-gyp-github": "https://github.com/ultamatt/node-pre-gyp-github.git"
+  },
+  "binary": {
+    "module_name": "index",
+    "host": "https://github.com/zkemail/zk-regex/releases/download/",
+    "remote_path": "{version}",
+    "package_name": "compiler-{node_abi}-{platform}-{arch}.tar.gz",
+    "module_path": "./"
+  }
+}
