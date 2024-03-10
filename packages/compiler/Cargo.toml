@@ -34,4 +34,5 @@ ahash = "=0.8.7"
 regex-automata = "0.4.5"
 regex = "1.10.3"
 getrandom = { version = "0.2", features = ["js"] }
+wasm-bindgen = "0.2"
 

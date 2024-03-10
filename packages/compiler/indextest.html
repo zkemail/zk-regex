@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <title>zkregex wasm test</title>
+  </head>
+  <body>
+    <script type="module">
+      import init, { greet } from "./pkg/zk_regex_compiler.js";
+      init().then(() => {
+        greet("WebAssembly");
+      });
+    </script>
+  </body>
+</html>

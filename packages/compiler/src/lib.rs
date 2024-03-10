@@ -16,6 +16,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use thiserror::Error;
 
+use wasm_bindgen::prelude::*;
+
+
 /// Error definitions of the compiler.
 #[derive(Error, Debug)]
 pub enum CompilerError {
@@ -158,6 +161,19 @@ pub fn gen_from_decomposed(
             .expect("failed to generate circom");
     }
 }
+
+
+#[wasm_bindgen]
+extern {
+    pub fn alert(s: &str);
+}
+
+
+#[wasm_bindgen]
+pub fn greet(name: &str) {
+    alert(&format!("Hello POE, {}!", name));
+}
+
 
 pub fn gen_from_raw(
     raw_regex: &str,
