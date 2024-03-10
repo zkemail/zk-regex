@@ -4,14 +4,24 @@
 * @param {string} name
 */
 export function greet(name: string): void;
+/**
+* @param {string} raw_regex
+* @param {string} substrs_json
+* @param {string} template_name
+* @returns {string}
+*/
+export function gen_from_raw_memory(raw_regex: string, substrs_json: string, template_name: string): string;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly greet: (a: number, b: number) => void;
+  readonly gen_from_raw_memory: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+  readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
+  readonly __wbindgen_free: (a: number, b: number, c: number) => void;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;

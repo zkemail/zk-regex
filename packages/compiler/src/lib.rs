@@ -218,7 +218,7 @@ pub fn gen_from_raw(
     }
 }
 
-
+#[wasm_bindgen]
 pub fn gen_from_raw_memory(
     raw_regex: &str,
     substrs_json: &str,
