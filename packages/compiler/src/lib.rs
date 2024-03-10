@@ -218,6 +218,21 @@ pub fn gen_from_raw(
     }
 }
 
+
+pub fn gen_from_raw_memory(
+    raw_regex: &str,
+    substrs_json: &str,
+    template_name: &str,
+) -> String {
+    let substrs_defs_json: SubstrsDefsJson = serde_json::from_str(substrs_json).unwrap();
+    let regex_and_dfa = RegexAndDFA::from_regex_str_and_substr_defs(raw_regex, substrs_defs_json)
+        .expect("failed to convert the raw regex and state transitions to dfa");
+
+    regex_and_dfa
+        .gen_circom_str(&template_name)
+        .expect("failed to generate circom")
+}
+
 pub(crate) fn get_accepted_state(dfa_val: &DFAGraph) -> Option<usize> {
     for i in 0..dfa_val.states.len() {
         if dfa_val.states[i].r#type == "accept" {
