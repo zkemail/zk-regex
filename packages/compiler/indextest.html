@@ -6,11 +6,22 @@
   </head>
   <body>
     <script type="module">
-      import init, { reverse_string } from "./pkg/zk_regex_compiler.js";
+      import init, { gen_from_raw_memory } from "./pkg/zk_regex_compiler.js";
       init().then(() => {
         let input = "Hello, World!";
-		let output = reverse_string(input);
-		document.body.innerHTML = output;
+		let jsonData = `{
+  "transitions": [
+    [[2, 3]],
+    [
+      [6, 7],
+      [7, 7]
+    ],
+    [[8, 9]]
+  ]
+}`;
+		let output = gen_from_raw_memory("1=(a|b) (2=(b|c)+ )+d", jsonData, "MyTemplate");
+		console.log(output);
+		document.body.innerHTML = "<pre>" + output + "</pre>";
       });
     </script>
   </body>
