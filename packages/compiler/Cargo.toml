@@ -42,5 +42,5 @@ default-features = false
 features = ["napi-6"]
 
 [features]
-#default = ["export_neon_main"]
+default = ["export_neon_main"]
 export_neon_main = []
