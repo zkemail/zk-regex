@@ -2,12 +2,21 @@ use std::fs::File;
 use std::iter::FromIterator;
 pub mod circom;
 pub mod halo2;
+
+#[cfg(feature = "export_neon_main")]
+pub mod node;
+
 pub mod regex;
 
 // #[cfg(test)]
 // mod tests;
+#[cfg(feature = "export_neon_main")]
+use crate::node::*;
+#[cfg(feature = "export_neon_main")]
+use neon;
 
 use crate::regex::*;
+
 
 use itertools::Itertools;
 use petgraph::prelude::*;
@@ -17,6 +26,7 @@ use std::path::PathBuf;
 use thiserror::Error;
 
 use wasm_bindgen::prelude::*;
+
 
 
 /// Error definitions of the compiler.

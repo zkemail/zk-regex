@@ -36,3 +36,11 @@ regex = "1.10.3"
 getrandom = { version = "0.2", features = ["js"] }
 wasm-bindgen = "0.2"
 
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies.neon]
+version = "0.10"
+default-features = false
+features = ["napi-6"]
+
+[features]
+#default = ["export_neon_main"]
+export_neon_main = []
