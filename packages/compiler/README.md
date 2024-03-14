@@ -41,7 +41,6 @@ wasm-pack build --target web --no-default-features
 ```
 The result will be available in `packages/compiler/pkg`
 
-
 ## CLI Usage
 Please see "Compiler CLI" section in [zk-regex](https://github.com/zkemail/zk-regex/tree/main).
 

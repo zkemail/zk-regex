@@ -2,21 +2,18 @@ use std::fs::File;
 use std::iter::FromIterator;
 pub mod circom;
 pub mod halo2;
-
 #[cfg(feature = "export_neon_main")]
 pub mod node;
-
 pub mod regex;
 
 // #[cfg(test)]
 // mod tests;
+
 #[cfg(feature = "export_neon_main")]
 use crate::node::*;
+use crate::regex::*;
 #[cfg(feature = "export_neon_main")]
 use neon;
-
-use crate::regex::*;
-
 
 use itertools::Itertools;
 use petgraph::prelude::*;
@@ -24,10 +21,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use thiserror::Error;
-
 use wasm_bindgen::prelude::*;
-
-
 
 /// Error definitions of the compiler.
 #[derive(Error, Debug)]
@@ -171,26 +165,6 @@ pub fn gen_from_decomposed(
             .expect("failed to generate circom");
     }
 }
-
-
-#[wasm_bindgen]
-extern {
-    pub fn alert(s: &str);
-}
-
-
-#[wasm_bindgen]
-pub fn greet(name: &str) {
-    alert(&format!("Hello POE, {}!", name));
-}
-
-
-#[wasm_bindgen]
-pub fn reverse_string(name: &str) -> String {
-    name.chars().rev().collect::<String>()
-}
-
-
 
 pub fn gen_from_raw(
     raw_regex: &str,
