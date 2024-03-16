@@ -2,18 +2,12 @@ use std::fs::File;
 use std::iter::FromIterator;
 pub mod circom;
 pub mod halo2;
-#[cfg(feature = "export_neon_main")]
-pub mod node;
 pub mod regex;
 
 // #[cfg(test)]
 // mod tests;
 
-#[cfg(feature = "export_neon_main")]
-use crate::node::*;
 use crate::regex::*;
-#[cfg(feature = "export_neon_main")]
-use neon;
 
 use itertools::Itertools;
 use petgraph::prelude::*;
@@ -243,13 +237,6 @@ pub(crate) fn get_accepted_state(dfa_val: &DFAGraph) -> Option<usize> {
 //     max_state
 // }
 
-#[cfg(feature = "export_neon_main")]
-#[neon::main]
-fn main(mut cx: neon::prelude::ModuleContext) -> neon::prelude::NeonResult<()> {
-    cx.export_function("genFromDecomposed", gen_from_decomposed_node)?;
-    cx.export_function("genFromRaw", gen_from_raw_node)?;
-    Ok(())
-}
 
 #[cfg(test)]
 mod tests {
