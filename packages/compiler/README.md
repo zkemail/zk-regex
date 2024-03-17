@@ -38,13 +38,13 @@ cargo install wasm-pack
 Compile the web package
 
 ```sh
-wasm-pack build --target web --no-default-features
-cd pkg
+wasm-pack build --target web --out-dir wasmpack_web/pkg
+cd wasmpack_web/pkg
 npm pkg set type='module'
 wasm-pack pack
 ```
 
-The result will be available in `packages/compiler/pkg`
+The output package file will be `packages/compiler/wasmpack_web/pkg/zk-regex-compiler-1.1.0.tgz`
 
 ### For tests
 
