@@ -38,6 +38,9 @@ Compile the web package
 
 ```sh
 wasm-pack build --target web --no-default-features
+cd pkg
+npm pkg set type='module'
+wasm-pack pack
 ```
 The result will be available in `packages/compiler/pkg`
 
