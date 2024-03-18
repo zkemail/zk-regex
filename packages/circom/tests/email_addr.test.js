@@ -2,7 +2,7 @@ const circom_tester = require("circom_tester");
 const wasm_tester = circom_tester.wasm;
 import * as path from "path";
 import fs from 'fs'
-const apis = require("../../apis");
+const apis = require("../../apis/wasmpack_nodejs/zk_regex_apis");
 const wasm = require("../../compiler/wasmpack_nodejs/zk_regex_compiler");
 const option = {
   include: path.join(__dirname, "../../../node_modules"),
@@ -23,7 +23,7 @@ describe("Email Address Regex", () => {
 
   it("only an email address", async () => {
     const emailAddr = "suegamisora@gmail.com";
-    const paddedStr = apis.padString(emailAddr, 256);
+    const paddedStr = apis.pad_string(emailAddr, 256);
     const circuitInputs = {
       msg: paddedStr,
     };
@@ -44,7 +44,7 @@ describe("Email Address Regex", () => {
     const prefix = "subject:";
     const emailAddr = "suegamisora@gmail.com";
     const string = prefix + emailAddr;
-    const paddedStr = apis.padString(string, 256);
+    const paddedStr = apis.pad_string(string, 256);
     const circuitInputs = {
       msg: paddedStr,
     };

@@ -26,6 +26,15 @@ $ npm run build
 
 This command uses the [cargo-cp-artifact](https://github.com/neon-bindings/cargo-cp-artifact) utility to run the Rust build and copy the built library into `./index.node`.
 
+
+## Compiling zk-regex-compiler to wasm
+
+### For tests
+
+```sh
+wasm-pack build --target nodejs --dev --out-dir wasmpack_nodejs
+```
+
 ## Exploring zk-regex-apis
 
 After building zk-regex-apis, you can explore its exports at the Node REPL:
