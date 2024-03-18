@@ -1,49 +1,32 @@
 const circom_tester = require("circom_tester");
 const wasm_tester = circom_tester.wasm;
 import * as path from "path";
+import fs from 'fs'
 const apis = require("../../apis");
+const wasm = require("../../compiler/wasmpack_nodejs/zk_regex_compiler");
 const option = {
   include: path.join(__dirname, "../../../node_modules"),
 };
-const compiler = require("../../compiler");
 
 jest.setTimeout(600000);
 describe("From Addr Regex", () => {
   let circuit;
   beforeAll(async () => {
-    compiler.genFromDecomposed(
-      path.join(__dirname, "../circuits/common/from_all.json"),
-      {
-        circomFilePath: path.join(
-          __dirname,
-          "../circuits/common/from_all_regex.circom"
-        ),
-        templateName: "FromAllRegex",
-        genSubstrs: true,
-      }
-    );
-    compiler.genFromDecomposed(
-      path.join(__dirname, "../circuits/common/email_addr_with_name.json"),
-      {
-        circomFilePath: path.join(
-          __dirname,
-          "../circuits/common/email_addr_with_name_regex.circom"
-        ),
-        templateName: "EmailAddrWithNameRegex",
-        genSubstrs: true,
-      }
-    );
-    compiler.genFromDecomposed(
-      path.join(__dirname, "../circuits/common/email_addr.json"),
-      {
-        circomFilePath: path.join(
-          __dirname,
-          "../circuits/common/email_addr_regex.circom"
-        ),
-        templateName: "EmailAddrRegex",
-        genSubstrs: true,
-      }
-    );
+    {
+      const email_addr_json = fs.readFileSync(path.join(__dirname, "../circuits/common/from_all.json"), "utf8")
+      const circom = wasm.gen_from_decomposed_memory(email_addr_json, 'FromAllRegex');
+      fs.writeFileSync(path.join(__dirname, "../circuits/common/from_all_regex.circom"), circom);
+    }
+    {
+      const email_addr_json = fs.readFileSync(path.join(__dirname, "../circuits/common/email_addr_with_name.json"), "utf8")
+      const circom = wasm.gen_from_decomposed_memory(email_addr_json, 'EmailAddrWithNameRegex');
+      fs.writeFileSync(path.join(__dirname, "../circuits/common/email_addr_with_name_regex.circom"), circom);
+    }
+    {
+      const email_addr_json = fs.readFileSync(path.join(__dirname, "../circuits/common/email_addr.json"), "utf8")
+      const circom = wasm.gen_from_decomposed_memory(email_addr_json, 'EmailAddrRegex');
+      fs.writeFileSync(path.join(__dirname, "../circuits/common/email_addr_regex.circom"), circom);
+    }
     circuit = await wasm_tester(
       path.join(__dirname, "./circuits/test_from_addr_regex.circom"),
       option

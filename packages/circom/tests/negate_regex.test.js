@@ -1,24 +1,20 @@
 const circom_tester = require("circom_tester");
 const wasm_tester = circom_tester.wasm;
 import * as path from "path";
+import fs from 'fs'
 const apis = require("../../apis");
+const wasm = require("../../compiler/wasmpack_nodejs/zk_regex_compiler");
 const option = {
   include: path.join(__dirname, "../../../node_modules"),
 };
-const compiler = require("../../compiler");
 
 jest.setTimeout(120000);
 describe("Negate Regex", () => {
   let circuit;
   beforeAll(async () => {
-    compiler.genFromDecomposed(
-      path.join(__dirname, "./circuits/negate1.json"),
-      {
-        circomFilePath: path.join(__dirname, "./circuits/negate1_regex.circom"),
-        templateName: "Negate1Regex",
-        genSubstrs: true,
-      }
-    );
+    const email_addr_json = fs.readFileSync(path.join(__dirname, "./circuits/negate1.json"), "utf8")
+    const circom = wasm.gen_from_decomposed_memory(email_addr_json, 'Negate1Regex');
+    fs.writeFileSync(path.join(__dirname, "./circuits/negate1_regex.circom"), circom);
     circuit = await wasm_tester(
       path.join(__dirname, "./circuits/test_negate1_regex.circom"),
       option

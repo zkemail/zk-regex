@@ -1,27 +1,20 @@
 const circom_tester = require("circom_tester");
 const wasm_tester = circom_tester.wasm;
 import * as path from "path";
+import fs from 'fs'
 const apis = require("../../apis");
+const wasm = require("../../compiler/wasmpack_nodejs/zk_regex_compiler");
 const option = {
   include: path.join(__dirname, "../../../node_modules"),
 };
-const compiler = require("../../compiler");
 
 jest.setTimeout(300000);
 describe("Simple Regex Decomposed", () => {
   let circuit;
   beforeAll(async () => {
-    compiler.genFromDecomposed(
-      path.join(__dirname, "./circuits/international_chars_decomposed.json"),
-      {
-        circomFilePath: path.join(
-          __dirname,
-          "./circuits/international_chars_decomposed.circom"
-        ),
-        templateName: "InternationalCharsDecomposed",
-        genSubstrs: true,
-      }
-    );
+    const email_addr_json = fs.readFileSync(path.join(__dirname, "./circuits/international_chars_decomposed.json"), "utf8")
+    const circom = wasm.gen_from_decomposed_memory(email_addr_json, 'InternationalCharsDecomposed');
+    fs.writeFileSync(path.join(__dirname, "./circuits/international_chars_decomposed.circom"), circom);
     circuit = await wasm_tester(
       path.join(
         __dirname,
