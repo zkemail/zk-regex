@@ -160,6 +160,21 @@ pub fn gen_from_decomposed(
     }
 }
 
+#[wasm_bindgen]
+pub fn gen_from_decomposed_memory(
+    decomposed_regex_json: &str,
+    circom_template_name: &str,
+) -> String {
+    let decomposed_regex_config: DecomposedRegexConfig =
+        serde_json::from_str(decomposed_regex_json).expect("failed to parse decomposed_regex json");
+    let regex_and_dfa = decomposed_regex_config
+        .to_regex_and_dfa()
+        .expect("failed to convert the decomposed regex to dfa");
+    regex_and_dfa
+        .gen_circom_str(&circom_template_name)
+        .expect("failed to generate circom")
+}
+
 pub fn gen_from_raw(
     raw_regex: &str,
     // max_bytes: usize,
