@@ -228,7 +228,6 @@ pub fn gen_from_raw_memory(
         serde_json::from_str(substrs_json).expect("failed to parse substrs json");
     let regex_and_dfa = RegexAndDFA::from_regex_str_and_substr_defs(raw_regex, substrs_defs_json)
         .expect("failed to convert the raw regex and state transitions to dfa");
-
     regex_and_dfa
         .gen_circom_str(&circom_template_name)
         .expect("failed to generate circom")

@@ -8,7 +8,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 
-pub fn gen_circom_allstr(dfa_graph: &DFAGraph, template_name: &str, regex_str: &str) -> String {
+fn gen_circom_allstr(dfa_graph: &DFAGraph, template_name: &str, regex_str: &str) -> String {
     let n = dfa_graph.states.len();
     let mut rev_graph = BTreeMap::<usize, BTreeMap<usize, Vec<u8>>>::new();
     let mut to_init_graph = vec![];
