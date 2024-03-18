@@ -12,5 +12,5 @@ const jsonData = `{
   }`;
 
 test('test gen_from_raw_memory', () => {
-    expect(wasm.gen_from_raw_memory('1=(a|b) (2=(b|c)+ )+d', jsonData, 'TestTemplate')).toBe('');
+    expect(wasm.gen_from_raw_memory('1=(a|b) (2=(b|c)+ )+d', jsonData, 'TestTemplate')).toMatch(/^pragma circom 2.1.5;/);
 });
