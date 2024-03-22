@@ -1,6 +1,6 @@
 {
   "name": "@zk-email/zk-regex-apis",
-  "version": "1.4.6",
+  "version": "2.0.0",
   "description": "apis compatible with [zk-regex](https://github.com/zkemail/zk-regex/tree/main).",
   "contributors": [
     "Javier Su <javier.su.weijie@gmail.com>",
@@ -9,7 +9,6 @@
     "Yush G <aayushg@mit.edu>",
     "Aditya Bisht <adityabisht64@gmail.com>"
   ],
-  "main": "index.node",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/zkemail/zk-regex.git"
