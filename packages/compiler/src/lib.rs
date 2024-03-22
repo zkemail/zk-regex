@@ -12,6 +12,7 @@ use crate::regex::*;
 use itertools::Itertools;
 use petgraph::prelude::*;
 use serde::{Deserialize, Serialize};
+use serde_wasm_bindgen::from_value;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use thiserror::Error;
@@ -55,19 +56,19 @@ pub enum SoldityType {
     Decimal,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DFAState {
     r#type: String,
     state: usize,
     edges: BTreeMap<usize, BTreeSet<u8>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DFAGraph {
     states: Vec<DFAState>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegexAndDFA {
     // pub max_byte_size: usize,
     // Original regex string, only here to be printed in generated file to make it more reproducible
@@ -76,7 +77,7 @@ pub struct RegexAndDFA {
     pub substrs_defs: SubstrsDefs,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstrsDefs {
     pub substr_defs_array: Vec<BTreeSet<(usize, usize)>>,
     pub substr_endpoints_array: Option<Vec<(BTreeSet<usize>, BTreeSet<usize>)>>,
@@ -228,6 +229,23 @@ pub fn gen_from_raw_memory(
         serde_json::from_str(substrs_json).expect("failed to parse substrs json");
     let regex_and_dfa = RegexAndDFA::from_regex_str_and_substr_defs(raw_regex, substrs_defs_json)
         .expect("failed to convert the raw regex and state transitions to dfa");
+    regex_and_dfa
+        .gen_circom_str(&circom_template_name)
+        .expect("failed to generate circom")
+}
+
+#[wasm_bindgen]
+pub fn gen_regex_and_dfa(decomposed_regex: JsValue) -> JsValue {
+    let decomposed_regex_config: DecomposedRegexConfig = from_value(decomposed_regex).unwrap();
+    let regex_and_dfa = regex_and_dfa(&decomposed_regex_config);
+    let dfa_val_str = serde_json::to_string(&regex_and_dfa).unwrap();
+    JsValue::from_str(&dfa_val_str)
+}
+
+#[wasm_bindgen]
+pub fn gen_circom(decomposed_regex: JsValue, circom_template_name: &str) -> String {
+    let decomposed_regex_config: DecomposedRegexConfig = from_value(decomposed_regex).unwrap();
+    let regex_and_dfa = regex_and_dfa(&decomposed_regex_config);
     regex_and_dfa
         .gen_circom_str(&circom_template_name)
         .expect("failed to generate circom")

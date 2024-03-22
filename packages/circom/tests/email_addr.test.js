@@ -1,20 +1,29 @@
-const circom_tester = require("circom_tester");
-const wasm_tester = circom_tester.wasm;
+import circom_tester from "circom_tester";
 import * as path from "path";
-import fs from 'fs'
-const apis = require("../../apis/wasmpack_nodejs/zk_regex_apis");
-const wasm = require("../../compiler/wasmpack_nodejs/zk_regex_compiler");
+import { readFileSync, writeFileSync } from "fs";
+import apis from "../../apis/pkg";
+import compiler from "../../compiler/pkg";
 const option = {
   include: path.join(__dirname, "../../../node_modules"),
 };
+const wasm_tester = circom_tester.wasm;
 
 jest.setTimeout(120000);
 describe("Email Address Regex", () => {
   let circuit;
   beforeAll(async () => {
-    const email_addr_json = fs.readFileSync(path.join(__dirname, "../circuits/common/email_addr.json"), "utf8")
-    const circom = wasm.gen_from_decomposed_memory(email_addr_json, 'EmailAddrRegex');
-    fs.writeFileSync(path.join(__dirname, "../circuits/common/email_addr_regex.circom"), circom);
+    const email_addr_json = readFileSync(
+      path.join(__dirname, "../circuits/common/email_addr.json"),
+      "utf8"
+    );
+    const circom = compiler.gen_from_decomposed_memory(
+      email_addr_json,
+      "EmailAddrRegex"
+    );
+    writeFileSync(
+      path.join(__dirname, "../circuits/common/email_addr_regex.circom"),
+      circom
+    );
     circuit = await wasm_tester(
       path.join(__dirname, "./circuits/test_email_addr_regex.circom"),
       option
@@ -30,7 +39,7 @@ describe("Email Address Regex", () => {
     const witness = await circuit.calculateWitness(circuitInputs);
     await circuit.checkConstraints(witness);
     expect(1n).toEqual(witness[1]);
-    const prefixIdxes = apis.extractEmailAddrIdxes(emailAddr)[0];
+    const prefixIdxes = apis.extract_email_addr_idxes(emailAddr)[0];
     for (let idx = 0; idx < 256; ++idx) {
       if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
         expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
@@ -51,7 +60,7 @@ describe("Email Address Regex", () => {
     const witness = await circuit.calculateWitness(circuitInputs);
     await circuit.checkConstraints(witness);
     expect(1n).toEqual(witness[1]);
-    const prefixIdxes = apis.extractEmailAddrIdxes(string)[0];
+    const prefixIdxes = apis.extract_email_addr_idxes(string)[0];
     for (let idx = 0; idx < 256; ++idx) {
       if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
         expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);

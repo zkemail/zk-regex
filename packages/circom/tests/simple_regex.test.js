@@ -1,20 +1,30 @@
-const circom_tester = require("circom_tester");
-const wasm_tester = circom_tester.wasm;
+import circom_tester from "circom_tester";
 import * as path from "path";
-import fs from 'fs'
-const apis = require("../../apis");
-const wasm = require("../../compiler/wasmpack_nodejs/zk_regex_compiler");
+import { readFileSync, writeFileSync } from "fs";
+import apis from "../../apis/pkg";
+import compiler from "../../compiler/pkg";
 const option = {
   include: path.join(__dirname, "../../../node_modules"),
 };
+const wasm_tester = circom_tester.wasm;
 
 jest.setTimeout(120000);
 describe("Simple Regex", () => {
   let circuit;
   beforeAll(async () => {
-    const substrs_json = fs.readFileSync(path.join(__dirname, "./circuits/simple_regex_substrs.json"), "utf8")
-    const circom = wasm.gen_from_raw_memory("1=(a|b) (2=(b|c)+ )+d", substrs_json, "SimpleRegex");
-    fs.writeFileSync(path.join(__dirname, "./circuits/simple_regex.circom"), circom);
+    const substrs_json = readFileSync(
+      path.join(__dirname, "./circuits/simple_regex_substrs.json"),
+      "utf8"
+    );
+    const circom = compiler.gen_from_raw_memory(
+      "1=(a|b) (2=(b|c)+ )+d",
+      substrs_json,
+      "SimpleRegex"
+    );
+    writeFileSync(
+      path.join(__dirname, "./circuits/simple_regex.circom"),
+      circom
+    );
     circuit = await wasm_tester(
       path.join(__dirname, "./circuits/test_simple_regex.circom"),
       option
@@ -23,7 +33,7 @@ describe("Simple Regex", () => {
 
   it("case 1", async () => {
     const input = "1=a 2=b d";
-    const paddedStr = apis.padString(input, 64);
+    const paddedStr = apis.pad_string(input, 64);
     const circuitInputs = {
       msg: paddedStr,
     };
@@ -46,7 +56,7 @@ describe("Simple Regex", () => {
 
   it("case 2", async () => {
     const input = "1=a 2=b 2=bc 2=c d";
-    const paddedStr = apis.padString(input, 64);
+    const paddedStr = apis.pad_string(input, 64);
     const circuitInputs = {
       msg: paddedStr,
     };
@@ -69,7 +79,7 @@ describe("Simple Regex", () => {
 
   it("case 3", async () => {
     const input = "1=a 2=b 2=bc 2=c da 1=a 2=cb 2=c 2=b dd";
-    const paddedStr = apis.padString(input, 64);
+    const paddedStr = apis.pad_string(input, 64);
     const circuitInputs = {
       msg: paddedStr,
     };

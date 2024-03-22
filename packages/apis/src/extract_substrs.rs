@@ -1,9 +1,11 @@
 use fancy_regex::Regex;
-use wasm_bindgen::prelude::*;
+use js_sys::Array;
 use serde::{Deserialize, Serialize};
-use serde_json;
+
+use serde_wasm_bindgen::from_value;
 use thiserror::Error;
-// use zk_regex_compiler::DecomposedRegexConfig;
+use wasm_bindgen::prelude::*;
+use wasm_bindgen_test::*;
 
 /// A configuration of decomposed regexes.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -38,192 +40,173 @@ pub enum ExtractSubstrssError {
 }
 
 #[wasm_bindgen]
-pub fn extract_substr_idxes(
-    input_str: &str,
-    regex_config: &DecomposedRegexConfig,
-) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
-    // if input_str.len() > regex_config.max_byte_size {
-    //     return Err(ExtractSubstrssError::InvalidInputLen(regex_config.max_byte_size,input_str.len()));
-    // }
+pub fn extract_substr_idxes(input_str: &str, regex_config: JsValue) -> Array {
+    let regex_config_str = regex_config.as_string().unwrap();
+    let regex_config: DecomposedRegexConfig = serde_json::from_str(&regex_config_str).unwrap();
     let mut entire_regex_str = String::new();
     for part in regex_config.parts.iter() {
         entire_regex_str += part.regex_def.as_str();
     }
-    // entire_regex_str = format_regex_printable(&entire_regex_str)?;
-    let entire_regex = Regex::new(&entire_regex_str)?;
-    let entire_found = entire_regex.find(input_str)?.ok_or_else(|| {
-        ExtractSubstrssError::SubstringOfEntireNotFound(entire_regex, input_str.to_string())
-    })?;
+
+    let entire_regex = Regex::new(&entire_regex_str).unwrap();
+    let entire_found = entire_regex
+        .find(input_str)
+        .unwrap()
+        .ok_or_else(|| {
+            ExtractSubstrssError::SubstringOfEntireNotFound(entire_regex, input_str.to_string())
+        })
+        .unwrap();
     let mut start = entire_found.start();
     let entire_end = entire_found.end();
 
     let mut public_idxes = vec![];
-    // let mut last_regex_str = String::new();
-    // let part_regex_defs = regex_config.parts.iter().map(|part| part.regex_def.as_str()).collect_vec();
+
     for part_idx in 0..regex_config.parts.len() {
         // last_regex_str = last_regex_str + regex_config.parts[part_idx].regex_def.as_str();
-        let regex = Regex::new(&regex_config.parts[part_idx].regex_def.as_str())?;
-        let found = regex.find_from_pos(&input_str, start)?.ok_or_else(|| {
-            ExtractSubstrssError::SubstringNotFound(
-                regex.clone(),
-                input_str[start..entire_end].to_string(),
-            )
-        })?;
+        let regex = Regex::new(&regex_config.parts[part_idx].regex_def.as_str()).unwrap();
+        let found = regex
+            .find_from_pos(&input_str, start)
+            .unwrap()
+            .ok_or_else(|| {
+                ExtractSubstrssError::SubstringNotFound(
+                    regex.clone(),
+                    input_str[start..entire_end].to_string(),
+                )
+            })
+            .unwrap();
         let end = found.end();
-        // if found.start() >= end {
-        //     return Err(ExtractSubstrssError::EmptySubstring(regex, input_str[start..entire_end].to_string()));
-        // }
+
         if regex_config.parts[part_idx].is_public {
             public_idxes.push((start, end));
         }
         start = end;
     }
 
-    Ok(public_idxes)
+    let arr = Array::new_with_length(public_idxes.len() as u32);
+    for (i, idx) in public_idxes.iter().enumerate() {
+        let js_arr = Array::new_with_length(2);
+        js_arr.set(0, JsValue::from(idx.0 as u32));
+        js_arr.set(1, JsValue::from(idx.1 as u32));
+        arr.set(i as u32, JsValue::from(js_arr));
+    }
+
+    arr
 }
 
 #[wasm_bindgen]
-pub fn extract_email_addr_idxes(
-    input_str: &str,
-) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
-    let regex_config =
-        serde_json::from_str(include_str!("./decomposed_defs/email_addr.json")).unwrap();
-    extract_substr_idxes(input_str, &regex_config)
+pub fn extract_email_addr_idxes(input_str: &str) -> Array {
+    let regex_config = include_str!("./decomposed_defs/email_addr.json");
+    extract_substr_idxes(input_str, JsValue::from_str(regex_config))
 }
 
 #[wasm_bindgen]
-pub fn extract_email_domain_idxes(
-    input_str: &str,
-) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
-    let regex_config =
-        serde_json::from_str(include_str!("./decomposed_defs/email_domain.json")).unwrap();
-    extract_substr_idxes(input_str, &regex_config)
+pub fn extract_email_domain_idxes(input_str: &str) -> Array {
+    let regex_config = include_str!("./decomposed_defs/email_domain.json");
+    extract_substr_idxes(input_str, JsValue::from_str(regex_config))
 }
 
 #[wasm_bindgen]
-pub fn extract_email_addr_with_name_idxes(
-    input_str: &str,
-) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
-    let regex_config =
-        serde_json::from_str(include_str!("./decomposed_defs/email_addr_with_name.json")).unwrap();
-    extract_substr_idxes(input_str, &regex_config)
+pub fn extract_email_addr_with_name_idxes(input_str: &str) -> Array {
+    let regex_config = include_str!("./decomposed_defs/email_addr_with_name.json");
+    extract_substr_idxes(input_str, JsValue::from_str(regex_config))
 }
 
 #[wasm_bindgen]
-pub fn extract_from_all_idxes(
-    input_str: &str,
-) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
-    let regex_config =
-        serde_json::from_str(include_str!("./decomposed_defs/from_all.json")).unwrap();
-    extract_substr_idxes(input_str, &regex_config)
+pub fn extract_from_all_idxes(input_str: &str) -> Array {
+    let regex_config = include_str!("./decomposed_defs/from_all.json");
+    extract_substr_idxes(input_str, JsValue::from_str(regex_config))
 }
 
 #[wasm_bindgen]
-pub fn extract_from_addr_idxes(
-    input_str: &str,
-) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
-    let regex_config =
-        serde_json::from_str(include_str!("./decomposed_defs/from_addr.json")).unwrap();
-    extract_substr_idxes(input_str, &regex_config)
+pub fn extract_from_addr_idxes(input_str: &str) -> Array {
+    let regex_config = include_str!("./decomposed_defs/from_addr.json");
+    extract_substr_idxes(input_str, JsValue::from_str(regex_config))
 }
 
 #[wasm_bindgen]
-pub fn extract_to_all_idxes(input_str: &str) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
-    let regex_config = serde_json::from_str(include_str!("./decomposed_defs/to_all.json")).unwrap();
-    extract_substr_idxes(input_str, &regex_config)
+pub fn extract_to_all_idxes(input_str: &str) -> Array {
+    let regex_config = include_str!("./decomposed_defs/to_all.json");
+    extract_substr_idxes(input_str, JsValue::from_str(regex_config))
 }
 
 #[wasm_bindgen]
-pub fn extract_to_addr_idxes(input_str: &str) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
-    let regex_config =
-        serde_json::from_str(include_str!("./decomposed_defs/to_addr.json")).unwrap();
-    extract_substr_idxes(input_str, &regex_config)
+pub fn extract_to_addr_idxes(input_str: &str) -> Array {
+    let regex_config = include_str!("./decomposed_defs/to_addr.json");
+    extract_substr_idxes(input_str, JsValue::from_str(regex_config))
 }
 
 #[wasm_bindgen]
-pub fn extract_subject_all_idxes(
-    input_str: &str,
-) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
-    let regex_config =
-        serde_json::from_str(include_str!("./decomposed_defs/subject_all.json")).unwrap();
-    extract_substr_idxes(input_str, &regex_config)
+pub fn extract_subject_all_idxes(input_str: &str) -> Array {
+    let regex_config = include_str!("./decomposed_defs/subject_all.json");
+    extract_substr_idxes(input_str, JsValue::from_str(regex_config))
 }
 
 #[wasm_bindgen]
-pub fn extract_body_hash_idxes(
-    input_str: &str,
-) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
-    let regex_config =
-        serde_json::from_str(include_str!("./decomposed_defs/body_hash.json")).unwrap();
-    extract_substr_idxes(input_str, &regex_config)
+pub fn extract_body_hash_idxes(input_str: &str) -> Array {
+    let regex_config = include_str!("./decomposed_defs/body_hash.json");
+    extract_substr_idxes(input_str, JsValue::from_str(regex_config))
 }
 
 #[wasm_bindgen]
-pub fn extract_timestamp_idxes(
-    input_str: &str,
-) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
-    let regex_config =
-        serde_json::from_str(include_str!("./decomposed_defs/timestamp.json")).unwrap();
-    extract_substr_idxes(input_str, &regex_config)
+pub fn extract_timestamp_idxes(input_str: &str) -> Array {
+    let regex_config = include_str!("./decomposed_defs/timestamp.json");
+    extract_substr_idxes(input_str, JsValue::from_str(regex_config))
 }
 
 #[wasm_bindgen]
-pub fn extract_message_id_idxes(
-    input_str: &str,
-) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
-    let regex_config =
-        serde_json::from_str(include_str!("./decomposed_defs/message_id.json")).unwrap();
-    extract_substr_idxes(input_str, &regex_config)
+pub fn extract_message_id_idxes(input_str: &str) -> Array {
+    let regex_config = include_str!("./decomposed_defs/message_id.json");
+    extract_substr_idxes(input_str, JsValue::from_str(regex_config))
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
 
-    #[test]
+    #[wasm_bindgen_test]
     fn test_email_domain_valid() {
         let input_str = "suegamisora@gmail.com";
-        let idxes = extract_email_domain_idxes(input_str).unwrap();
-        assert_eq!(idxes, vec![(12, 21)]);
+        let idxes = extract_email_domain_idxes(input_str);
+        assert_eq!(from_value::<Vec<u8>>(idxes.at(0)).unwrap(), vec![12, 21]);
     }
 
-    #[test]
+    #[wasm_bindgen_test]
     fn test_email_addr_in_subject_valid() {
         let input_str = "This is sent for suegamisora@gmail.com";
-        let idxes = extract_email_addr_idxes(input_str).unwrap();
-        assert_eq!(idxes, vec![(17, 38)]);
+        let idxes = extract_email_addr_idxes(input_str);
+        assert_eq!(from_value::<Vec<u8>>(idxes.at(0)).unwrap(), vec![17, 38]);
     }
 
-    #[test]
+    #[wasm_bindgen_test]
     fn test_email_addr_with_name_valid1() {
         let input_str = "from:dummy@a.com <suegamisora@gmail.com>";
-        let idxes = extract_email_addr_with_name_idxes(input_str).unwrap();
-        assert_eq!(idxes, vec![(18, 39)]);
+        let idxes = extract_email_addr_with_name_idxes(input_str);
+        assert_eq!(from_value::<Vec<u8>>(idxes.at(0)).unwrap(), vec![18, 39]);
     }
 
-    #[test]
+    #[wasm_bindgen_test]
     fn test_email_addr_with_name_valid2() {
         // "末神 奏宙" has 13 bytes.
         let input_str = "from:\"末神 奏宙\" <suegamisora@gmail.com>";
-        let idxes = extract_email_addr_with_name_idxes(input_str).unwrap();
-        assert_eq!(idxes, vec![(22, 43)]);
+        let idxes = extract_email_addr_with_name_idxes(input_str);
+        assert_eq!(from_value::<Vec<u8>>(idxes.at(0)).unwrap(), vec![22, 43]);
     }
 
-    #[test]
+    #[wasm_bindgen_test]
     fn test_email_from_all_valid() {
         let input_str = "from:dummy@a.com <suegamisora@gmail.com>\r\n";
-        let idxes = extract_from_all_idxes(input_str).unwrap();
-        assert_eq!(idxes, vec![(5, 40)]);
+        let idxes = extract_from_all_idxes(input_str);
+        assert_eq!(from_value::<Vec<u8>>(idxes.at(0)).unwrap(), vec![5, 40]);
     }
 
-    #[test]
+    #[wasm_bindgen_test]
     fn test_email_from_addr_valid() {
         let input_str = "from:dummy@a.com <suegamisora@gmail.com>\r\n";
-        let idxes = extract_from_addr_idxes(input_str).unwrap();
-        assert_eq!(idxes, vec![(18, 39)]);
+        let idxes = extract_from_addr_idxes(input_str);
+        assert_eq!(from_value::<Vec<u8>>(idxes.at(0)).unwrap(), vec![18, 39]);
     }
 
-    #[test]
+    #[wasm_bindgen_test]
     fn test_code_in_email_address_valid() {
         let code_regex = DecomposedRegexConfig {
             // max_byte_size: 1024,
@@ -243,29 +226,30 @@ mod test {
             ],
         };
         let input_str = "sepolia+ACCOUNTKEY.0xabc123@sendeth.org";
-        let idxes = extract_substr_idxes(input_str, &code_regex).unwrap();
-        assert_eq!(idxes, vec![(21, 27)]);
+        let code_regex = JsValue::from_str(&serde_json::to_string(&code_regex).unwrap());
+        let idxes = extract_substr_idxes(input_str, code_regex);
+        assert_eq!(from_value::<Vec<u8>>(idxes.at(0)).unwrap(), vec![21, 27]);
     }
 
-    #[test]
+    #[wasm_bindgen_test]
     fn test_body_hash_valid() {
         let input_str = "dkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20230601; t=1694989812; x=1695594612; dara=google.com; h=to:subject:message-id:date:from:mime-version:from:to:cc:subject :date:message-id:reply-to; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=";
-        let idxes = extract_body_hash_idxes(input_str).unwrap();
-        assert_eq!(idxes, vec![(219, 263)]);
+        let idxes = extract_body_hash_idxes(input_str);
+        assert_eq!(from_value::<Vec<u32>>(idxes.at(0)).unwrap(), vec![219, 263]);
     }
 
-    #[test]
+    #[wasm_bindgen_test]
     fn test_timestamp_valid() {
         let input_str = "dkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20230601; t=1694989812; x=1695594612; dara=google.com; h=to:subject:message-id:date:from:mime-version:from:to:cc:subject :date:message-id:reply-to; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=";
-        let idxes = extract_timestamp_idxes(input_str).unwrap();
-        assert_eq!(idxes, vec![(80, 90)]);
+        let idxes = extract_timestamp_idxes(input_str);
+        assert_eq!(from_value::<Vec<u8>>(idxes.at(0)).unwrap(), vec![80, 90]);
     }
 
-    #[test]
+    #[wasm_bindgen_test]
     fn test_message_id_valid() {
         let input_str =
             "message-id:<CAJ7Y6jerCWt6t4HVqfXeeqRthJpj_1vYCpXzAVgowozVFKWbVQ@mail.gmail.com>\r\n";
-        let idxes = extract_message_id_idxes(input_str).unwrap();
-        assert_eq!(idxes, vec![(11, 79)]);
+        let idxes = extract_message_id_idxes(input_str);
+        assert_eq!(from_value::<Vec<u8>>(idxes.at(0)).unwrap(), vec![11, 79]);
     }
 }
