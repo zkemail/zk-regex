@@ -2,22 +2,21 @@ use std::fs::File;
 use std::iter::FromIterator;
 pub mod circom;
 pub mod halo2;
-pub mod node;
 pub mod regex;
 
 // #[cfg(test)]
 // mod tests;
 
-use crate::node::*;
 use crate::regex::*;
-use neon;
 
 use itertools::Itertools;
 use petgraph::prelude::*;
 use serde::{Deserialize, Serialize};
+use serde_wasm_bindgen::from_value;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use thiserror::Error;
+use wasm_bindgen::prelude::*;
 
 /// Error definitions of the compiler.
 #[derive(Error, Debug)]
@@ -57,19 +56,19 @@ pub enum SoldityType {
     Decimal,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DFAState {
     r#type: String,
     state: usize,
     edges: BTreeMap<usize, BTreeSet<u8>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DFAGraph {
     states: Vec<DFAState>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegexAndDFA {
     // pub max_byte_size: usize,
     // Original regex string, only here to be printed in generated file to make it more reproducible
@@ -78,7 +77,7 @@ pub struct RegexAndDFA {
     pub substrs_defs: SubstrsDefs,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstrsDefs {
     pub substr_defs_array: Vec<BTreeSet<(usize, usize)>>,
     pub substr_endpoints_array: Option<Vec<(BTreeSet<usize>, BTreeSet<usize>)>>,
@@ -162,6 +161,21 @@ pub fn gen_from_decomposed(
     }
 }
 
+#[wasm_bindgen]
+pub fn gen_from_decomposed_memory(
+    decomposed_regex_json: &str,
+    circom_template_name: &str,
+) -> String {
+    let decomposed_regex_config: DecomposedRegexConfig =
+        serde_json::from_str(decomposed_regex_json).expect("failed to parse decomposed_regex json");
+    let regex_and_dfa = decomposed_regex_config
+        .to_regex_and_dfa()
+        .expect("failed to convert the decomposed regex to dfa");
+    regex_and_dfa
+        .gen_circom_str(&circom_template_name)
+        .expect("failed to generate circom")
+}
+
 pub fn gen_from_raw(
     raw_regex: &str,
     // max_bytes: usize,
@@ -205,6 +219,38 @@ pub fn gen_from_raw(
     }
 }
 
+#[wasm_bindgen]
+pub fn gen_from_raw_memory(
+    raw_regex: &str,
+    substrs_json: &str,
+    circom_template_name: &str,
+) -> String {
+    let substrs_defs_json: SubstrsDefsJson =
+        serde_json::from_str(substrs_json).expect("failed to parse substrs json");
+    let regex_and_dfa = RegexAndDFA::from_regex_str_and_substr_defs(raw_regex, substrs_defs_json)
+        .expect("failed to convert the raw regex and state transitions to dfa");
+    regex_and_dfa
+        .gen_circom_str(&circom_template_name)
+        .expect("failed to generate circom")
+}
+
+#[wasm_bindgen]
+pub fn gen_regex_and_dfa(decomposed_regex: JsValue) -> JsValue {
+    let decomposed_regex_config: DecomposedRegexConfig = from_value(decomposed_regex).unwrap();
+    let regex_and_dfa = regex_and_dfa(&decomposed_regex_config);
+    let dfa_val_str = serde_json::to_string(&regex_and_dfa).unwrap();
+    JsValue::from_str(&dfa_val_str)
+}
+
+#[wasm_bindgen]
+pub fn gen_circom(decomposed_regex: JsValue, circom_template_name: &str) -> String {
+    let decomposed_regex_config: DecomposedRegexConfig = from_value(decomposed_regex).unwrap();
+    let regex_and_dfa = regex_and_dfa(&decomposed_regex_config);
+    regex_and_dfa
+        .gen_circom_str(&circom_template_name)
+        .expect("failed to generate circom")
+}
+
 pub(crate) fn get_accepted_state(dfa_val: &DFAGraph) -> Option<usize> {
     for i in 0..dfa_val.states.len() {
         if dfa_val.states[i].r#type == "accept" {
@@ -223,14 +269,6 @@ pub(crate) fn get_accepted_state(dfa_val: &DFAGraph) -> Option<usize> {
 //     }
 //     max_state
 // }
-
-#[cfg(feature = "export_neon_main")]
-#[neon::main]
-fn main(mut cx: neon::prelude::ModuleContext) -> neon::prelude::NeonResult<()> {
-    cx.export_function("genFromDecomposed", gen_from_decomposed_node)?;
-    cx.export_function("genFromRaw", gen_from_raw_node)?;
-    Ok(())
-}
 
 #[cfg(test)]
 mod tests {

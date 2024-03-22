@@ -1,13 +1,14 @@
 {
   "name": "@zk-email/zk-regex-circom",
-  "version": "1.3.0",
+  "version": "2.0.0",
   "license": "MIT",
   "description": "regex verification circuits in circom for common regexes, generated with the compiler in [zk-regex](https://github.com/zkemail/zk-regex/tree/main).",
   "contributors": [
     "Javier Su <javier.su.weijie@gmail.com>",
     "Kata Choi <kata.choi@gmail.com>",
     "Sora Suegami <suegamisora@gmail.com>",
-    "Yush G <aayushg@mit.edu>"
+    "Yush G <aayushg@mit.edu>",
+    "Aditya Bisht <adityabisht64@gmail.com>"
   ],
   "scripts": {
     "test": "jest",

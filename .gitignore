@@ -103,7 +103,6 @@ build/*
 
 target
 
-index.node
 Cargo.lock
 
 .DS_Store

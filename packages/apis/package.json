@@ -1,39 +1,26 @@
 {
   "name": "@zk-email/zk-regex-apis",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "description": "apis compatible with [zk-regex](https://github.com/zkemail/zk-regex/tree/main).",
   "contributors": [
     "Javier Su <javier.su.weijie@gmail.com>",
     "Kata Choi <kata.choi@gmail.com>",
     "Sora Suegami <suegamisora@gmail.com>",
-    "Yush G <aayushg@mit.edu>"
+    "Yush G <aayushg@mit.edu>",
+    "Aditya Bisht <adityabisht64@gmail.com>"
   ],
-  "main": "index.node",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/zkemail/zk-regex.git"
   },
   "scripts": {
-    "build": "cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
+    "build": "wasm-pack build --target nodejs --out-dir ./pkg/",
     "build-debug": "npm run build --",
-    "build-release": "npm run build -- --release",
+    "build-release": "npm run build --",
     "install": "npm run build-debug",
-    "install-release": "node-pre-gyp install --update-binary --fallback-to-build=false || npm run build-release",
-    "test": "cargo test",
-    "package": "node-pre-gyp package",
-    "upload-binary": "npm run package && node-pre-gyp-github publish"
+    "install-release": "npm run build-release",
+    "test": "wasm-pack test --node",
+    "upload-binary": "wasm-pack publish -t nodejs"
   },
-  "license": "MIT",
-  "dependencies": {
-    "cargo-cp-artifact": "^0.1",
-    "@mapbox/node-pre-gyp": "^1.0",
-    "node-pre-gyp-github": "https://github.com/ultamatt/node-pre-gyp-github.git"
-  },
-  "binary": {
-    "module_name": "index",
-    "host": "https://github.com/zkemail/zk-regex/releases/download/",
-    "remote_path": "{version}",
-    "package_name": "apis-{node_abi}-{platform}-{arch}.tar.gz",
-    "module_path": "./"
-  }
+  "license": "MIT"
 }

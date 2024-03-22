@@ -357,22 +357,31 @@ impl RegexAndDFA {
         gen_substrs: bool,
     ) -> Result<(), CompilerError> {
         let circom = gen_circom_allstr(&self.dfa_val, template_name, &self.regex_str);
+        let mut circom_file = File::create(circom_path)?;
+        write!(circom_file, "{}", circom)?;
         if gen_substrs {
-            self.add_substrs_constraints(circom_path, circom)?;
-        } else {
-            let mut circom_file = File::create(circom_path)?;
-            write!(circom_file, "{}", circom)?;
-            circom_file.flush()?;
+            let substrs = self.add_substrs_constraints()?;
+            write!(circom_file, "{}", substrs)?;
         }
+        circom_file.flush()?;
         Ok(())
+    }
+
+    pub fn gen_circom_str(
+        &self,
+        template_name: &str,
+    ) -> Result<String, CompilerError> {
+        let circom = gen_circom_allstr(&self.dfa_val, template_name, &self.regex_str);
+        let substrs = self.add_substrs_constraints()?;
+        let result = circom + &substrs;
+        Ok(result)
     }
 
     pub fn add_substrs_constraints(
         &self,
-        circom_path: &PathBuf,
-        mut circom: String,
-    ) -> Result<(), CompilerError> {
+    ) -> Result<String, CompilerError> {
         let accepted_state = get_accepted_state(&self.dfa_val).unwrap();
+        let mut circom: String = "".to_string();
         circom += "\n";
         circom += "\tsignal is_consecutive[msg_bytes+1][2];\n";
         circom += "\tis_consecutive[msg_bytes][1] <== 1;\n";
@@ -427,9 +436,6 @@ impl RegexAndDFA {
             circom += "\t}\n";
         }
         circom += "}";
-        let mut circom_file = File::create(circom_path)?;
-        write!(circom_file, "{}", circom)?;
-        circom_file.flush()?;
-        Ok(())
+        Ok(circom)
     }
 }

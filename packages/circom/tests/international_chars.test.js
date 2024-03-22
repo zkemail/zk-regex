@@ -1,26 +1,28 @@
-const circom_tester = require("circom_tester");
-const wasm_tester = circom_tester.wasm;
+import circom_tester from "circom_tester";
 import * as path from "path";
-const apis = require("../../apis");
+import { readFileSync, writeFileSync } from "fs";
+import apis from "../../apis/pkg";
+import compiler from "../../compiler/pkg";
 const option = {
   include: path.join(__dirname, "../../../node_modules"),
 };
-const compiler = require("../../compiler");
+const wasm_tester = circom_tester.wasm;
 
 jest.setTimeout(300000);
 describe("Simple Regex Decomposed", () => {
   let circuit;
   beforeAll(async () => {
-    compiler.genFromDecomposed(
+    const email_addr_json = readFileSync(
       path.join(__dirname, "./circuits/international_chars_decomposed.json"),
-      {
-        circomFilePath: path.join(
-          __dirname,
-          "./circuits/international_chars_decomposed.circom"
-        ),
-        templateName: "InternationalCharsDecomposed",
-        genSubstrs: true,
-      }
+      "utf8"
+    );
+    const circom = compiler.gen_from_decomposed_memory(
+      email_addr_json,
+      "InternationalCharsDecomposed"
+    );
+    writeFileSync(
+      path.join(__dirname, "./circuits/international_chars_decomposed.circom"),
+      circom
     );
     circuit = await wasm_tester(
       path.join(
@@ -34,7 +36,7 @@ describe("Simple Regex Decomposed", () => {
   it("case 1", async () => {
     const input =
       "Latin-Extension=Ʃƣƙ Greek=ϕω Cyrillic=иЩ Arabic=أبت Devanagari=आदित्य Hiragana&Katakana=なツ";
-    const paddedStr = apis.padString(input, 128);
+    const paddedStr = apis.pad_string(input, 128);
     const circuitInputs = {
       msg: paddedStr,
     };

@@ -1,9 +1,9 @@
 {
   "name": "@zk-email/zk-regex",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "description": "zk regex circuit for content attestation",
-  "main": "node-apis/index.node",
+  "main": "pkg/zk_regex_compiler_bg.wasm",
   "workspaces": [
     "packages/*"
   ],
@@ -11,7 +11,8 @@
     "Sora Suegami <suegamisora@gmail.com>",
     "Yush G <aayushg@mit.edu>",
     "Javier Su <javier.su.weijie@gmail.com>",
-    "Kata Choi <kata.choi@gmail.com>"
+    "Kata Choi <kata.choi@gmail.com>",
+    "Aditya Bisht <adityabisht64@gmail.com>"
   ],
   "scripts": {
     "install": "yarn workspaces -pt run install",

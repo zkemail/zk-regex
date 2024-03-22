@@ -1,23 +1,28 @@
-const circom_tester = require("circom_tester");
-const wasm_tester = circom_tester.wasm;
+import circom_tester from "circom_tester";
 import * as path from "path";
-const apis = require("../../apis");
+import { readFileSync, writeFileSync } from "fs";
+import apis from "../../apis/pkg";
+import compiler from "../../compiler/pkg";
 const option = {
   include: path.join(__dirname, "../../../node_modules"),
 };
-const compiler = require("../../compiler");
+const wasm_tester = circom_tester.wasm;
 
 jest.setTimeout(120000);
 describe("Negate Regex", () => {
   let circuit;
   beforeAll(async () => {
-    compiler.genFromDecomposed(
+    const email_addr_json = readFileSync(
       path.join(__dirname, "./circuits/negate1.json"),
-      {
-        circomFilePath: path.join(__dirname, "./circuits/negate1_regex.circom"),
-        templateName: "Negate1Regex",
-        genSubstrs: true,
-      }
+      "utf8"
+    );
+    const circom = compiler.gen_from_decomposed_memory(
+      email_addr_json,
+      "Negate1Regex"
+    );
+    writeFileSync(
+      path.join(__dirname, "./circuits/negate1_regex.circom"),
+      circom
     );
     circuit = await wasm_tester(
       path.join(__dirname, "./circuits/test_negate1_regex.circom"),
@@ -27,7 +32,7 @@ describe("Negate Regex", () => {
 
   it("case 1 with regex 1", async () => {
     const input = "a: ABCDEFG XYZ.";
-    const paddedStr = apis.padString(input, 64);
+    const paddedStr = apis.pad_string(input, 64);
     const circuitInputs = {
       msg: paddedStr,
     };
@@ -50,7 +55,7 @@ describe("Negate Regex", () => {
 
   it("case 2 with regex 1", async () => {
     const input = "a: CRIPTOGRAFíA.";
-    const paddedStr = apis.padString(input, 64);
+    const paddedStr = apis.pad_string(input, 64);
     const circuitInputs = {
       msg: paddedStr,
     };
@@ -73,7 +78,7 @@ describe("Negate Regex", () => {
 
   it("case 3 with regex 1", async () => {
     const input = "a: あいう.";
-    const paddedStr = apis.padString(input, 64);
+    const paddedStr = apis.pad_string(input, 64);
     const circuitInputs = {
       msg: paddedStr,
     };
@@ -96,7 +101,7 @@ describe("Negate Regex", () => {
 
   it("case 4 with regex 1", async () => {
     const input = "a: التشفير.";
-    const paddedStr = apis.padString(input, 64);
+    const paddedStr = apis.pad_string(input, 64);
     const circuitInputs = {
       msg: paddedStr,
     };
