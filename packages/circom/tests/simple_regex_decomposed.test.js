@@ -16,7 +16,7 @@ describe("Simple Regex Decomposed", () => {
       path.join(__dirname, "./circuits/simple_regex_decomposed.json"),
       "utf8"
     );
-    const circom = compiler.gen_from_decomposed_memory(
+    const circom = compiler.genFromDecomposed(
       email_addr_json,
       "SimpleRegexDecomposed"
     );
@@ -32,7 +32,7 @@ describe("Simple Regex Decomposed", () => {
 
   it("case 1", async () => {
     const input = "email was meant for @zkRegex.";
-    const paddedStr = apis.pad_string(input, 64);
+    const paddedStr = apis.padString(input, 64);
     const circuitInputs = {
       msg: paddedStr,
     };

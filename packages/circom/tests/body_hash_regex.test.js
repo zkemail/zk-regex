@@ -16,7 +16,7 @@ describe("Bodyhash Regex", () => {
       path.join(__dirname, "../circuits/common/body_hash.json"),
       "utf8"
     );
-    const circom = compiler.gen_from_decomposed_memory(
+    const circom = compiler.genFromDecomposed(
       email_addr_json,
       "BodyHashRegex"
     );
@@ -33,14 +33,14 @@ describe("Bodyhash Regex", () => {
 
   it("bodyhash in the header", async () => {
     const signatureField = `dkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20230601; t=1694989812; x=1695594612; dara=google.com; h=to:subject:message-id:date:from:mime-version:from:to:cc:subject :date:message-id:reply-to; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=`;
-    const paddedStr = apis.pad_string(signatureField, 1024);
+    const paddedStr = apis.padString(signatureField, 1024);
     const circuitInputs = {
       msg: paddedStr,
     };
     const witness = await circuit.calculateWitness(circuitInputs);
     await circuit.checkConstraints(witness);
     expect(1n).toEqual(witness[1]);
-    const prefixIdxes = apis.extract_substr_idxes(
+    const prefixIdxes = apis.extractSubstrIdxes(
       signatureField,
       readFileSync(
         path.join(__dirname, "../circuits/common/body_hash.json"),
@@ -58,14 +58,14 @@ describe("Bodyhash Regex", () => {
 
   it("timestamp after new line", async () => {
     const signatureField = `\r\ndkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20230601; t=1694989812; x=1695594612; dara=google.com; h=to:subject:message-id:date:from:mime-version:from:to:cc:subject :date:message-id:reply-to; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=`;
-    const paddedStr = apis.pad_string(signatureField, 1024);
+    const paddedStr = apis.padString(signatureField, 1024);
     const circuitInputs = {
       msg: paddedStr,
     };
     const witness = await circuit.calculateWitness(circuitInputs);
     await circuit.checkConstraints(witness);
     expect(1n).toEqual(witness[1]);
-    const prefixIdxes = apis.extract_substr_idxes(
+    const prefixIdxes = apis.extractSubstrIdxes(
       signatureField,
       readFileSync(
         path.join(__dirname, "../circuits/common/body_hash.json"),

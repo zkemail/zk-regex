@@ -16,7 +16,7 @@ describe("Simple Regex Decomposed", () => {
       path.join(__dirname, "./circuits/international_chars_decomposed.json"),
       "utf8"
     );
-    const circom = compiler.gen_from_decomposed_memory(
+    const circom = compiler.genFromDecomposed(
       email_addr_json,
       "InternationalCharsDecomposed"
     );
@@ -36,7 +36,7 @@ describe("Simple Regex Decomposed", () => {
   it("case 1", async () => {
     const input =
       "Latin-Extension=Ʃƣƙ Greek=ϕω Cyrillic=иЩ Arabic=أبت Devanagari=आदित्य Hiragana&Katakana=なツ";
-    const paddedStr = apis.pad_string(input, 128);
+    const paddedStr = apis.padString(input, 128);
     const circuitInputs = {
       msg: paddedStr,
     };

@@ -16,7 +16,7 @@ describe("Subject All Regex", () => {
       path.join(__dirname, "../circuits/common/subject_all.json"),
       "utf8"
     );
-    const circom = compiler.gen_from_decomposed_memory(
+    const circom = compiler.genFromDecomposed(
       email_addr_json,
       "SubjectAllRegex"
     );
@@ -32,14 +32,14 @@ describe("Subject All Regex", () => {
 
   it("subject from beginning", async () => {
     const subjectStr = "subject:This is a test.\r\n";
-    const paddedStr = apis.pad_string(subjectStr, 256);
+    const paddedStr = apis.padString(subjectStr, 256);
     const circuitInputs = {
       msg: paddedStr,
     };
     const witness = await circuit.calculateWitness(circuitInputs);
     await circuit.checkConstraints(witness);
     expect(1n).toEqual(witness[1]);
-    const prefixIdxes = apis.extract_subject_all_idxes(subjectStr)[0];
+    const prefixIdxes = apis.extractSubjectAllIdxes(subjectStr)[0];
     for (let idx = 0; idx < 256; ++idx) {
       if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
         expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
@@ -51,14 +51,14 @@ describe("Subject All Regex", () => {
 
   it("subject after new line", async () => {
     const subjectStr = "dummy\r\nsubject:This is a test.\r\n";
-    const paddedStr = apis.pad_string(subjectStr, 256);
+    const paddedStr = apis.padString(subjectStr, 256);
     const circuitInputs = {
       msg: paddedStr,
     };
     const witness = await circuit.calculateWitness(circuitInputs);
     await circuit.checkConstraints(witness);
     expect(1n).toEqual(witness[1]);
-    const prefixIdxes = apis.extract_subject_all_idxes(subjectStr)[0];
+    const prefixIdxes = apis.extractSubjectAllIdxes(subjectStr)[0];
     for (let idx = 0; idx < 256; ++idx) {
       if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
         expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
@@ -70,14 +70,14 @@ describe("Subject All Regex", () => {
 
   it("subject from beginning and non-English case", async () => {
     const subjectStr = "subject:これはテストです。\r\n";
-    const paddedStr = apis.pad_string(subjectStr, 256);
+    const paddedStr = apis.padString(subjectStr, 256);
     const circuitInputs = {
       msg: paddedStr,
     };
     const witness = await circuit.calculateWitness(circuitInputs);
     await circuit.checkConstraints(witness);
     expect(1n).toEqual(witness[1]);
-    const prefixIdxes = apis.extract_subject_all_idxes(subjectStr)[0];
+    const prefixIdxes = apis.extractSubjectAllIdxes(subjectStr)[0];
     for (let idx = 0; idx < 256; ++idx) {
       if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
         expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);

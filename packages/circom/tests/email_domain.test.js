@@ -16,7 +16,7 @@ describe("Email Domain Regex", () => {
       path.join(__dirname, "../circuits/common/email_domain.json"),
       "utf8"
     );
-    const circom = compiler.gen_from_decomposed_memory(
+    const circom = compiler.genFromDecomposed(
       email_addr_json,
       "EmailDomainRegex"
     );
@@ -32,7 +32,7 @@ describe("Email Domain Regex", () => {
 
   it("test a regex of an email domain", async () => {
     const emailAddr = "suegamisora@gmail.com";
-    const paddedStr = apis.pad_string(emailAddr, 256);
+    const paddedStr = apis.padString(emailAddr, 256);
     const circuitInputs = {
       msg: paddedStr,
     };
@@ -42,7 +42,7 @@ describe("Email Domain Regex", () => {
     for (let idx = 0; idx < 12; ++idx) {
       expect(0n).toEqual(witness[2 + idx]);
     }
-    const prefixIdxes = apis.extract_email_domain_idxes(emailAddr)[0];
+    const prefixIdxes = apis.extractEmailDomainIdxes(emailAddr)[0];
     for (let idx = 0; idx < 256; ++idx) {
       if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
         expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);

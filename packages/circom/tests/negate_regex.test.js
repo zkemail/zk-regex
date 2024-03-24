@@ -16,7 +16,7 @@ describe("Negate Regex", () => {
       path.join(__dirname, "./circuits/negate1.json"),
       "utf8"
     );
-    const circom = compiler.gen_from_decomposed_memory(
+    const circom = compiler.genFromDecomposed(
       email_addr_json,
       "Negate1Regex"
     );
@@ -32,7 +32,7 @@ describe("Negate Regex", () => {
 
   it("case 1 with regex 1", async () => {
     const input = "a: ABCDEFG XYZ.";
-    const paddedStr = apis.pad_string(input, 64);
+    const paddedStr = apis.padString(input, 64);
     const circuitInputs = {
       msg: paddedStr,
     };
@@ -55,7 +55,7 @@ describe("Negate Regex", () => {
 
   it("case 2 with regex 1", async () => {
     const input = "a: CRIPTOGRAFíA.";
-    const paddedStr = apis.pad_string(input, 64);
+    const paddedStr = apis.padString(input, 64);
     const circuitInputs = {
       msg: paddedStr,
     };
@@ -78,7 +78,7 @@ describe("Negate Regex", () => {
 
   it("case 3 with regex 1", async () => {
     const input = "a: あいう.";
-    const paddedStr = apis.pad_string(input, 64);
+    const paddedStr = apis.padString(input, 64);
     const circuitInputs = {
       msg: paddedStr,
     };
@@ -101,7 +101,7 @@ describe("Negate Regex", () => {
 
   it("case 4 with regex 1", async () => {
     const input = "a: التشفير.";
-    const paddedStr = apis.pad_string(input, 64);
+    const paddedStr = apis.padString(input, 64);
     const circuitInputs = {
       msg: paddedStr,
     };

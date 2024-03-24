@@ -16,7 +16,7 @@ describe("Simple Regex", () => {
       path.join(__dirname, "./circuits/simple_regex_substrs.json"),
       "utf8"
     );
-    const circom = compiler.gen_from_raw_memory(
+    const circom = compiler.genFromRaw(
       "1=(a|b) (2=(b|c)+ )+d",
       substrs_json,
       "SimpleRegex"
@@ -33,7 +33,7 @@ describe("Simple Regex", () => {
 
   it("case 1", async () => {
     const input = "1=a 2=b d";
-    const paddedStr = apis.pad_string(input, 64);
+    const paddedStr = apis.padString(input, 64);
     const circuitInputs = {
       msg: paddedStr,
     };
@@ -56,7 +56,7 @@ describe("Simple Regex", () => {
 
   it("case 2", async () => {
     const input = "1=a 2=b 2=bc 2=c d";
-    const paddedStr = apis.pad_string(input, 64);
+    const paddedStr = apis.padString(input, 64);
     const circuitInputs = {
       msg: paddedStr,
     };
@@ -79,7 +79,7 @@ describe("Simple Regex", () => {
 
   it("case 3", async () => {
     const input = "1=a 2=b 2=bc 2=c da 1=a 2=cb 2=c 2=b dd";
-    const paddedStr = apis.pad_string(input, 64);
+    const paddedStr = apis.padString(input, 64);
     const circuitInputs = {
       msg: paddedStr,
     };
