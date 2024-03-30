@@ -10,10 +10,10 @@ This library provides circom circuits that enables you to prove that
 - the input string satisfies regular expressions (regexes) specified in the chip.
 - the substrings are correctly extracted from the input string according to substring definitions.
 
-This is a JS/Rust adaptation of the Python regex-to-circom work done by [sampriti](https://github.com/sampritipanda/) and [yush_g](https://twitter.com/yush_g), along with [sorasue](https://github.com/SoraSuegami/)'s decomposed specifications. You can generate your own regexes via our no-code tool at https://www.zkregex.com
+This is a JS/Rust adaptation of the Python regex-to-circom work done by [sampriti](https://github.com/sampritipanda/) and [yush_g](https://twitter.com/yush_g), along with [sorasue](https://github.com/SoraSuegami/)'s decomposed specifications and [Bisht13](https://github.com/Bisht13)'s rewrite to support more characters. You can generate your own regexes via our no-code tool at [zkregex.com](https://www.zkregex.com). Note that zkregex.com is on an older compiler version.
 
 In addition to the original work, this library also supports the following features:
-- CLI to dynamically generate regex circuit based on regex argument
+- CLI to dynamically generate regex circuit based on regex arguments
 - Extended regex circuit template supporting:
   - group and negation regexes.
   - a decomposed regex definition, which is the easiest way to define your regex.
@@ -28,6 +28,8 @@ While the manual way supports more kinds of regexes than the automatic way, the 
 ### Theory
 
 To understand the theory behind the regex circuit compiler, please checkout [this blog post](https://katat.me/blog/ZK+Regex) (edits in progress). You can also look at the original regex description and how it ties into the original zk email work at the [original zk-email blog post regex overview](https://blog.aayushg.com/posts/zkemail#regex-deterministic-finite-automata-in-zk).
+
+Note that there are certain characters that are not supported, such as lookaheads and lookbehinds.
 
 ## How to use
 
