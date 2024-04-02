@@ -19,23 +19,25 @@ template Negate1Regex(msg_bytes) {
 	component and[33][num_bytes];
 	component multi_or[12][num_bytes];
 	signal states[num_bytes+1][12];
+	signal states_tmp[num_bytes+1][12];
+	signal from_zero_enabled[num_bytes+1];
+	from_zero_enabled[num_bytes] <== 0;
 	component state_changed[num_bytes];
 
-	states[0][0] <== 1;
 	for (var i = 1; i < 12; i++) {
 		states[0][i] <== 0;
 	}
 
 	for (var i = 0; i < num_bytes; i++) {
 		state_changed[i] = MultiOR(11);
+		states[i][0] <== 1;
 		eq[0][i] = IsEqual();
 		eq[0][i].in[0] <== in[i];
 		eq[0][i].in[1] <== 97;
 		and[0][i] = AND();
 		and[0][i].a <== states[i][0];
 		and[0][i].b <== eq[0][i].out;
-		states[i+1][1] <== and[0][i].out;
-		state_changed[i].in[0] <== states[i+1][1];
+		states_tmp[i+1][1] <== 0;
 		eq[1][i] = IsEqual();
 		eq[1][i].in[0] <== in[i];
 		eq[1][i].in[1] <== 58;
@@ -43,7 +45,6 @@ template Negate1Regex(msg_bytes) {
 		and[1][i].a <== states[i][1];
 		and[1][i].b <== eq[1][i].out;
 		states[i+1][2] <== and[1][i].out;
-		state_changed[i].in[1] <== states[i+1][2];
 		lt[0][i] = LessEqThan(8);
 		lt[0][i].in[0] <== 194;
 		lt[0][i].in[1] <== in[i];
@@ -102,7 +103,6 @@ template Negate1Regex(msg_bytes) {
 		multi_or[0][i].in[3] <== and[9][i].out;
 		multi_or[0][i].in[4] <== and[10][i].out;
 		states[i+1][3] <== multi_or[0][i].out;
-		state_changed[i].in[2] <== states[i+1][3];
 		eq[2][i] = IsEqual();
 		eq[2][i].in[0] <== in[i];
 		eq[2][i].in[1] <== 224;
@@ -116,7 +116,6 @@ template Negate1Regex(msg_bytes) {
 		multi_or[1][i].in[0] <== and[11][i].out;
 		multi_or[1][i].in[1] <== and[12][i].out;
 		states[i+1][4] <== multi_or[1][i].out;
-		state_changed[i].in[3] <== states[i+1][4];
 		eq[3][i] = IsEqual();
 		eq[3][i].in[0] <== in[i];
 		eq[3][i].in[1] <== 225;
@@ -270,7 +269,6 @@ template Negate1Regex(msg_bytes) {
 		multi_or[4][i].in[3] <== and[17][i].out;
 		multi_or[4][i].in[4] <== and[18][i].out;
 		states[i+1][5] <== multi_or[4][i].out;
-		state_changed[i].in[4] <== states[i+1][5];
 		eq[33][i] = IsEqual();
 		eq[33][i].in[0] <== in[i];
 		eq[33][i].in[1] <== 237;
@@ -284,7 +282,6 @@ template Negate1Regex(msg_bytes) {
 		multi_or[5][i].in[0] <== and[19][i].out;
 		multi_or[5][i].in[1] <== and[20][i].out;
 		states[i+1][6] <== multi_or[5][i].out;
-		state_changed[i].in[5] <== states[i+1][6];
 		eq[34][i] = IsEqual();
 		eq[34][i].in[0] <== in[i];
 		eq[34][i].in[1] <== 240;
@@ -298,7 +295,6 @@ template Negate1Regex(msg_bytes) {
 		multi_or[6][i].in[0] <== and[21][i].out;
 		multi_or[6][i].in[1] <== and[22][i].out;
 		states[i+1][7] <== multi_or[6][i].out;
-		state_changed[i].in[6] <== states[i+1][7];
 		eq[35][i] = IsEqual();
 		eq[35][i].in[0] <== in[i];
 		eq[35][i].in[1] <== 241;
@@ -322,7 +318,6 @@ template Negate1Regex(msg_bytes) {
 		multi_or[8][i].in[0] <== and[23][i].out;
 		multi_or[8][i].in[1] <== and[24][i].out;
 		states[i+1][8] <== multi_or[8][i].out;
-		state_changed[i].in[7] <== states[i+1][8];
 		eq[38][i] = IsEqual();
 		eq[38][i].in[0] <== in[i];
 		eq[38][i].in[1] <== 244;
@@ -336,7 +331,6 @@ template Negate1Regex(msg_bytes) {
 		multi_or[9][i].in[0] <== and[25][i].out;
 		multi_or[9][i].in[1] <== and[26][i].out;
 		states[i+1][9] <== multi_or[9][i].out;
-		state_changed[i].in[8] <== states[i+1][9];
 		lt[10][i] = LessEqThan(8);
 		lt[10][i].in[0] <== 0;
 		lt[10][i].in[1] <== in[i];
@@ -392,7 +386,6 @@ template Negate1Regex(msg_bytes) {
 		multi_or[11][i].in[1] <== and[30][i].out;
 		multi_or[11][i].in[2] <== and[31][i].out;
 		states[i+1][10] <== multi_or[11][i].out;
-		state_changed[i].in[9] <== states[i+1][10];
 		eq[44][i] = IsEqual();
 		eq[44][i].in[0] <== in[i];
 		eq[44][i].in[1] <== 46;
@@ -400,8 +393,19 @@ template Negate1Regex(msg_bytes) {
 		and[32][i].a <== states[i][10];
 		and[32][i].b <== eq[44][i].out;
 		states[i+1][11] <== and[32][i].out;
+		from_zero_enabled[i] <== MultiNOR(11)([states_tmp[i+1][1], states[i+1][2], states[i+1][3], states[i+1][4], states[i+1][5], states[i+1][6], states[i+1][7], states[i+1][8], states[i+1][9], states[i+1][10], states[i+1][11]]);
+		states[i+1][1] <== MultiOR(2)([states_tmp[i+1][1], from_zero_enabled[i] * and[0][i].out]);
+		state_changed[i].in[0] <== states[i+1][1];
+		state_changed[i].in[1] <== states[i+1][2];
+		state_changed[i].in[2] <== states[i+1][3];
+		state_changed[i].in[3] <== states[i+1][4];
+		state_changed[i].in[4] <== states[i+1][5];
+		state_changed[i].in[5] <== states[i+1][6];
+		state_changed[i].in[6] <== states[i+1][7];
+		state_changed[i].in[7] <== states[i+1][8];
+		state_changed[i].in[8] <== states[i+1][9];
+		state_changed[i].in[9] <== states[i+1][10];
 		state_changed[i].in[10] <== states[i+1][11];
-		states[i+1][0] <== 1 - state_changed[i].out;
 	}
 
 	component final_state_result = MultiOR(num_bytes+1);
@@ -409,43 +413,21 @@ template Negate1Regex(msg_bytes) {
 		final_state_result.in[i] <== states[i][11];
 	}
 	out <== final_state_result.out;
-	signal is_consecutive[msg_bytes+1][2];
-	is_consecutive[msg_bytes][1] <== 1;
+	signal is_consecutive[msg_bytes+1][3];
+	is_consecutive[msg_bytes][2] <== 1;
 	for (var i = 0; i < msg_bytes; i++) {
-		is_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][11] * (1 - is_consecutive[msg_bytes-i][1]) + is_consecutive[msg_bytes-i][1];
+		is_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][11] * (1 - is_consecutive[msg_bytes-i][2]) + is_consecutive[msg_bytes-i][2];
 		is_consecutive[msg_bytes-1-i][1] <== state_changed[msg_bytes-i].out * is_consecutive[msg_bytes-1-i][0];
+		is_consecutive[msg_bytes-1-i][2] <== ORAnd()([(1 - from_zero_enabled[msg_bytes-i+1]), states[num_bytes-i][11], is_consecutive[msg_bytes-1-i][1]]);
 	}
 	// substrings calculated: [{(2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 8), (2, 9), (2, 10), (3, 10), (4, 3), (5, 3), (6, 3), (7, 5), (8, 5), (9, 5), (10, 3), (10, 4), (10, 5), (10, 6), (10, 7), (10, 8), (10, 9), (10, 10)}]
-	signal is_substr0[msg_bytes][24];
+	signal is_substr0[msg_bytes];
 	signal is_reveal0[msg_bytes];
 	signal output reveal0[msg_bytes];
 	for (var i = 0; i < msg_bytes; i++) {
-		is_substr0[i][0] <== 0;
 		 // the 0-th substring transitions: [(2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 8), (2, 9), (2, 10), (3, 10), (4, 3), (5, 3), (6, 3), (7, 5), (8, 5), (9, 5), (10, 3), (10, 4), (10, 5), (10, 6), (10, 7), (10, 8), (10, 9), (10, 10)]
-		is_substr0[i][1] <== is_substr0[i][0] + states[i+1][2] * states[i+2][3];
-		is_substr0[i][2] <== is_substr0[i][1] + states[i+1][2] * states[i+2][4];
-		is_substr0[i][3] <== is_substr0[i][2] + states[i+1][2] * states[i+2][5];
-		is_substr0[i][4] <== is_substr0[i][3] + states[i+1][2] * states[i+2][6];
-		is_substr0[i][5] <== is_substr0[i][4] + states[i+1][2] * states[i+2][7];
-		is_substr0[i][6] <== is_substr0[i][5] + states[i+1][2] * states[i+2][8];
-		is_substr0[i][7] <== is_substr0[i][6] + states[i+1][2] * states[i+2][9];
-		is_substr0[i][8] <== is_substr0[i][7] + states[i+1][2] * states[i+2][10];
-		is_substr0[i][9] <== is_substr0[i][8] + states[i+1][3] * states[i+2][10];
-		is_substr0[i][10] <== is_substr0[i][9] + states[i+1][4] * states[i+2][3];
-		is_substr0[i][11] <== is_substr0[i][10] + states[i+1][5] * states[i+2][3];
-		is_substr0[i][12] <== is_substr0[i][11] + states[i+1][6] * states[i+2][3];
-		is_substr0[i][13] <== is_substr0[i][12] + states[i+1][7] * states[i+2][5];
-		is_substr0[i][14] <== is_substr0[i][13] + states[i+1][8] * states[i+2][5];
-		is_substr0[i][15] <== is_substr0[i][14] + states[i+1][9] * states[i+2][5];
-		is_substr0[i][16] <== is_substr0[i][15] + states[i+1][10] * states[i+2][3];
-		is_substr0[i][17] <== is_substr0[i][16] + states[i+1][10] * states[i+2][4];
-		is_substr0[i][18] <== is_substr0[i][17] + states[i+1][10] * states[i+2][5];
-		is_substr0[i][19] <== is_substr0[i][18] + states[i+1][10] * states[i+2][6];
-		is_substr0[i][20] <== is_substr0[i][19] + states[i+1][10] * states[i+2][7];
-		is_substr0[i][21] <== is_substr0[i][20] + states[i+1][10] * states[i+2][8];
-		is_substr0[i][22] <== is_substr0[i][21] + states[i+1][10] * states[i+2][9];
-		is_substr0[i][23] <== is_substr0[i][22] + states[i+1][10] * states[i+2][10];
-		is_reveal0[i] <== is_substr0[i][23] * is_consecutive[i][1];
+		is_substr0[i] <== MultiOR(23)([states[i+1][2] * states[i+2][3], states[i+1][2] * states[i+2][4], states[i+1][2] * states[i+2][5], states[i+1][2] * states[i+2][6], states[i+1][2] * states[i+2][7], states[i+1][2] * states[i+2][8], states[i+1][2] * states[i+2][9], states[i+1][2] * states[i+2][10], states[i+1][3] * states[i+2][10], states[i+1][4] * states[i+2][3], states[i+1][5] * states[i+2][3], states[i+1][6] * states[i+2][3], states[i+1][7] * states[i+2][5], states[i+1][8] * states[i+2][5], states[i+1][9] * states[i+2][5], states[i+1][10] * states[i+2][3], states[i+1][10] * states[i+2][4], states[i+1][10] * states[i+2][5], states[i+1][10] * states[i+2][6], states[i+1][10] * states[i+2][7], states[i+1][10] * states[i+2][8], states[i+1][10] * states[i+2][9], states[i+1][10] * states[i+2][10]]);
+		is_reveal0[i] <== is_substr0[i] * is_consecutive[i][2];
 		reveal0[i] <== in[i+1] * is_reveal0[i];
 	}
 }

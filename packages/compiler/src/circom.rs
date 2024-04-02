@@ -1,9 +1,12 @@
+use itertools::Itertools;
+
 use super::CompilerError;
 use crate::get_accepted_state;
 use crate::DFAGraph;
 use crate::RegexAndDFA;
 use std::collections::{BTreeMap, BTreeSet};
 
+use std::fmt::format;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
@@ -93,17 +96,25 @@ fn gen_circom_allstr(dfa_graph: &DFAGraph, template_name: &str, regex_str: &str)
     let mut eq_checks = vec![None; 256];
     let mut multi_or_checks1 = BTreeMap::<String, usize>::new();
     let mut multi_or_checks2 = BTreeMap::<String, usize>::new();
+    let mut zero_starting_states = vec![];
+    let mut zero_starting_and_idxes = BTreeMap::<usize, Vec<usize>>::new();
 
     let mut lines = vec![];
+    // let mut zero_starting_lines = vec![];
 
     lines.push("\tfor (var i = 0; i < num_bytes; i++) {".to_string());
     lines.push(format!("\t\tstate_changed[i] = MultiOR({});", n - 1));
-
+    lines.push(format!("\t\tstates[i][0] <== 1;"));
     for i in 1..n {
         let mut outputs = vec![];
+        zero_starting_and_idxes.insert(i, vec![]);
+        // let mut state_change_lines = vec![];
 
         for (prev_i, k) in rev_graph.get(&(i as usize)).unwrap().iter() {
             let prev_i_num = *prev_i;
+            if prev_i_num == 0 {
+                zero_starting_states.push(i);
+            }
             let mut k = k.clone();
             k.sort();
 
@@ -185,7 +196,6 @@ fn gen_circom_allstr(dfa_graph: &DFAGraph, template_name: &str, regex_str: &str)
                     }
                 }
             }
-
             lines.push(format!("\t\tand[{}][i] = AND();", and_i));
             lines.push(format!(
                 "\t\tand[{}][i].a <== states[i][{}];",
@@ -197,6 +207,9 @@ fn gen_circom_allstr(dfa_graph: &DFAGraph, template_name: &str, regex_str: &str)
                     "\t\tand[{}][i].b <== {}[{}][i].out;",
                     and_i, eq_outputs[0].0, eq_outputs[0].1
                 ));
+                if prev_i_num == 0 {
+                    zero_starting_and_idxes.get_mut(&i).unwrap().push(and_i);
+                }
             } else if eq_outputs.len() > 1 {
                 let eq_outputs_key = serde_json::to_string(&eq_outputs).unwrap();
 
@@ -218,6 +231,9 @@ fn gen_circom_allstr(dfa_graph: &DFAGraph, template_name: &str, regex_str: &str)
                         "\t\tand[{}][i].b <== multi_or[{}][i].out;",
                         and_i, multi_or_i
                     ));
+                    if prev_i_num == 0 {
+                        zero_starting_and_idxes.get_mut(&i).unwrap().push(and_i);
+                    }
                     multi_or_checks1.insert(eq_outputs_key, multi_or_i);
                     multi_or_i += 1;
                 } else {
@@ -226,19 +242,29 @@ fn gen_circom_allstr(dfa_graph: &DFAGraph, template_name: &str, regex_str: &str)
                             "\t\tand[{}][i].b <== multi_or[{}][i].out;",
                             and_i, multi_or_i
                         ));
+                        if prev_i_num == 0 {
+                            zero_starting_and_idxes.get_mut(&i).unwrap().push(and_i);
+                        }
                     }
                 }
             }
-
-            outputs.push(and_i);
+            if prev_i_num != 0 {
+                outputs.push(and_i);
+            }
             and_i += 1;
         }
-
         if outputs.len() == 1 {
-            lines.push(format!(
-                "\t\tstates[i+1][{}] <== and[{}][i].out;",
-                i, outputs[0]
-            ));
+            if zero_starting_states.contains(&i) {
+                lines.push(format!(
+                    "\t\tstates_tmp[i+1][{}] <== and[{}][i].out;",
+                    i, outputs[0]
+                ));
+            } else {
+                lines.push(format!(
+                    "\t\tstates[i+1][{}] <== and[{}][i].out;",
+                    i, outputs[0]
+                ));
+            }
         } else if outputs.len() > 1 {
             let outputs_key = serde_json::to_string(&outputs).unwrap();
 
@@ -255,23 +281,79 @@ fn gen_circom_allstr(dfa_graph: &DFAGraph, template_name: &str, regex_str: &str)
                         multi_or_i, output_i, and_i
                     ));
                 }
-
-                lines.push(format!(
-                    "\t\tstates[i+1][{}] <== multi_or[{}][i].out;",
-                    i, multi_or_i
-                ));
+                if zero_starting_states.contains(&i) {
+                    lines.push(format!(
+                        "\t\tstates_tmp[i+1][{}] <== multi_or[{}][i].out;",
+                        i, multi_or_i
+                    ));
+                } else {
+                    lines.push(format!(
+                        "\t\tstates[i+1][{}] <== multi_or[{}][i].out;",
+                        i, multi_or_i
+                    ));
+                }
                 multi_or_checks2.insert(outputs_key, multi_or_i);
                 multi_or_i += 1;
             } else {
-                if let Some(multi_or_i_) = multi_or_checks2.get(&outputs_key) {
-                    lines.push(format!(
-                        "\t\tstates[i+1][{}] <== multi_or[{}][i].out;",
-                        i, multi_or_i_
-                    ));
+                if let Some(multi_or_i) = multi_or_checks2.get(&outputs_key) {
+                    if zero_starting_states.contains(&i) {
+                        lines.push(format!(
+                            "\t\tstates_tmp[i+1][{}] <== multi_or[{}][i].out;",
+                            i, multi_or_i
+                        ));
+                    } else {
+                        lines.push(format!(
+                            "\t\tstates[i+1][{}] <== multi_or[{}][i].out;",
+                            i, multi_or_i
+                        ));
+                    }
                 }
+            }
+        } else {
+            if zero_starting_states.contains(&i) {
+                lines.push(format!("\t\tstates_tmp[i+1][{}] <== 0;", i));
+            } else {
+                lines.push(format!("\t\tstates[i+1][{}] <== 0;", i));
             }
         }
 
+        // if zero_starting_states.contains(&i) {
+        //     zero_starting_lines.append(&mut state_change_lines);
+        // } else {
+        //     lines.append(&mut state_change_lines);
+        // }
+    }
+    // let not_zero_starting_states = (1..n)
+    //     .filter(|i| !zero_starting_states.contains(&i))
+    //     .collect_vec();
+    lines.push(format!(
+        "\t\tfrom_zero_enabled[i] <== MultiNOR({})([{}]);",
+        n - 1,
+        (1..n)
+            .map(|i| if zero_starting_states.contains(&i) {
+                format!("states_tmp[i+1][{}]", i)
+            } else {
+                format!("states[i+1][{}]", i)
+            })
+            .collect::<Vec<_>>()
+            .join(", ")
+    ));
+    for (i, vec) in zero_starting_and_idxes.iter() {
+        if vec.len() == 0 {
+            continue;
+        }
+        lines.push(format!(
+            "\t\tstates[i+1][{}] <== MultiOR({})([states_tmp[i+1][{}], {}]);",
+            i,
+            vec.len() + 1,
+            i,
+            vec.iter()
+                .map(|and_i| format!("from_zero_enabled[i] * and[{}][i].out", and_i))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    }
+    for i in 1..n {
         lines.push(format!(
             "\t\tstate_changed[i].in[{}] <== states[i+1][{}];",
             i - 1,
@@ -279,7 +361,7 @@ fn gen_circom_allstr(dfa_graph: &DFAGraph, template_name: &str, regex_str: &str)
         ));
     }
 
-    lines.push("\t\tstates[i+1][0] <== 1 - state_changed[i].out;".to_string());
+    // lines.push("\t\tstates[i+1][0] <== 1 - state_changed[i].out;".to_string());
 
     let mut declarations = vec![];
     declarations.push("pragma circom 2.1.5;\n".to_string());
@@ -316,10 +398,13 @@ fn gen_circom_allstr(dfa_graph: &DFAGraph, template_name: &str, regex_str: &str)
     }
 
     declarations.push(format!("\tsignal states[num_bytes+1][{}];", n));
+    declarations.push(format!("\tsignal states_tmp[num_bytes+1][{}];", n));
+    declarations.push(format!("\tsignal from_zero_enabled[num_bytes+1];"));
+    declarations.push(format!("\tfrom_zero_enabled[num_bytes] <== 0;"));
     declarations.push("\tcomponent state_changed[num_bytes];\n".to_string());
 
     let mut init_code = vec![];
-    init_code.push("\tstates[0][0] <== 1;".to_string());
+    // init_code.push("\tstates[0][0] <== 1;".to_string());
     init_code.push(format!("\tfor (var i = 1; i < {}; i++) {{", n));
     init_code.push("\t\tstates[0][i] <== 0;".to_string());
     init_code.push("\t}\n".to_string());
@@ -367,27 +452,23 @@ impl RegexAndDFA {
         Ok(())
     }
 
-    pub fn gen_circom_str(
-        &self,
-        template_name: &str,
-    ) -> Result<String, CompilerError> {
+    pub fn gen_circom_str(&self, template_name: &str) -> Result<String, CompilerError> {
         let circom = gen_circom_allstr(&self.dfa_val, template_name, &self.regex_str);
         let substrs = self.add_substrs_constraints()?;
         let result = circom + &substrs;
         Ok(result)
     }
 
-    pub fn add_substrs_constraints(
-        &self,
-    ) -> Result<String, CompilerError> {
+    pub fn add_substrs_constraints(&self) -> Result<String, CompilerError> {
         let accepted_state = get_accepted_state(&self.dfa_val).unwrap();
         let mut circom: String = "".to_string();
         circom += "\n";
-        circom += "\tsignal is_consecutive[msg_bytes+1][2];\n";
-        circom += "\tis_consecutive[msg_bytes][1] <== 1;\n";
+        circom += "\tsignal is_consecutive[msg_bytes+1][3];\n";
+        circom += "\tis_consecutive[msg_bytes][2] <== 1;\n";
         circom += "\tfor (var i = 0; i < msg_bytes; i++) {\n";
-        circom += &format!("\t\tis_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][{}] * (1 - is_consecutive[msg_bytes-i][1]) + is_consecutive[msg_bytes-i][1];\n", accepted_state);
+        circom += &format!("\t\tis_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][{}] * (1 - is_consecutive[msg_bytes-i][2]) + is_consecutive[msg_bytes-i][2];\n", accepted_state);
         circom += "\t\tis_consecutive[msg_bytes-1-i][1] <== state_changed[msg_bytes-i].out * is_consecutive[msg_bytes-1-i][0];\n";
+        circom += &format!("\t\tis_consecutive[msg_bytes-1-i][2] <== ORAnd()([(1 - from_zero_enabled[msg_bytes-i+1]), states[num_bytes-i][{}], is_consecutive[msg_bytes-1-i][1]]);\n", accepted_state);
         circom += "\t}\n";
 
         let substr_defs_array = &self.substrs_defs.substr_defs_array;
@@ -397,11 +478,11 @@ impl RegexAndDFA {
         );
         for (idx, defs) in substr_defs_array.into_iter().enumerate() {
             let num_defs = defs.len();
-            circom += &format!("\tsignal is_substr{}[msg_bytes][{}];\n", idx, num_defs + 1);
+            circom += &format!("\tsignal is_substr{}[msg_bytes];\n", idx);
             circom += &format!("\tsignal is_reveal{}[msg_bytes];\n", idx);
             circom += &format!("\tsignal output reveal{}[msg_bytes];\n", idx);
             circom += "\tfor (var i = 0; i < msg_bytes; i++) {\n";
-            circom += &format!("\t\tis_substr{}[i][0] <== 0;\n", idx);
+            // circom += &format!("\t\tis_substr{}[i][0] <== 0;\n", idx);
             let mut defs = defs.iter().collect::<Vec<&(usize, usize)>>();
             defs.sort_by(|a, b| {
                 let start_cmp = a.0.cmp(&b.0);
@@ -413,24 +494,33 @@ impl RegexAndDFA {
                 }
             });
             circom += &format!("\t\t // the {}-th substring transitions: {:?}\n", idx, defs);
-            for (j, (cur, next)) in defs.iter().enumerate() {
-                circom += &format!(
-                    "\t\tis_substr{}[i][{}] <== is_substr{}[i][{}] + ",
-                    idx,
-                    j + 1,
-                    idx,
-                    j
-                );
-                circom += &format!("states[i+1][{}] * states[i+2][{}];\n", cur, next);
-                // if j != defs.len() - 1 {
-                //     circom += " + ";
-                // } else {
-                //     circom += ";\n";
-                // }
-            }
             circom += &format!(
-                "\t\tis_reveal{}[i] <== is_substr{}[i][{}] * is_consecutive[i][1];\n",
-                idx, idx, num_defs
+                "\t\tis_substr{}[i] <== MultiOR({})([{}]);\n",
+                idx,
+                num_defs,
+                defs.iter()
+                    .map(|(cur, next)| format!("states[i+1][{}] * states[i+2][{}]", cur, next))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
+            // for (j, (cur, next)) in defs.iter().enumerate() {
+            //     circom += &format!(
+            //         "\t\tis_substr{}[i][{}] <== is_substr{}[i][{}] + ",
+            //         idx,
+            //         j + 1,
+            //         idx,
+            //         j
+            //     );
+            //     circom += &format!("states[i+1][{}] * states[i+2][{}];\n", cur, next);
+            //     // if j != defs.len() - 1 {
+            //     //     circom += " + ";
+            //     // } else {
+            //     //     circom += ";\n";
+            //     // }
+            // }
+            circom += &format!(
+                "\t\tis_reveal{}[i] <== is_substr{}[i] * is_consecutive[i][2];\n",
+                idx, idx
             );
             circom += &format!("\t\treveal{}[i] <== in[i+1] * is_reveal{}[i];\n", idx, idx);
             circom += "\t}\n";

@@ -19,15 +19,18 @@ template EmailAddrWithNameRegex(msg_bytes) {
 	component and[52][num_bytes];
 	component multi_or[20][num_bytes];
 	signal states[num_bytes+1][14];
+	signal states_tmp[num_bytes+1][14];
+	signal from_zero_enabled[num_bytes+1];
+	from_zero_enabled[num_bytes] <== 0;
 	component state_changed[num_bytes];
 
-	states[0][0] <== 1;
 	for (var i = 1; i < 14; i++) {
 		states[0][i] <== 0;
 	}
 
 	for (var i = 0; i < num_bytes; i++) {
 		state_changed[i] = MultiOR(13);
+		states[i][0] <== 1;
 		lt[0][i] = LessEqThan(8);
 		lt[0][i].in[0] <== 194;
 		lt[0][i].in[1] <== in[i];
@@ -134,15 +137,13 @@ template EmailAddrWithNameRegex(msg_bytes) {
 		multi_or[0][i].in[7] <== eq[6][i].out;
 		multi_or[0][i].in[8] <== eq[7][i].out;
 		and[11][i].b <== multi_or[0][i].out;
-		multi_or[1][i] = MultiOR(6);
-		multi_or[1][i].in[0] <== and[1][i].out;
-		multi_or[1][i].in[1] <== and[3][i].out;
-		multi_or[1][i].in[2] <== and[5][i].out;
-		multi_or[1][i].in[3] <== and[7][i].out;
-		multi_or[1][i].in[4] <== and[9][i].out;
-		multi_or[1][i].in[5] <== and[11][i].out;
-		states[i+1][1] <== multi_or[1][i].out;
-		state_changed[i].in[0] <== states[i+1][1];
+		multi_or[1][i] = MultiOR(5);
+		multi_or[1][i].in[0] <== and[3][i].out;
+		multi_or[1][i].in[1] <== and[5][i].out;
+		multi_or[1][i].in[2] <== and[7][i].out;
+		multi_or[1][i].in[3] <== and[9][i].out;
+		multi_or[1][i].in[4] <== and[11][i].out;
+		states_tmp[i+1][1] <== multi_or[1][i].out;
 		eq[8][i] = IsEqual();
 		eq[8][i].in[0] <== in[i];
 		eq[8][i].in[1] <== 224;
@@ -155,12 +156,10 @@ template EmailAddrWithNameRegex(msg_bytes) {
 		and[14][i] = AND();
 		and[14][i].a <== states[i][9];
 		and[14][i].b <== eq[8][i].out;
-		multi_or[2][i] = MultiOR(3);
-		multi_or[2][i].in[0] <== and[12][i].out;
-		multi_or[2][i].in[1] <== and[13][i].out;
-		multi_or[2][i].in[2] <== and[14][i].out;
-		states[i+1][2] <== multi_or[2][i].out;
-		state_changed[i].in[1] <== states[i+1][2];
+		multi_or[2][i] = MultiOR(2);
+		multi_or[2][i].in[0] <== and[13][i].out;
+		multi_or[2][i].in[1] <== and[14][i].out;
+		states_tmp[i+1][2] <== multi_or[2][i].out;
 		eq[9][i] = IsEqual();
 		eq[9][i].in[0] <== in[i];
 		eq[9][i].in[1] <== 225;
@@ -310,15 +309,13 @@ template EmailAddrWithNameRegex(msg_bytes) {
 		and[21][i] = AND();
 		and[21][i].a <== states[i][9];
 		and[21][i].b <== multi_or[3][i].out;
-		multi_or[5][i] = MultiOR(6);
-		multi_or[5][i].in[0] <== and[15][i].out;
-		multi_or[5][i].in[1] <== and[17][i].out;
-		multi_or[5][i].in[2] <== and[18][i].out;
-		multi_or[5][i].in[3] <== and[19][i].out;
-		multi_or[5][i].in[4] <== and[20][i].out;
-		multi_or[5][i].in[5] <== and[21][i].out;
-		states[i+1][3] <== multi_or[5][i].out;
-		state_changed[i].in[2] <== states[i+1][3];
+		multi_or[5][i] = MultiOR(5);
+		multi_or[5][i].in[0] <== and[17][i].out;
+		multi_or[5][i].in[1] <== and[18][i].out;
+		multi_or[5][i].in[2] <== and[19][i].out;
+		multi_or[5][i].in[3] <== and[20][i].out;
+		multi_or[5][i].in[4] <== and[21][i].out;
+		states_tmp[i+1][3] <== multi_or[5][i].out;
 		eq[39][i] = IsEqual();
 		eq[39][i].in[0] <== in[i];
 		eq[39][i].in[1] <== 237;
@@ -331,12 +328,10 @@ template EmailAddrWithNameRegex(msg_bytes) {
 		and[24][i] = AND();
 		and[24][i].a <== states[i][9];
 		and[24][i].b <== eq[39][i].out;
-		multi_or[6][i] = MultiOR(3);
-		multi_or[6][i].in[0] <== and[22][i].out;
-		multi_or[6][i].in[1] <== and[23][i].out;
-		multi_or[6][i].in[2] <== and[24][i].out;
-		states[i+1][4] <== multi_or[6][i].out;
-		state_changed[i].in[3] <== states[i+1][4];
+		multi_or[6][i] = MultiOR(2);
+		multi_or[6][i].in[0] <== and[23][i].out;
+		multi_or[6][i].in[1] <== and[24][i].out;
+		states_tmp[i+1][4] <== multi_or[6][i].out;
 		eq[40][i] = IsEqual();
 		eq[40][i].in[0] <== in[i];
 		eq[40][i].in[1] <== 240;
@@ -349,12 +344,10 @@ template EmailAddrWithNameRegex(msg_bytes) {
 		and[27][i] = AND();
 		and[27][i].a <== states[i][9];
 		and[27][i].b <== eq[40][i].out;
-		multi_or[7][i] = MultiOR(3);
-		multi_or[7][i].in[0] <== and[25][i].out;
-		multi_or[7][i].in[1] <== and[26][i].out;
-		multi_or[7][i].in[2] <== and[27][i].out;
-		states[i+1][5] <== multi_or[7][i].out;
-		state_changed[i].in[4] <== states[i+1][5];
+		multi_or[7][i] = MultiOR(2);
+		multi_or[7][i].in[0] <== and[26][i].out;
+		multi_or[7][i].in[1] <== and[27][i].out;
+		states_tmp[i+1][5] <== multi_or[7][i].out;
 		eq[41][i] = IsEqual();
 		eq[41][i].in[0] <== in[i];
 		eq[41][i].in[1] <== 241;
@@ -377,12 +370,10 @@ template EmailAddrWithNameRegex(msg_bytes) {
 		and[30][i] = AND();
 		and[30][i].a <== states[i][9];
 		and[30][i].b <== multi_or[8][i].out;
-		multi_or[9][i] = MultiOR(3);
-		multi_or[9][i].in[0] <== and[28][i].out;
-		multi_or[9][i].in[1] <== and[29][i].out;
-		multi_or[9][i].in[2] <== and[30][i].out;
-		states[i+1][6] <== multi_or[9][i].out;
-		state_changed[i].in[5] <== states[i+1][6];
+		multi_or[9][i] = MultiOR(2);
+		multi_or[9][i].in[0] <== and[29][i].out;
+		multi_or[9][i].in[1] <== and[30][i].out;
+		states_tmp[i+1][6] <== multi_or[9][i].out;
 		eq[44][i] = IsEqual();
 		eq[44][i].in[0] <== in[i];
 		eq[44][i].in[1] <== 244;
@@ -395,12 +386,10 @@ template EmailAddrWithNameRegex(msg_bytes) {
 		and[33][i] = AND();
 		and[33][i].a <== states[i][9];
 		and[33][i].b <== eq[44][i].out;
-		multi_or[10][i] = MultiOR(3);
-		multi_or[10][i].in[0] <== and[31][i].out;
-		multi_or[10][i].in[1] <== and[32][i].out;
-		multi_or[10][i].in[2] <== and[33][i].out;
-		states[i+1][7] <== multi_or[10][i].out;
-		state_changed[i].in[6] <== states[i+1][7];
+		multi_or[10][i] = MultiOR(2);
+		multi_or[10][i].in[0] <== and[32][i].out;
+		multi_or[10][i].in[1] <== and[33][i].out;
+		states_tmp[i+1][7] <== multi_or[10][i].out;
 		lt[14][i] = LessEqThan(8);
 		lt[14][i].in[0] <== 14;
 		lt[14][i].in[1] <== in[i];
@@ -538,13 +527,11 @@ template EmailAddrWithNameRegex(msg_bytes) {
 		multi_or[13][i].in[16] <== eq[0][i].out;
 		multi_or[13][i].in[17] <== eq[1][i].out;
 		and[40][i].b <== multi_or[13][i].out;
-		multi_or[14][i] = MultiOR(4);
-		multi_or[14][i].in[0] <== and[36][i].out;
-		multi_or[14][i].in[1] <== and[37][i].out;
-		multi_or[14][i].in[2] <== and[38][i].out;
-		multi_or[14][i].in[3] <== and[40][i].out;
-		states[i+1][8] <== multi_or[14][i].out;
-		state_changed[i].in[7] <== states[i+1][8];
+		multi_or[14][i] = MultiOR(3);
+		multi_or[14][i].in[0] <== and[37][i].out;
+		multi_or[14][i].in[1] <== and[38][i].out;
+		multi_or[14][i].in[2] <== and[40][i].out;
+		states_tmp[i+1][8] <== multi_or[14][i].out;
 		and[41][i] = AND();
 		and[41][i].a <== states[i][8];
 		and[41][i].b <== eq[2][i].out;
@@ -555,7 +542,6 @@ template EmailAddrWithNameRegex(msg_bytes) {
 		multi_or[15][i].in[0] <== and[41][i].out;
 		multi_or[15][i].in[1] <== and[42][i].out;
 		states[i+1][9] <== multi_or[15][i].out;
-		state_changed[i].in[8] <== states[i+1][9];
 		lt[20][i] = LessEqThan(8);
 		lt[20][i].in[0] <== 65;
 		lt[20][i].in[1] <== in[i];
@@ -683,12 +669,10 @@ template EmailAddrWithNameRegex(msg_bytes) {
 		multi_or[17][i].in[0] <== and[45][i].out;
 		multi_or[17][i].in[1] <== and[46][i].out;
 		states[i+1][10] <== multi_or[17][i].out;
-		state_changed[i].in[9] <== states[i+1][10];
 		and[47][i] = AND();
 		and[47][i].a <== states[i][10];
 		and[47][i].b <== eq[4][i].out;
 		states[i+1][11] <== and[47][i].out;
-		state_changed[i].in[10] <== states[i+1][11];
 		lt[24][i] = LessEqThan(8);
 		lt[24][i].in[0] <== 97;
 		lt[24][i].in[1] <== in[i];
@@ -727,13 +711,32 @@ template EmailAddrWithNameRegex(msg_bytes) {
 		multi_or[19][i].in[0] <== and[49][i].out;
 		multi_or[19][i].in[1] <== and[50][i].out;
 		states[i+1][12] <== multi_or[19][i].out;
-		state_changed[i].in[11] <== states[i+1][12];
 		and[51][i] = AND();
 		and[51][i].a <== states[i][12];
 		and[51][i].b <== eq[3][i].out;
 		states[i+1][13] <== and[51][i].out;
+		from_zero_enabled[i] <== MultiNOR(13)([states_tmp[i+1][1], states_tmp[i+1][2], states_tmp[i+1][3], states_tmp[i+1][4], states_tmp[i+1][5], states_tmp[i+1][6], states_tmp[i+1][7], states_tmp[i+1][8], states[i+1][9], states[i+1][10], states[i+1][11], states[i+1][12], states[i+1][13]]);
+		states[i+1][1] <== MultiOR(2)([states_tmp[i+1][1], from_zero_enabled[i] * and[1][i].out]);
+		states[i+1][2] <== MultiOR(2)([states_tmp[i+1][2], from_zero_enabled[i] * and[12][i].out]);
+		states[i+1][3] <== MultiOR(2)([states_tmp[i+1][3], from_zero_enabled[i] * and[15][i].out]);
+		states[i+1][4] <== MultiOR(2)([states_tmp[i+1][4], from_zero_enabled[i] * and[22][i].out]);
+		states[i+1][5] <== MultiOR(2)([states_tmp[i+1][5], from_zero_enabled[i] * and[25][i].out]);
+		states[i+1][6] <== MultiOR(2)([states_tmp[i+1][6], from_zero_enabled[i] * and[28][i].out]);
+		states[i+1][7] <== MultiOR(2)([states_tmp[i+1][7], from_zero_enabled[i] * and[31][i].out]);
+		states[i+1][8] <== MultiOR(2)([states_tmp[i+1][8], from_zero_enabled[i] * and[36][i].out]);
+		state_changed[i].in[0] <== states[i+1][1];
+		state_changed[i].in[1] <== states[i+1][2];
+		state_changed[i].in[2] <== states[i+1][3];
+		state_changed[i].in[3] <== states[i+1][4];
+		state_changed[i].in[4] <== states[i+1][5];
+		state_changed[i].in[5] <== states[i+1][6];
+		state_changed[i].in[6] <== states[i+1][7];
+		state_changed[i].in[7] <== states[i+1][8];
+		state_changed[i].in[8] <== states[i+1][9];
+		state_changed[i].in[9] <== states[i+1][10];
+		state_changed[i].in[10] <== states[i+1][11];
+		state_changed[i].in[11] <== states[i+1][12];
 		state_changed[i].in[12] <== states[i+1][13];
-		states[i+1][0] <== 1 - state_changed[i].out;
 	}
 
 	component final_state_result = MultiOR(num_bytes+1);
@@ -741,25 +744,21 @@ template EmailAddrWithNameRegex(msg_bytes) {
 		final_state_result.in[i] <== states[i][13];
 	}
 	out <== final_state_result.out;
-	signal is_consecutive[msg_bytes+1][2];
-	is_consecutive[msg_bytes][1] <== 1;
+	signal is_consecutive[msg_bytes+1][3];
+	is_consecutive[msg_bytes][2] <== 1;
 	for (var i = 0; i < msg_bytes; i++) {
-		is_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][13] * (1 - is_consecutive[msg_bytes-i][1]) + is_consecutive[msg_bytes-i][1];
+		is_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][13] * (1 - is_consecutive[msg_bytes-i][2]) + is_consecutive[msg_bytes-i][2];
 		is_consecutive[msg_bytes-1-i][1] <== state_changed[msg_bytes-i].out * is_consecutive[msg_bytes-1-i][0];
+		is_consecutive[msg_bytes-1-i][2] <== ORAnd()([(1 - from_zero_enabled[msg_bytes-i+1]), states[num_bytes-i][13], is_consecutive[msg_bytes-1-i][1]]);
 	}
 	// substrings calculated: [{(9, 10), (10, 10), (10, 11), (11, 12), (12, 12)}]
-	signal is_substr0[msg_bytes][6];
+	signal is_substr0[msg_bytes];
 	signal is_reveal0[msg_bytes];
 	signal output reveal0[msg_bytes];
 	for (var i = 0; i < msg_bytes; i++) {
-		is_substr0[i][0] <== 0;
 		 // the 0-th substring transitions: [(9, 10), (10, 10), (10, 11), (11, 12), (12, 12)]
-		is_substr0[i][1] <== is_substr0[i][0] + states[i+1][9] * states[i+2][10];
-		is_substr0[i][2] <== is_substr0[i][1] + states[i+1][10] * states[i+2][10];
-		is_substr0[i][3] <== is_substr0[i][2] + states[i+1][10] * states[i+2][11];
-		is_substr0[i][4] <== is_substr0[i][3] + states[i+1][11] * states[i+2][12];
-		is_substr0[i][5] <== is_substr0[i][4] + states[i+1][12] * states[i+2][12];
-		is_reveal0[i] <== is_substr0[i][5] * is_consecutive[i][1];
+		is_substr0[i] <== MultiOR(5)([states[i+1][9] * states[i+2][10], states[i+1][10] * states[i+2][10], states[i+1][10] * states[i+2][11], states[i+1][11] * states[i+2][12], states[i+1][12] * states[i+2][12]]);
+		is_reveal0[i] <== is_substr0[i] * is_consecutive[i][2];
 		reveal0[i] <== in[i+1] * is_reveal0[i];
 	}
 }

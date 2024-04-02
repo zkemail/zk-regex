@@ -46,3 +46,18 @@ template MultiOR(n) {
     out <== 1 - is_zero.out;
 }
 
+template MultiNOR(n) {
+    signal input in[n];
+    signal output out;
+
+    signal or <== MultiOR(n)(in);
+    out <== 1 - or;
+}
+
+template ORAnd() {
+    signal input in[3];
+    signal output out;
+
+    signal or <== OR()(in[0], in[1]);
+    out <== AND()(or, in[2]);
+}
