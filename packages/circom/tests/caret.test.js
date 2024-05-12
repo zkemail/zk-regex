@@ -9,545 +9,102 @@ const option = {
 const wasm_tester = circom_tester.wasm;
 
 jest.setTimeout(600000);
-describe("Asterisk Regex", () => {
+describe("Caret Regex", () => {
     let circuit1;
     let circuit2;
     let circuit3;
     let circuit4;
     let circuit5;
-    let circuit6;
     beforeAll(async () => {
         writeFileSync(
-            path.join(__dirname, "./circuits/asterisk1_regex.circom"),
+            path.join(__dirname, "./circuits/caret1_regex.circom"),
             compiler.genFromDecomposed(
                 readFileSync(
-                    path.join(__dirname, "./circuits/asterisk1.json"),
+                    path.join(__dirname, "./circuits/caret1.json"),
                     "utf8"
                 ),
-                "Asterisk1Regex"
+                "Caret1Regex"
             )
         );
         circuit1 = await wasm_tester(
-            path.join(__dirname, "./circuits/test_asterisk1_regex.circom"),
+            path.join(__dirname, "./circuits/test_caret1_regex.circom"),
             option
         );
 
         writeFileSync(
-            path.join(__dirname, "./circuits/asterisk2_regex.circom"),
+            path.join(__dirname, "./circuits/caret2_regex.circom"),
             compiler.genFromDecomposed(
                 readFileSync(
-                    path.join(__dirname, "./circuits/asterisk2.json"),
+                    path.join(__dirname, "./circuits/caret2.json"),
                     "utf8"
                 ),
-                "Asterisk2Regex"
+                "Caret2Regex"
             )
         );
         circuit2 = await wasm_tester(
-            path.join(__dirname, "./circuits/test_asterisk2_regex.circom"),
+            path.join(__dirname, "./circuits/test_caret2_regex.circom"),
             option
         );
 
         writeFileSync(
-            path.join(__dirname, "./circuits/asterisk3_regex.circom"),
+            path.join(__dirname, "./circuits/caret3_regex.circom"),
             compiler.genFromDecomposed(
                 readFileSync(
-                    path.join(__dirname, "./circuits/asterisk3.json"),
+                    path.join(__dirname, "./circuits/caret3.json"),
                     "utf8"
                 ),
-                "Asterisk3Regex"
+                "Caret3Regex"
             )
         );
         circuit3 = await wasm_tester(
-            path.join(__dirname, "./circuits/test_asterisk3_regex.circom"),
+            path.join(__dirname, "./circuits/test_caret3_regex.circom"),
             option
         );
 
         writeFileSync(
-            path.join(__dirname, "./circuits/asterisk4_regex.circom"),
+            path.join(__dirname, "./circuits/caret4_regex.circom"),
             compiler.genFromDecomposed(
                 readFileSync(
-                    path.join(__dirname, "./circuits/asterisk4.json"),
+                    path.join(__dirname, "./circuits/caret4.json"),
                     "utf8"
                 ),
-                "Asterisk4Regex"
+                "Caret4Regex"
             )
         );
         circuit4 = await wasm_tester(
-            path.join(__dirname, "./circuits/test_asterisk4_regex.circom"),
+            path.join(__dirname, "./circuits/test_caret4_regex.circom"),
             option
         );
 
         writeFileSync(
-            path.join(__dirname, "./circuits/asterisk5_regex.circom"),
+            path.join(__dirname, "./circuits/caret5_regex.circom"),
             compiler.genFromDecomposed(
                 readFileSync(
-                    path.join(__dirname, "./circuits/asterisk5.json"),
+                    path.join(__dirname, "./circuits/caret5.json"),
                     "utf8"
                 ),
-                "Asterisk5Regex"
+                "Caret5Regex"
             )
         );
         circuit5 = await wasm_tester(
-            path.join(__dirname, "./circuits/test_asterisk5_regex.circom"),
-            option
-        );
-
-        writeFileSync(
-            path.join(__dirname, "./circuits/asterisk6_regex.circom"),
-            compiler.genFromDecomposed(
-                readFileSync(
-                    path.join(__dirname, "./circuits/asterisk6.json"),
-                    "utf8"
-                ),
-                "Asterisk6Regex"
-            )
-        );
-        circuit6 = await wasm_tester(
-            path.join(__dirname, "./circuits/test_asterisk6_regex.circom"),
+            path.join(__dirname, "./circuits/test_caret5_regex.circom"),
             option
         );
     });
 
-    it("asterisk1 valid case 1", async () => {
-        const inputStr = `b`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit1.calculateWitness(circuitInputs);
-        await circuit1.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(
-            inputStr,
-            readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk1.json"),
-                "utf8"
-            )
-        )[0];
-        for (let idx = 0; idx < 8; ++idx) {
-            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-            } else {
-                expect(0n).toEqual(witness[2 + idx]);
-            }
-        }
-    });
-
-    it("asterisk1 valid case 2", async () => {
-        const inputStr = `ab`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit1.calculateWitness(circuitInputs);
-        await circuit1.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(
-            inputStr,
-            readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk1.json"),
-                "utf8"
-            )
-        )[0];
-        for (let idx = 0; idx < 8; ++idx) {
-            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-            } else {
-                expect(0n).toEqual(witness[2 + idx]);
-            }
-        }
-    });
-
-    it("asterisk1 valid case 3", async () => {
-        const inputStr = `aab`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit1.calculateWitness(circuitInputs);
-        await circuit1.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(
-            inputStr,
-            readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk1.json"),
-                "utf8"
-            )
-        )[0];
-        for (let idx = 0; idx < 8; ++idx) {
-            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-            } else {
-                expect(0n).toEqual(witness[2 + idx]);
-            }
-        }
-    });
-
-    it("asterisk1 valid case 4", async () => {
-        const inputStr = `710ab`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit1.calculateWitness(circuitInputs);
-        await circuit1.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(
-            inputStr,
-            readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk1.json"),
-                "utf8"
-            )
-        )[0];
-        for (let idx = 0; idx < 8; ++idx) {
-            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-            } else {
-                expect(0n).toEqual(witness[2 + idx]);
-            }
-        }
-    });
-
-
-    it("asterisk1 valid case 5", async () => {
-        const inputStr = `710ab9k1`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit1.calculateWitness(circuitInputs);
-        await circuit1.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(
-            inputStr,
-            readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk1.json"),
-                "utf8"
-            )
-        )[0];
-        for (let idx = 0; idx < 8; ++idx) {
-            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-            } else {
-                expect(0n).toEqual(witness[2 + idx]);
-            }
-        }
-    });
-
-
-    it("asterisk1 invalid case 1", async () => {
-        const inputStr = `aaa`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit1.calculateWitness(circuitInputs);
-        await circuit1.checkConstraints(witness);
-        expect(0n).toEqual(witness[1]);
-        for (let idx = 0; idx < 8; ++idx) {
-            expect(0n).toEqual(witness[2 + idx]);
-        }
-    });
-
-
-    it("asterisk2 valid case 1", async () => {
-        const inputStr = `aaa`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit2.calculateWitness(circuitInputs);
-        await circuit2.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(
-            inputStr,
-            readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk2.json"),
-                "utf8"
-            )
-        )[0];
-        for (let idx = 0; idx < 8; ++idx) {
-            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-            } else {
-                expect(0n).toEqual(witness[2 + idx]);
-            }
-        }
-    });
-
-    it("asterisk2 valid case 2", async () => {
-        const inputStr = `ab`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit2.calculateWitness(circuitInputs);
-        await circuit2.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(
-            inputStr,
-            readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk2.json"),
-                "utf8"
-            )
-        )[0];
-        for (let idx = 0; idx < 8; ++idx) {
-            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-            } else {
-                expect(0n).toEqual(witness[2 + idx]);
-            }
-        }
-    });
-
-    it("asterisk2 valid case 3", async () => {
-        const inputStr = `abbba`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit2.calculateWitness(circuitInputs);
-        await circuit2.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(
-            inputStr,
-            readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk2.json"),
-                "utf8"
-            )
-        )[0];
-        for (let idx = 0; idx < 8; ++idx) {
-            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-            } else {
-                expect(0n).toEqual(witness[2 + idx]);
-            }
-        }
-    });
-
-
-    it("asterisk2 valid case 4", async () => {
-        const inputStr = `717abab9`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit2.calculateWitness(circuitInputs);
-        await circuit2.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(
-            inputStr,
-            readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk2.json"),
-                "utf8"
-            )
-        )[0];
-        for (let idx = 0; idx < 8; ++idx) {
-            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-            } else {
-                expect(0n).toEqual(witness[2 + idx]);
-            }
-        }
-    });
-
-    it("asterisk2 invalid case 1", async () => {
-        const inputStr = `bbb`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit2.calculateWitness(circuitInputs);
-        await circuit2.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(
-            inputStr,
-            readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk2.json"),
-                "utf8"
-            )
-        )[0];
-        for (let idx = 0; idx < 8; ++idx) {
-            expect(0n).toEqual(witness[2 + idx]);
-        }
-    });
-
-    it("asterisk2 invalid case 2", async () => {
-        const inputStr = `19bad7`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit2.calculateWitness(circuitInputs);
-        await circuit2.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(
-            inputStr,
-            readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk2.json"),
-                "utf8"
-            )
-        )[0];
-        for (let idx = 0; idx < 8; ++idx) {
-            expect(0n).toEqual(witness[2 + idx]);
-        }
-    });
-
-    it("asterisk3 valid case 1", async () => {
-        const inputStr = `a93092b`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit3.calculateWitness(circuitInputs);
-        await circuit3.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(
-            inputStr,
-            readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk3.json"),
-                "utf8"
-            )
-        )[0];
-        for (let idx = 0; idx < 8; ++idx) {
-            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-            } else {
-                expect(0n).toEqual(witness[2 + idx]);
-            }
-        }
-    });
-
-    it("asterisk3 valid case 2", async () => {
-        const inputStr = `aabbbbbb`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit3.calculateWitness(circuitInputs);
-        await circuit3.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(
-            inputStr,
-            readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk3.json"),
-                "utf8"
-            )
-        )[0];
-        for (let idx = 0; idx < 8; ++idx) {
-            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-            } else {
-                expect(0n).toEqual(witness[2 + idx]);
-            }
-        }
-    });
-
-    it("asterisk3 valid case 3", async () => {
-        const inputStr = `818ab91`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit3.calculateWitness(circuitInputs);
-        await circuit3.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(
-            inputStr,
-            readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk3.json"),
-                "utf8"
-            )
-        )[0];
-        for (let idx = 0; idx < 8; ++idx) {
-            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-            } else {
-                expect(0n).toEqual(witness[2 + idx]);
-            }
-        }
-    });
-
-    it("asterisk3 invalid case 1", async () => {
-        const inputStr = `89219bbb`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit3.calculateWitness(circuitInputs);
-        await circuit3.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        for (let idx = 0; idx < 8; ++idx) {
-            expect(0n).toEqual(witness[2 + idx]);
-        }
-    });
-
-    it("asterisk3 invalid case 2", async () => {
-        const inputStr = `aa181928`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit3.calculateWitness(circuitInputs);
-        await circuit3.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        for (let idx = 0; idx < 8; ++idx) {
-            expect(0n).toEqual(witness[2 + idx]);
-        }
-    });
-
-    it("asterisk4 valid case 1", async () => {
-        const inputStr = `b099`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit4.calculateWitness(circuitInputs);
-        await circuit4.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(
-            inputStr,
-            readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk4.json"),
-                "utf8"
-            )
-        )[0];
-        for (let idx = 0; idx < 8; ++idx) {
-            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-            } else {
-                expect(0n).toEqual(witness[2 + idx]);
-            }
-        }
-    });
-
-    it("asterisk4 invalid case 1", async () => {
-        const inputStr = `192ue2iw`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit4.calculateWitness(circuitInputs);
-        await circuit4.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        for (let idx = 0; idx < 8; ++idx) {
-            expect(0n).toEqual(witness[2 + idx]);
-        }
-    });
-
-    it("asterisk5 valid case 1", async () => {
+    it("caret1 valid case 1", async () => {
         const inputStr = `a`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
         };
-        const witness = await circuit5.calculateWitness(circuitInputs);
-        await circuit5.checkConstraints(witness);
+        const witness = await circuit1.calculateWitness(circuitInputs);
+        await circuit1.checkConstraints(witness);
         expect(1n).toEqual(witness[1]);
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk5.json"),
+                path.join(__dirname, "../circuits/common/caret1.json"),
                 "utf8"
             )
         )[0];
@@ -560,19 +117,19 @@ describe("Asterisk Regex", () => {
         }
     });
 
-    it("asterisk5 valid case 2", async () => {
-        const inputStr = `218aaaa2`;
+    it("caret1 valid case 2", async () => {
+        const inputStr = `abnjknda`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
         };
-        const witness = await circuit5.calculateWitness(circuitInputs);
-        await circuit5.checkConstraints(witness);
+        const witness = await circuit1.calculateWitness(circuitInputs);
+        await circuit1.checkConstraints(witness);
         expect(1n).toEqual(witness[1]);
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk5.json"),
+                path.join(__dirname, "../circuits/common/caret1.json"),
                 "utf8"
             )
         )[0];
@@ -585,33 +142,162 @@ describe("Asterisk Regex", () => {
         }
     });
 
-    it("asterisk5 invalid case 1", async () => {
-        const inputStr = `bbbbcccc`;
+    it("caret1 invalid case 1", async () => {
+        const inputStr = `ba`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
         };
-        const witness = await circuit5.calculateWitness(circuitInputs);
-        await circuit5.checkConstraints(witness);
+        const witness = await circuit1.calculateWitness(circuitInputs);
+        await circuit1.checkConstraints(witness);
         expect(1n).toEqual(witness[1]);
         for (let idx = 0; idx < 8; ++idx) {
             expect(0n).toEqual(witness[2 + idx]);
         }
     });
 
-    it("asterisk6 valid case 1", async () => {
+    it("caret1 invalid case 2", async () => {
+        const inputStr = `bav`;
+        const paddedStr = apis.padString(inputStr, 8);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        const witness = await circuit1.calculateWitness(circuitInputs);
+        await circuit1.checkConstraints(witness);
+        expect(1n).toEqual(witness[1]);
+        for (let idx = 0; idx < 8; ++idx) {
+            expect(0n).toEqual(witness[2 + idx]);
+        }
+    });
+
+    
+    it("caret2 valid case 1", async () => {
+        const inputStr = `abc`;
+        const paddedStr = apis.padString(inputStr, 8);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        const witness = await circuit2.calculateWitness(circuitInputs);
+        await circuit2.checkConstraints(witness);
+        expect(1n).toEqual(witness[1]);
+        const prefixIdxes = apis.extractSubstrIdxes(
+            inputStr,
+            readFileSync(
+                path.join(__dirname, "../circuits/common/caret2.json"),
+                "utf8"
+            )
+        )[0];
+        for (let idx = 0; idx < 8; ++idx) {
+            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+            } else {
+                expect(0n).toEqual(witness[2 + idx]);
+            }
+        }
+    });
+
+    it("caret2 valid case 2", async () => {
+        const inputStr = `bca`;
+        const paddedStr = apis.padString(inputStr, 8);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        const witness = await circuit2.calculateWitness(circuitInputs);
+        await circuit2.checkConstraints(witness);
+        expect(1n).toEqual(witness[1]);
+        const prefixIdxes = apis.extractSubstrIdxes(
+            inputStr,
+            readFileSync(
+                path.join(__dirname, "../circuits/common/caret2.json"),
+                "utf8"
+            )
+        )[0];
+        for (let idx = 0; idx < 8; ++idx) {
+            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+            } else {
+                expect(0n).toEqual(witness[2 + idx]);
+            }
+        }
+    });
+
+    it("caret2 valid case 3", async () => {
+        const inputStr = `cab`;
+        const paddedStr = apis.padString(inputStr, 8);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        const witness = await circuit2.calculateWitness(circuitInputs);
+        await circuit2.checkConstraints(witness);
+        expect(1n).toEqual(witness[1]);
+        const prefixIdxes = apis.extractSubstrIdxes(
+            inputStr,
+            readFileSync(
+                path.join(__dirname, "../circuits/common/caret2.json"),
+                "utf8"
+            )
+        )[0];
+        for (let idx = 0; idx < 8; ++idx) {
+            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+            } else {
+                expect(0n).toEqual(witness[2 + idx]);
+            }
+        }
+    });
+
+    it("caret2 invalid case 1", async () => {
+        const inputStr = `7abc9mna`;
+        const paddedStr = apis.padString(inputStr, 8);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        const witness = await circuit2.calculateWitness(circuitInputs);
+        await circuit2.checkConstraints(witness);
+        expect(1n).toEqual(witness[1]);
+        for (let idx = 0; idx < 8; ++idx) {
+            expect(0n).toEqual(witness[2 + idx]);
+        }
+    });
+
+    it("caret3 valid case 1", async () => {
+        const inputStr = `a7hv8a9b`;
+        const paddedStr = apis.padString(inputStr, 8);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        const witness = await circuit3.calculateWitness(circuitInputs);
+        await circuit3.checkConstraints(witness);
+        expect(1n).toEqual(witness[1]);
+        const prefixIdxes = apis.extractSubstrIdxes(
+            inputStr,
+            readFileSync(
+                path.join(__dirname, "../circuits/common/caret3.json"),
+                "utf8"
+            )
+        )[0];
+        for (let idx = 0; idx < 8; ++idx) {
+            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+            } else {
+                expect(0n).toEqual(witness[2 + idx]);
+            }
+        }
+    });
+
+    it("caret3 invalid case 1", async () => {
         const inputStr = ``;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
         };
-        const witness = await circuit6.calculateWitness(circuitInputs);
-        await circuit6.checkConstraints(witness);
+        const witness = await circuit3.calculateWitness(circuitInputs);
+        await circuit3.checkConstraints(witness);
         expect(1n).toEqual(witness[1]);
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk6.json"),
+                path.join(__dirname, "../circuits/common/caret3.json"),
                 "utf8"
             )
         )[0];
@@ -624,19 +310,19 @@ describe("Asterisk Regex", () => {
         }
     });
 
-    it("asterisk6 valid case 2", async () => {
-        const inputStr = `a`;
+    it("caret4 valid case 1", async () => {
+        const inputStr = `abaaabba`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
         };
-        const witness = await circuit6.calculateWitness(circuitInputs);
-        await circuit6.checkConstraints(witness);
+        const witness = await circuit4.calculateWitness(circuitInputs);
+        await circuit4.checkConstraints(witness);
         expect(1n).toEqual(witness[1]);
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk6.json"),
+                path.join(__dirname, "../circuits/common/caret4.json"),
                 "utf8"
             )
         )[0];
@@ -649,19 +335,19 @@ describe("Asterisk Regex", () => {
         }
     });
 
-    it("asterisk6 valid case 3", async () => {
-        const inputStr = `1921 abw`;
+    it("caret4 valid case 2", async () => {
+        const inputStr = `baab82ab`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
         };
-        const witness = await circuit6.calculateWitness(circuitInputs);
-        await circuit6.checkConstraints(witness);
+        const witness = await circuit4.calculateWitness(circuitInputs);
+        await circuit4.checkConstraints(witness);
         expect(1n).toEqual(witness[1]);
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk6.json"),
+                path.join(__dirname, "../circuits/common/caret4.json"),
                 "utf8"
             )
         )[0];
@@ -674,5 +360,190 @@ describe("Asterisk Regex", () => {
         }
     });
 
-    
+    it("caret4 valid case 3", async () => {
+        const inputStr = `7w1\nabba`;
+        const paddedStr = apis.padString(inputStr, 8);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        const witness = await circuit4.calculateWitness(circuitInputs);
+        await circuit4.checkConstraints(witness);
+        expect(1n).toEqual(witness[1]);
+        const prefixIdxes = apis.extractSubstrIdxes(
+            inputStr,
+            readFileSync(
+                path.join(__dirname, "../circuits/common/caret4.json"),
+                "utf8"
+            )
+        )[0];
+        for (let idx = 0; idx < 8; ++idx) {
+            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+            } else {
+                expect(0n).toEqual(witness[2 + idx]);
+            }
+        }
+    });
+
+    it("caret4 valid case 4", async () => {
+        const inputStr = `7w\nbbba9`;
+        const paddedStr = apis.padString(inputStr, 8);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        const witness = await circuit4.calculateWitness(circuitInputs);
+        await circuit4.checkConstraints(witness);
+        expect(1n).toEqual(witness[1]);
+        const prefixIdxes = apis.extractSubstrIdxes(
+            inputStr,
+            readFileSync(
+                path.join(__dirname, "../circuits/common/caret4.json"),
+                "utf8"
+            )
+        )[0];
+        for (let idx = 0; idx < 8; ++idx) {
+            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+            } else {
+                expect(0n).toEqual(witness[2 + idx]);
+            }
+        }
+    });
+
+
+    it("caret4 invalid case 1", async () => {
+        const inputStr = `7w1nabba`;
+        const paddedStr = apis.padString(inputStr, 8);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        const witness = await circuit4.calculateWitness(circuitInputs);
+        await circuit4.checkConstraints(witness);
+        expect(1n).toEqual(witness[1]);
+        for (let idx = 0; idx < 8; ++idx) {
+            expect(0n).toEqual(witness[2 + idx]);
+        }
+    });
+
+    it("caret4 invalid case 2", async () => {
+        const inputStr = `7wnbbba9`;
+        const paddedStr = apis.padString(inputStr, 8);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        const witness = await circuit4.calculateWitness(circuitInputs);
+        await circuit4.checkConstraints(witness);
+        expect(1n).toEqual(witness[1]);
+        for (let idx = 0; idx < 8; ++idx) {
+            expect(0n).toEqual(witness[2 + idx]);
+        }
+    });
+
+    it("caret5 valid case 1", async () => {
+        const inputStr = `defabc81`;
+        const paddedStr = apis.padString(inputStr, 8);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        const witness = await circuit5.calculateWitness(circuitInputs);
+        await circuit5.checkConstraints(witness);
+        expect(1n).toEqual(witness[1]);
+        const prefixIdxes = apis.extractSubstrIdxes(
+            inputStr,
+            readFileSync(
+                path.join(__dirname, "../circuits/common/caret5.json"),
+                "utf8"
+            )
+        )[0];
+        for (let idx = 0; idx < 8; ++idx) {
+            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+            } else {
+                expect(0n).toEqual(witness[2 + idx]);
+            }
+        }
+    });
+
+    it("caret5 valid case 2", async () => {
+        const inputStr = `91\n9eabc`;
+        const paddedStr = apis.padString(inputStr, 8);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        const witness = await circuit5.calculateWitness(circuitInputs);
+        await circuit5.checkConstraints(witness);
+        expect(1n).toEqual(witness[1]);
+        const prefixIdxes = apis.extractSubstrIdxes(
+            inputStr,
+            readFileSync(
+                path.join(__dirname, "../circuits/common/caret5.json"),
+                "utf8"
+            )
+        )[0];
+        for (let idx = 0; idx < 8; ++idx) {
+            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+            } else {
+                expect(0n).toEqual(witness[2 + idx]);
+            }
+        }
+    });
+
+    it("caret5 invalid case 1", async () => {
+        const inputStr = `abc`;
+        const paddedStr = apis.padString(inputStr, 8);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        const witness = await circuit5.calculateWitness(circuitInputs);
+        await circuit5.checkConstraints(witness);
+        expect(1n).toEqual(witness[1]);
+        for (let idx = 0; idx < 8; ++idx) {
+            expect(0n).toEqual(witness[2 + idx]);
+        }
+    });
+
+
+    it("caret5 invalid case 2", async () => {
+        const inputStr = `a8abc8`;
+        const paddedStr = apis.padString(inputStr, 8);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        const witness = await circuit5.calculateWitness(circuitInputs);
+        await circuit5.checkConstraints(witness);
+        expect(1n).toEqual(witness[1]);
+        for (let idx = 0; idx < 8; ++idx) {
+            expect(0n).toEqual(witness[2 + idx]);
+        }
+    });
+
+    it("caret5 invalid case 2", async () => {
+        const inputStr = `71\na81ma`;
+        const paddedStr = apis.padString(inputStr, 8);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        const witness = await circuit5.calculateWitness(circuitInputs);
+        await circuit5.checkConstraints(witness);
+        expect(1n).toEqual(witness[1]);
+        for (let idx = 0; idx < 8; ++idx) {
+            expect(0n).toEqual(witness[2 + idx]);
+        }
+    });
+
+
+    it("caret5 invalid case 3", async () => {
+        const inputStr = `91n9eabc`;
+        const paddedStr = apis.padString(inputStr, 8);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        const witness = await circuit5.calculateWitness(circuitInputs);
+        await circuit5.checkConstraints(witness);
+        expect(1n).toEqual(witness[1]);
+        for (let idx = 0; idx < 8; ++idx) {
+            expect(0n).toEqual(witness[2 + idx]);
+        }
+    });
 });
