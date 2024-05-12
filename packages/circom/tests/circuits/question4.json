@@ -2,15 +2,15 @@
     "parts": [
         {
             "is_public": false,
-            "regex_def": "aa"
+            "regex_def": "12"
         },
         {
             "is_public": true,
-            "regex_def": "a?"
+            "regex_def": "(a|b)?"
         },
         {
             "is_public": false,
-            "regex_def": "a"
+            "regex_def": "c"
         }
     ]
 }
