@@ -6,7 +6,7 @@
         },
         {
             "is_public": true,
-            "regex_def": "b+"
+            "regex_def": "(b|c)+"
         }
     ]
 }
