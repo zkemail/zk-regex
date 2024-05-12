@@ -395,7 +395,7 @@ impl RegexAndDFA {
                 idx,
                 num_defs,
                 defs.iter()
-                    .map(|(cur, next)| format!("states[i+1][{}] * states[i+2][{}]", cur, next))
+                    .map(|(cur, next)| format!("states[i][{}] * states[i+1][{}]", cur, next))
                     .collect::<Vec<_>>()
                     .join(", ")
             );
@@ -418,7 +418,7 @@ impl RegexAndDFA {
             //     "\t\tis_reveal{}[i] <== is_substr{}[i] * is_consecutive[i][2];\n",
             //     idx, idx
             // );
-            circom += &format!("\t\treveal{}[i] <== in[i+1] * is_substr{}[i];\n", idx, idx);
+            circom += &format!("\t\treveal{}[i] <== in[i] * is_substr{}[i];\n", idx, idx);
             circom += "\t}\n";
         }
         circom += "}";

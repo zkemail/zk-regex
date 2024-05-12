@@ -1,4 +1,4 @@
-use crate::{DFAGraph, DFAState, DecomposedRegexConfig, RegexAndDFA, SubstrsDefs};
+use crate::{DFAGraph, DFAState, DecomposedRegexConfig, RegexAndDFA, RegexPartConfig, SubstrsDefs};
 use regex::Regex;
 use regex_automata::dfa::{dense::DFA, StartKind};
 use std::collections::{BTreeMap, BTreeSet};
@@ -65,7 +65,7 @@ fn parse_dfa_output(output: &str) -> DFAGraphInfo {
         }
     }
 
-    let start_state_re = Regex::new(r"START-GROUP\(unanchored\)[\s*\w*\=>]*Text => (\d+)").unwrap();
+    let start_state_re = Regex::new(r"START-GROUP\(anchored\)[\s*\w*\=>]*Text => (\d+)").unwrap();
     let start_state = start_state_re.captures_iter(output).next().unwrap()[1]
         .parse::<usize>()
         .unwrap();
@@ -255,11 +255,53 @@ fn add_dfa(net_dfa: &DFAGraph, graph: &DFAGraph) -> DFAGraph {
     net_dfa
 }
 
+fn handle_end_unanchoring(net_dfa: &mut DFAGraph) {
+    // For all accepting states, loop it on itself for all edges which are not outgoing
+    for state in &mut net_dfa.states {
+        if state.r#type == "accept" {
+            let mut outgoing_edges = BTreeSet::new();
+            for (u, v) in &state.edges {
+                if u != &state.state {
+                    for edge in v {
+                        outgoing_edges.insert(*edge);
+                    }
+                }
+            }
+            let mut rest_edges = BTreeSet::new();
+            for i in 0..=255 {
+                if !outgoing_edges.contains(&i) {
+                    rest_edges.insert(i);
+                }
+            }
+            // Check if the state has an edge to itself
+            if state.edges.contains_key(&state.state) {
+                let mut self_edges = state.edges.get_mut(&state.state).unwrap();
+                for edge in &rest_edges {
+                    self_edges.insert(*edge);
+                }
+            } else {
+                state.edges.insert(state.state, rest_edges);
+            }
+        }
+    }
+}
+
 pub fn regex_and_dfa(decomposed_regex: &DecomposedRegexConfig) -> RegexAndDFA {
+    // Create a new decomposed regex with .* before all the items of decomposed_regex
+    let mut decomposed_regex = decomposed_regex.clone();
+    // Add .* before all items in decomposed_regex
+    decomposed_regex.parts.insert(
+        0,
+        RegexPartConfig {
+            is_public: false,
+            regex_def: String::from("(.*)"),
+        },
+    );
+
     let mut config = DFA::config().minimize(true);
-    // config = config.start_kind(StartKind::Unanchored);
+    config = config.start_kind(StartKind::Anchored);
     config = config.byte_classes(false);
-    // config = config.accelerate(true);
+    config = config.accelerate(true);
 
     let mut net_dfa = DFAGraph { states: Vec::new() };
     let mut substr_defs_array = Vec::new();
@@ -267,7 +309,7 @@ pub fn regex_and_dfa(decomposed_regex: &DecomposedRegexConfig) -> RegexAndDFA {
     for regex in decomposed_regex.parts.iter() {
         let re = DFA::builder()
             .configure(config.clone())
-            .build(&format!(r"{}", regex.regex_def))
+            .build(&format!(r"^{}$", regex.regex_def))
             .unwrap();
         let re_str = format!("{:?}", re);
         let mut graph = dfa_to_graph(&parse_dfa_output(&re_str));
@@ -326,10 +368,14 @@ pub fn regex_and_dfa(decomposed_regex: &DecomposedRegexConfig) -> RegexAndDFA {
         net_dfa = add_dfa(&net_dfa, &graph);
     }
 
+    handle_end_unanchoring(&mut net_dfa);
+
     let mut regex_str = String::new();
     for regex in decomposed_regex.parts.iter() {
-        regex_str += &regex.regex_def;
+        regex_str.push_str(&regex.regex_def);
     }
+    // Remove the .* from the start
+    regex_str = regex_str[4..].to_string();
 
     RegexAndDFA {
         regex_str: regex_str,
