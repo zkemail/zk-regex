@@ -56,10 +56,16 @@ fn parse_dfa_output(output: &str) -> DFAGraphInfo {
             eoi_pointing_states.insert(eoi_target);
             state.typ = String::from("accept");
             state.edges.remove("EOI");
+            // Set the dst of all edges pointing to eoi_target to this state
+            for edge in &mut state.edges {
+                if *edge.1 == eoi_target {
+                    *edge.1 = state.source;
+                }
+            }
         }
     }
 
-    let start_state_re = Regex::new(r"START-GROUP\(anchored\)[\s*\w*\=>]*Text => (\d+)").unwrap();
+    let start_state_re = Regex::new(r"START-GROUP\(unanchored\)[\s*\w*\=>]*Text => (\d+)").unwrap();
     let start_state = start_state_re.captures_iter(output).next().unwrap()[1]
         .parse::<usize>()
         .unwrap();
@@ -251,9 +257,9 @@ fn add_dfa(net_dfa: &DFAGraph, graph: &DFAGraph) -> DFAGraph {
 
 pub fn regex_and_dfa(decomposed_regex: &DecomposedRegexConfig) -> RegexAndDFA {
     let mut config = DFA::config().minimize(true);
-    config = config.start_kind(StartKind::Anchored);
+    // config = config.start_kind(StartKind::Unanchored);
     config = config.byte_classes(false);
-    config = config.accelerate(true);
+    // config = config.accelerate(true);
 
     let mut net_dfa = DFAGraph { states: Vec::new() };
     let mut substr_defs_array = Vec::new();
@@ -261,7 +267,7 @@ pub fn regex_and_dfa(decomposed_regex: &DecomposedRegexConfig) -> RegexAndDFA {
     for regex in decomposed_regex.parts.iter() {
         let re = DFA::builder()
             .configure(config.clone())
-            .build(&format!(r"^{}$", regex.regex_def))
+            .build(&format!(r"{}", regex.regex_def))
             .unwrap();
         let re_str = format!("{:?}", re);
         let mut graph = dfa_to_graph(&parse_dfa_output(&re_str));
