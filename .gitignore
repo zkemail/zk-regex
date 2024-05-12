@@ -111,3 +111,4 @@ packages/*/build
 package-lock.json
 yarn.lock
 
+index.node
