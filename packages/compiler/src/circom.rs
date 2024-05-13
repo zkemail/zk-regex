@@ -464,7 +464,7 @@ impl RegexAndDFA {
         let mut circom: String = "".to_string();
         circom += "\n";
         circom += "\tsignal is_consecutive[msg_bytes+1][3];\n";
-        circom += "\tis_consecutive[msg_bytes][2] <== 1;\n";
+        circom += "\tis_consecutive[msg_bytes][2] <== 0;\n";
         circom += "\tfor (var i = 0; i < msg_bytes; i++) {\n";
         circom += &format!("\t\tis_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][{}] * (1 - is_consecutive[msg_bytes-i][2]) + is_consecutive[msg_bytes-i][2];\n", accepted_state);
         circom += "\t\tis_consecutive[msg_bytes-1-i][1] <== state_changed[msg_bytes-i].out * is_consecutive[msg_bytes-1-i][0];\n";
