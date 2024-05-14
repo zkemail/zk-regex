@@ -237,6 +237,9 @@ fn add_dfa(net_dfa: &DFAGraph, graph: &DFAGraph) -> DFAGraph {
                 state.edges.insert(*k, v.clone());
             }
             state.r#type = "".to_string();
+            if start_state.r#type == "accept" {
+                state.r#type = "accept".to_string();
+            }
         }
     }
 
