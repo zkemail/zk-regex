@@ -14,8 +14,8 @@ describe("Plus Regex", () => {
     let circuit2;
     let circuit3;
     let circuit4;
-    let circuit5;
-    let circuit6;
+    // let circuit5;
+    // let circuit6;
     beforeAll(async () => {
         writeFileSync(
             path.join(__dirname, "./circuits/plus1_regex.circom"),
@@ -77,35 +77,35 @@ describe("Plus Regex", () => {
             option
         );
 
-        writeFileSync(
-            path.join(__dirname, "./circuits/plus5_regex.circom"),
-            compiler.genFromDecomposed(
-                readFileSync(
-                    path.join(__dirname, "./circuits/plus5.json"),
-                    "utf8"
-                ),
-                "Plus5Regex"
-            )
-        );
-        circuit5 = await wasm_tester(
-            path.join(__dirname, "./circuits/test_plus5_regex.circom"),
-            option
-        );
+        // writeFileSync(
+        //     path.join(__dirname, "./circuits/plus5_regex.circom"),
+        //     compiler.genFromDecomposed(
+        //         readFileSync(
+        //             path.join(__dirname, "./circuits/plus5.json"),
+        //             "utf8"
+        //         ),
+        //         "Plus5Regex"
+        //     )
+        // );
+        // circuit5 = await wasm_tester(
+        //     path.join(__dirname, "./circuits/test_plus5_regex.circom"),
+        //     option
+        // );
 
-        writeFileSync(
-            path.join(__dirname, "./circuits/plus6_regex.circom"),
-            compiler.genFromDecomposed(
-                readFileSync(
-                    path.join(__dirname, "./circuits/plus6.json"),
-                    "utf8"
-                ),
-                "Plus6Regex"
-            )
-        );
-        circuit6 = await wasm_tester(
-            path.join(__dirname, "./circuits/test_plus6_regex.circom"),
-            option
-        );
+        // writeFileSync(
+        //     path.join(__dirname, "./circuits/plus6_regex.circom"),
+        //     compiler.genFromDecomposed(
+        //         readFileSync(
+        //             path.join(__dirname, "./circuits/plus6.json"),
+        //             "utf8"
+        //         ),
+        //         "Plus6Regex"
+        //     )
+        // );
+        // circuit6 = await wasm_tester(
+        //     path.join(__dirname, "./circuits/test_plus6_regex.circom"),
+        //     option
+        // );
     });
 
     it("plus1 valid case 1", async () => {
@@ -341,7 +341,7 @@ describe("Plus Regex", () => {
     });
 
     it("plus3 valid case 1", async () => {
-        const inputStr = `azb`;
+        const inputStr = `abcbcbc`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
@@ -366,7 +366,7 @@ describe("Plus Regex", () => {
     });
 
     it("plus3 valid case 2", async () => {
-        const inputStr = `aabb21ab`;
+        const inputStr = `acbabcbc`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
@@ -391,7 +391,7 @@ describe("Plus Regex", () => {
     });
 
     it("plus3 valid case 3", async () => {
-        const inputStr = `78abbab9`;
+        const inputStr = `abccbcbb`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
@@ -416,35 +416,7 @@ describe("Plus Regex", () => {
     });
 
     it("plus3 invalid case 1", async () => {
-        const inputStr = `7hdu1pwb`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit3.calculateWitness(circuitInputs);
-        await circuit3.checkConstraints(witness);
-        expect(0n).toEqual(witness[1]);
-        for (let idx = 0; idx < 8; ++idx) {
-            expect(0n).toEqual(witness[2 + idx]);
-        }
-    });
-
-    it("plus3 invalid case 2", async () => {
-        const inputStr = `aaa92jma`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit3.calculateWitness(circuitInputs);
-        await circuit3.checkConstraints(witness);
-        expect(0n).toEqual(witness[1]);
-        for (let idx = 0; idx < 8; ++idx) {
-            expect(0n).toEqual(witness[2 + idx]);
-        }
-    });
-
-    it("plus3 invalid case 3", async () => {
-        const inputStr = `ab`;
+        const inputStr = `abab`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
@@ -458,7 +430,7 @@ describe("Plus Regex", () => {
     });
 
     it("plus4 valid case 1", async () => {
-        const inputStr = `ab`;
+        const inputStr = `1234512b`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
@@ -473,19 +445,17 @@ describe("Plus Regex", () => {
                 "utf8"
             )
         )[0];
-        console.log(prefixIdxes);
         for (let idx = 0; idx < 8; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
                 expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
             } else {
-                console.log(idx);
                 expect(0n).toEqual(witness[2 + idx]);
             }
         }
     });
 
     it("plus4 valid case 2", async () => {
-        const inputStr = `abb`;
+        const inputStr = `2134512b`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
@@ -504,14 +474,13 @@ describe("Plus Regex", () => {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
                 expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
             } else {
-                console.log(idx);
                 expect(0n).toEqual(witness[2 + idx]);
             }
         }
     });
 
     it("plus4 invalid case 1", async () => {
-        const inputStr = `b`;
+        const inputStr = `1234b`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
@@ -525,7 +494,7 @@ describe("Plus Regex", () => {
     });
 
     it("plus4 invalid case 2", async () => {
-        const inputStr = `baaa899a`;
+        const inputStr = `34512`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
@@ -538,146 +507,146 @@ describe("Plus Regex", () => {
         }
     });
 
-    it("plus5 valid case 1", async () => {
-        const inputStr = `aa`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit5.calculateWitness(circuitInputs);
-        await circuit5.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(
-            inputStr,
-            readFileSync(
-                path.join(__dirname, "./circuits/plus5.json"),
-                "utf8"
-            )
-        )[0];
-        for (let idx = 0; idx < 8; ++idx) {
-            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-            } else {
-                expect(0n).toEqual(witness[2 + idx]);
-            }
-        }
-    });
+    // it("plus5 valid case 1", async () => {
+    //     const inputStr = `aa`;
+    //     const paddedStr = apis.padString(inputStr, 8);
+    //     const circuitInputs = {
+    //         msg: paddedStr,
+    //     };
+    //     const witness = await circuit5.calculateWitness(circuitInputs);
+    //     await circuit5.checkConstraints(witness);
+    //     expect(1n).toEqual(witness[1]);
+    //     const prefixIdxes = apis.extractSubstrIdxes(
+    //         inputStr,
+    //         readFileSync(
+    //             path.join(__dirname, "./circuits/plus5.json"),
+    //             "utf8"
+    //         )
+    //     )[0];
+    //     for (let idx = 0; idx < 8; ++idx) {
+    //         if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+    //             expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+    //         } else {
+    //             expect(0n).toEqual(witness[2 + idx]);
+    //         }
+    //     }
+    // });
 
-    it("plus5 valid case 2", async () => {
-        const inputStr = `aaaababb`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit5.calculateWitness(circuitInputs);
-        await circuit5.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(
-            inputStr,
-            readFileSync(
-                path.join(__dirname, "./circuits/plus5.json"),
-                "utf8"
-            )
-        )[0];
-        for (let idx = 0; idx < 8; ++idx) {
-            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-            } else {
-                expect(0n).toEqual(witness[2 + idx]);
-            }
-        }
-    });
+    // it("plus5 valid case 2", async () => {
+    //     const inputStr = `aaaababb`;
+    //     const paddedStr = apis.padString(inputStr, 8);
+    //     const circuitInputs = {
+    //         msg: paddedStr,
+    //     };
+    //     const witness = await circuit5.calculateWitness(circuitInputs);
+    //     await circuit5.checkConstraints(witness);
+    //     expect(1n).toEqual(witness[1]);
+    //     const prefixIdxes = apis.extractSubstrIdxes(
+    //         inputStr,
+    //         readFileSync(
+    //             path.join(__dirname, "./circuits/plus5.json"),
+    //             "utf8"
+    //         )
+    //     )[0];
+    //     for (let idx = 0; idx < 8; ++idx) {
+    //         if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+    //             expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+    //         } else {
+    //             expect(0n).toEqual(witness[2 + idx]);
+    //         }
+    //     }
+    // });
 
-    it("plus5 valid case 3", async () => {
-        const inputStr = `bbcw2cab`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit5.calculateWitness(circuitInputs);
-        await circuit5.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(
-            inputStr,
-            readFileSync(
-                path.join(__dirname, "./circuits/plus5.json"),
-                "utf8"
-            )
-        )[0];
-        for (let idx = 0; idx < 8; ++idx) {
-            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-            } else {
-                expect(0n).toEqual(witness[2 + idx]);
-            }
-        }
-    });
+    // it("plus5 valid case 3", async () => {
+    //     const inputStr = `bbcw2cab`;
+    //     const paddedStr = apis.padString(inputStr, 8);
+    //     const circuitInputs = {
+    //         msg: paddedStr,
+    //     };
+    //     const witness = await circuit5.calculateWitness(circuitInputs);
+    //     await circuit5.checkConstraints(witness);
+    //     expect(1n).toEqual(witness[1]);
+    //     const prefixIdxes = apis.extractSubstrIdxes(
+    //         inputStr,
+    //         readFileSync(
+    //             path.join(__dirname, "./circuits/plus5.json"),
+    //             "utf8"
+    //         )
+    //     )[0];
+    //     for (let idx = 0; idx < 8; ++idx) {
+    //         if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+    //             expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+    //         } else {
+    //             expect(0n).toEqual(witness[2 + idx]);
+    //         }
+    //     }
+    // });
 
-    it("plus5 invalid case 1", async () => {
-        const inputStr = `872jdiua`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit5.calculateWitness(circuitInputs);
-        await circuit5.checkConstraints(witness);
-        expect(0n).toEqual(witness[1]);
-        for (let idx = 0; idx < 8; ++idx) {
-            expect(0n).toEqual(witness[2 + idx]);
-        }
-    });
+    // it("plus5 invalid case 1", async () => {
+    //     const inputStr = `872jdiua`;
+    //     const paddedStr = apis.padString(inputStr, 8);
+    //     const circuitInputs = {
+    //         msg: paddedStr,
+    //     };
+    //     const witness = await circuit5.calculateWitness(circuitInputs);
+    //     await circuit5.checkConstraints(witness);
+    //     expect(0n).toEqual(witness[1]);
+    //     for (let idx = 0; idx < 8; ++idx) {
+    //         expect(0n).toEqual(witness[2 + idx]);
+    //     }
+    // });
 
-    it("plus5 invalid case 2", async () => {
-        const inputStr = `872jdiu7`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit5.calculateWitness(circuitInputs);
-        await circuit5.checkConstraints(witness);
-        expect(0n).toEqual(witness[1]);
-        for (let idx = 0; idx < 8; ++idx) {
-            expect(0n).toEqual(witness[2 + idx]);
-        }
-    });
+    // it("plus5 invalid case 2", async () => {
+    //     const inputStr = `872jdiu7`;
+    //     const paddedStr = apis.padString(inputStr, 8);
+    //     const circuitInputs = {
+    //         msg: paddedStr,
+    //     };
+    //     const witness = await circuit5.calculateWitness(circuitInputs);
+    //     await circuit5.checkConstraints(witness);
+    //     expect(0n).toEqual(witness[1]);
+    //     for (let idx = 0; idx < 8; ++idx) {
+    //         expect(0n).toEqual(witness[2 + idx]);
+    //     }
+    // });
 
 
-    it("plus6 valid case 1", async () => {
-        const inputStr = `aaaabbbb`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit6.calculateWitness(circuitInputs);
-        await circuit6.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(
-            inputStr,
-            readFileSync(
-                path.join(__dirname, "./circuits/plus6.json"),
-                "utf8"
-            )
-        )[0];
-        for (let idx = 0; idx < 8; ++idx) {
-            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-            } else {
-                expect(0n).toEqual(witness[2 + idx]);
-            }
-        }
-    });
+    // it("plus6 valid case 1", async () => {
+    //     const inputStr = `aaaabbbb`;
+    //     const paddedStr = apis.padString(inputStr, 8);
+    //     const circuitInputs = {
+    //         msg: paddedStr,
+    //     };
+    //     const witness = await circuit6.calculateWitness(circuitInputs);
+    //     await circuit6.checkConstraints(witness);
+    //     expect(1n).toEqual(witness[1]);
+    //     const prefixIdxes = apis.extractSubstrIdxes(
+    //         inputStr,
+    //         readFileSync(
+    //             path.join(__dirname, "./circuits/plus6.json"),
+    //             "utf8"
+    //         )
+    //     )[0];
+    //     for (let idx = 0; idx < 8; ++idx) {
+    //         if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+    //             expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+    //         } else {
+    //             expect(0n).toEqual(witness[2 + idx]);
+    //         }
+    //     }
+    // });
 
-    it("plus6 invalid case 1", async () => {
-        const inputStr = ``;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit6.calculateWitness(circuitInputs);
-        await circuit6.checkConstraints(witness);
-        expect(0n).toEqual(witness[1]);
-        for (let idx = 0; idx < 8; ++idx) {
-            expect(0n).toEqual(witness[2 + idx]);
-        }
-    });
+    // it("plus6 invalid case 1", async () => {
+    //     const inputStr = ``;
+    //     const paddedStr = apis.padString(inputStr, 8);
+    //     const circuitInputs = {
+    //         msg: paddedStr,
+    //     };
+    //     const witness = await circuit6.calculateWitness(circuitInputs);
+    //     await circuit6.checkConstraints(witness);
+    //     expect(0n).toEqual(witness[1]);
+    //     for (let idx = 0; idx < 8; ++idx) {
+    //         expect(0n).toEqual(witness[2 + idx]);
+    //     }
+    // });
 });

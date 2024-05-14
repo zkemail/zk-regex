@@ -262,13 +262,15 @@ pub fn regex_and_dfa(decomposed_regex: &DecomposedRegexConfig) -> RegexAndDFA {
     let mut substr_defs_array = Vec::new();
 
     for regex in decomposed_regex.parts.iter() {
+        let regex_str = regex.regex_def.as_str();
+        println!("{:?}", regex_str);
         let re = DFA::builder()
             .configure(config.clone())
-            .build(&format!(r"^{}$", regex.regex_def))
+            .build(&format!(r"^{}$", regex_str))
             .unwrap();
         let re_str = format!("{:?}", re);
         let mut graph = dfa_to_graph(&parse_dfa_output(&re_str));
-        // println!("{:?}", graph);
+        println!("{:?}", graph);
         // Find max state in net_dfa
         let mut max_state_index = 0;
         for state in net_dfa.states.iter() {
@@ -322,7 +324,7 @@ pub fn regex_and_dfa(decomposed_regex: &DecomposedRegexConfig) -> RegexAndDFA {
 
         net_dfa = add_dfa(&net_dfa, &graph);
     }
-    // println!("{:?}", net_dfa);
+    println!("{:?}", net_dfa);
 
     let mut regex_str = String::new();
     for regex in decomposed_regex.parts.iter() {

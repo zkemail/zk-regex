@@ -163,94 +163,83 @@ describe("Question Regex", () => {
         }
     });
 
-    // it("question2 valid case 1", async () => {
-    //     const inputStr = `b`;
-    //     const paddedStr = apis.padString(inputStr, 8);
-    //     const circuitInputs = {
-    //         msg: paddedStr,
-    //     };
-    //     const witness = await circuit2.calculateWitness(circuitInputs);
-    //     await circuit2.checkConstraints(witness);
-    //     expect(1n).toEqual(witness[1]);
-    //     const prefixIdxes = apis.extractSubstrIdxes(
-    //         inputStr,
-    //         readFileSync(
-    //             path.join(__dirname, "./circuits/question2.json"),
-    //             "utf8"
-    //         )
-    //     )[0];
-    //     for (let idx = 0; idx < 8; ++idx) {
-    //         if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-    //             expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-    //         } else {
-    //             expect(0n).toEqual(witness[2 + idx]);
-    //         }
-    //     }
-    // });
+    it("question2 valid case 1", async () => {
+        const inputStr = `12b`;
+        const paddedStr = apis.padString(inputStr, 8);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        const witness = await circuit2.calculateWitness(circuitInputs);
+        await circuit2.checkConstraints(witness);
+        expect(1n).toEqual(witness[1]);
+        const prefixIdxes = apis.extractSubstrIdxes(
+            inputStr,
+            readFileSync(
+                path.join(__dirname, "./circuits/question2.json"),
+                "utf8"
+            )
+        )[0];
+        for (let idx = 0; idx < 8; ++idx) {
+            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+            } else {
+                expect(0n).toEqual(witness[2 + idx]);
+            }
+        }
+    });
 
-    // it("question2 valid case 2", async () => {
-    //     const inputStr = `bb`;
-    //     const paddedStr = apis.padString(inputStr, 8);
-    //     const circuitInputs = {
-    //         msg: paddedStr,
-    //     };
-    //     const witness = await circuit2.calculateWitness(circuitInputs);
-    //     await circuit2.checkConstraints(witness);
-    //     expect(1n).toEqual(witness[1]);
-    //     const prefixIdxes = apis.extractSubstrIdxes(
-    //         inputStr,
-    //         readFileSync(
-    //             path.join(__dirname, "./circuits/question2.json"),
-    //             "utf8"
-    //         )
-    //     )[0];
-    //     for (let idx = 0; idx < 8; ++idx) {
-    //         if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-    //             expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-    //         } else {
-    //             expect(0n).toEqual(witness[2 + idx]);
-    //         }
-    //     }
-    // });
+    it("question2 valid case 2", async () => {
+        const inputStr = `11x2bb`;
+        const paddedStr = apis.padString(inputStr, 8);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        const witness = await circuit2.calculateWitness(circuitInputs);
+        await circuit2.checkConstraints(witness);
+        expect(1n).toEqual(witness[1]);
+        const prefixIdxes = apis.extractSubstrIdxes(
+            inputStr,
+            readFileSync(
+                path.join(__dirname, "./circuits/question2.json"),
+                "utf8"
+            )
+        )[0];
+        for (let idx = 0; idx < 8; ++idx) {
+            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+            } else {
+                expect(0n).toEqual(witness[2 + idx]);
+            }
+        }
+    });
 
-    // it("question2 valid case 3", async () => {
-    //     const inputStr = `719b98a3`;
-    //     const paddedStr = apis.padString(inputStr, 8);
-    //     const circuitInputs = {
-    //         msg: paddedStr,
-    //     };
-    //     const witness = await circuit2.calculateWitness(circuitInputs);
-    //     await circuit2.checkConstraints(witness);
-    //     expect(1n).toEqual(witness[1]);
-    //     const prefixIdxes = apis.extractSubstrIdxes(
-    //         inputStr,
-    //         readFileSync(
-    //             path.join(__dirname, "./circuits/question2.json"),
-    //             "utf8"
-    //         )
-    //     )[0];
-    //     for (let idx = 0; idx < 8; ++idx) {
-    //         if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-    //             expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-    //         } else {
-    //             expect(0n).toEqual(witness[2 + idx]);
-    //         }
-    //     }
-    // });
+    it("question2 invalid case 1", async () => {
+        const inputStr = `1x2`;
+        const paddedStr = apis.padString(inputStr, 8);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        const witness = await circuit2.calculateWitness(circuitInputs);
+        await circuit2.checkConstraints(witness);
+        expect(0n).toEqual(witness[1]);
+        for (let idx = 0; idx < 8; ++idx) {
+            expect(0n).toEqual(witness[2 + idx]);
+        }
+    });
 
-    // it("question2 invalid case 1", async () => {
-    //     const inputStr = `aaaaaaaa`;
-    //     const paddedStr = apis.padString(inputStr, 8);
-    //     const circuitInputs = {
-    //         msg: paddedStr,
-    //     };
-    //     const witness = await circuit2.calculateWitness(circuitInputs);
-    //     await circuit2.checkConstraints(witness);
-    //     expect(0n).toEqual(witness[1]);
-    //     for (let idx = 0; idx < 8; ++idx) {
-    //         expect(0n).toEqual(witness[2 + idx]);
-    //     }
-    // });
+    it("question2 invalid case 2", async () => {
+        const inputStr = `1xb`;
+        const paddedStr = apis.padString(inputStr, 8);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        const witness = await circuit2.calculateWitness(circuitInputs);
+        await circuit2.checkConstraints(witness);
+        expect(0n).toEqual(witness[1]);
+        for (let idx = 0; idx < 8; ++idx) {
+            expect(0n).toEqual(witness[2 + idx]);
+        }
+    });
 
     it("question3 valid case 1", async () => {
         const inputStr = `12c`;

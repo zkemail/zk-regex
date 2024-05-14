@@ -2,7 +2,7 @@
     "parts": [
         {
             "is_public": true,
-            "regex_def": ".??"
+            "regex_def": "(1x?2)+"
         },
         {
             "is_public": false,

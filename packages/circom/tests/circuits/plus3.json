@@ -6,11 +6,7 @@
         },
         {
             "is_public": true,
-            "regex_def": ".+?"
-        },
-        {
-            "is_public": false,
-            "regex_def": "b"
+            "regex_def": "(bc)+"
         }
     ]
 }

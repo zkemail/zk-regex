@@ -6,7 +6,6 @@ use crate::DFAGraph;
 use crate::RegexAndDFA;
 use std::collections::{BTreeMap, BTreeSet};
 
-use std::fmt::format;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
