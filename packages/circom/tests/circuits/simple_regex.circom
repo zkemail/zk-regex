@@ -23,13 +23,13 @@ template SimpleRegex(msg_bytes) {
 	from_zero_enabled[num_bytes] <== 0;
 	component state_changed[num_bytes];
 
-	for (var i = 0; i < 10; i++) {
+	for (var i = 1; i < 10; i++) {
 		states[0][i] <== 0;
 	}
 
 	for (var i = 0; i < num_bytes; i++) {
 		state_changed[i] = MultiOR(9);
-		states[i+1][0] <== 0;
+		states[i][0] <== 1;
 		eq[0][i] = IsEqual();
 		eq[0][i].in[0] <== in[i];
 		eq[0][i].in[1] <== 49;

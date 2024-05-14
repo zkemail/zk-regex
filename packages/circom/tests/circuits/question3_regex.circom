@@ -15,8 +15,8 @@ template Question3Regex(msg_bytes) {
 	}
 
 	component eq[5][num_bytes];
-	component and[4][num_bytes];
-	component multi_or[1][num_bytes];
+	component and[5][num_bytes];
+	component multi_or[2][num_bytes];
 	signal states[num_bytes+1][5];
 	signal states_tmp[num_bytes+1][5];
 	signal from_zero_enabled[num_bytes+1];
@@ -61,9 +61,15 @@ template Question3Regex(msg_bytes) {
 		eq[4][i].in[0] <== in[i];
 		eq[4][i].in[1] <== 99;
 		and[3][i] = AND();
-		and[3][i].a <== states[i][3];
+		and[3][i].a <== states[i][2];
 		and[3][i].b <== eq[4][i].out;
-		states[i+1][4] <== and[3][i].out;
+		and[4][i] = AND();
+		and[4][i].a <== states[i][3];
+		and[4][i].b <== eq[4][i].out;
+		multi_or[1][i] = MultiOR(2);
+		multi_or[1][i].in[0] <== and[3][i].out;
+		multi_or[1][i].in[1] <== and[4][i].out;
+		states[i+1][4] <== multi_or[1][i].out;
 		from_zero_enabled[i] <== MultiNOR(4)([states_tmp[i+1][1], states[i+1][2], states[i+1][3], states[i+1][4]]);
 		states[i+1][1] <== MultiOR(2)([states_tmp[i+1][1], from_zero_enabled[i] * and[0][i].out]);
 		state_changed[i].in[0] <== states[i+1][1];

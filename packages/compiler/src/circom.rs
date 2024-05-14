@@ -15,7 +15,7 @@ fn gen_circom_allstr(dfa_graph: &DFAGraph, template_name: &str, regex_str: &str)
     let n = dfa_graph.states.len();
     let mut rev_graph = BTreeMap::<usize, BTreeMap<usize, Vec<u8>>>::new();
     let mut to_init_graph = vec![];
-    let mut init_going_state: Option<usize> = None;
+    // let mut init_going_state: Option<usize> = None;
 
     for i in 0..n {
         rev_graph.insert(i, BTreeMap::new());
@@ -31,10 +31,10 @@ fn gen_circom_allstr(dfa_graph: &DFAGraph, template_name: &str, regex_str: &str)
             rev_graph.get_mut(k).unwrap().insert(i, chars.clone());
 
             if i == 0 {
-                if let Some(index) = chars.iter().position(|&x| x == 94) {
-                    init_going_state = Some(*k);
-                    rev_graph.get_mut(&k).unwrap().get_mut(&i).unwrap()[index] = 255;
-                }
+                // if let Some(index) = chars.iter().position(|&x| x == 94) {
+                //     init_going_state = Some(*k);
+                //     rev_graph.get_mut(&k).unwrap().get_mut(&i).unwrap()[index] = 255;
+                // }
 
                 for j in rev_graph.get(&k).unwrap().get(&i).unwrap() {
                     if *j == 255 {
@@ -50,32 +50,32 @@ fn gen_circom_allstr(dfa_graph: &DFAGraph, template_name: &str, regex_str: &str)
         }
     }
 
-    if let Some(init_going_state) = init_going_state {
-        for (going_state, chars) in to_init_graph.iter().enumerate() {
-            if chars.is_empty() {
-                continue;
-            }
+    // if let Some(init_going_state) = init_going_state {
+    //     for (going_state, chars) in to_init_graph.iter().enumerate() {
+    //         if chars.is_empty() {
+    //             continue;
+    //         }
 
-            if rev_graph
-                .get_mut(&(going_state as usize))
-                .unwrap()
-                .get_mut(&init_going_state)
-                .is_none()
-            {
-                rev_graph
-                    .get_mut(&(going_state as usize))
-                    .unwrap()
-                    .insert(init_going_state, vec![]);
-            }
+    //         if rev_graph
+    //             .get_mut(&(going_state as usize))
+    //             .unwrap()
+    //             .get_mut(&init_going_state)
+    //             .is_none()
+    //         {
+    //             rev_graph
+    //                 .get_mut(&(going_state as usize))
+    //                 .unwrap()
+    //                 .insert(init_going_state, vec![]);
+    //         }
 
-            rev_graph
-                .get_mut(&(going_state as usize))
-                .unwrap()
-                .get_mut(&init_going_state)
-                .unwrap()
-                .extend_from_slice(chars);
-        }
-    }
+    //         rev_graph
+    //             .get_mut(&(going_state as usize))
+    //             .unwrap()
+    //             .get_mut(&init_going_state)
+    //             .unwrap()
+    //             .extend_from_slice(chars);
+    //     }
+    // }
 
     if accept_nodes.is_empty() {
         panic!("Accept node must exist");
