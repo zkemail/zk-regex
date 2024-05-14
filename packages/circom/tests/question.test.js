@@ -229,7 +229,6 @@ describe("Question Regex", () => {
                 "utf8"
             )
         )[0];
-        console.log(prefixIdxes);
         for (let idx = 0; idx < 8; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
                 expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);

@@ -31,7 +31,7 @@ template Asterisk1Regex(msg_bytes) {
 		states[i][0] <== 1;
 		eq[0][i] = IsEqual();
 		eq[0][i].in[0] <== in[i];
-		eq[0][i].in[1] <== 1;
+		eq[0][i].in[1] <== 98;
 		and[0][i] = AND();
 		and[0][i].a <== states[i][0];
 		and[0][i].b <== eq[0][i].out;

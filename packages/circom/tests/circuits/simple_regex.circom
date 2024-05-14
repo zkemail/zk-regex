@@ -23,13 +23,13 @@ template SimpleRegex(msg_bytes) {
 	from_zero_enabled[num_bytes] <== 0;
 	component state_changed[num_bytes];
 
-	for (var i = 1; i < 10; i++) {
+	for (var i = 0; i < 10; i++) {
 		states[0][i] <== 0;
 	}
 
 	for (var i = 0; i < num_bytes; i++) {
 		state_changed[i] = MultiOR(9);
-		states[i][0] <== 1;
+		states[i+1][0] <== 0;
 		eq[0][i] = IsEqual();
 		eq[0][i].in[0] <== in[i];
 		eq[0][i].in[1] <== 49;
@@ -127,7 +127,7 @@ template SimpleRegex(msg_bytes) {
 	}
 	out <== final_state_result.out;
 	signal is_consecutive[msg_bytes+1][3];
-	is_consecutive[msg_bytes][2] <== 1;
+	is_consecutive[msg_bytes][2] <== 0;
 	for (var i = 0; i < msg_bytes; i++) {
 		is_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][9] * (1 - is_consecutive[msg_bytes-i][2]) + is_consecutive[msg_bytes-i][2];
 		is_consecutive[msg_bytes-1-i][1] <== state_changed[msg_bytes-i].out * is_consecutive[msg_bytes-1-i][0];

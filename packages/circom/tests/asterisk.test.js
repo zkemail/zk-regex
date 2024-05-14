@@ -120,7 +120,7 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk1.json"),
+                path.join(__dirname, "./circuits/asterisk1.json"),
                 "utf8"
             )
         )[0];
@@ -145,7 +145,7 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk1.json"),
+                path.join(__dirname, "./circuits/asterisk1.json"),
                 "utf8"
             )
         )[0];
@@ -170,7 +170,7 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk1.json"),
+                path.join(__dirname, "./circuits/asterisk1.json"),
                 "utf8"
             )
         )[0];
@@ -195,7 +195,7 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk1.json"),
+                path.join(__dirname, "./circuits/asterisk1.json"),
                 "utf8"
             )
         )[0];
@@ -221,7 +221,7 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk1.json"),
+                path.join(__dirname, "./circuits/asterisk1.json"),
                 "utf8"
             )
         )[0];
@@ -262,7 +262,7 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk2.json"),
+                path.join(__dirname, "./circuits/asterisk2.json"),
                 "utf8"
             )
         )[0];
@@ -287,7 +287,7 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk2.json"),
+                path.join(__dirname, "./circuits/asterisk2.json"),
                 "utf8"
             )
         )[0];
@@ -312,7 +312,7 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk2.json"),
+                path.join(__dirname, "./circuits/asterisk2.json"),
                 "utf8"
             )
         )[0];
@@ -338,7 +338,7 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk2.json"),
+                path.join(__dirname, "./circuits/asterisk2.json"),
                 "utf8"
             )
         )[0];
@@ -363,7 +363,7 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk2.json"),
+                path.join(__dirname, "./circuits/asterisk2.json"),
                 "utf8"
             )
         )[0];
@@ -384,7 +384,7 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk2.json"),
+                path.join(__dirname, "./circuits/asterisk2.json"),
                 "utf8"
             )
         )[0];
@@ -405,7 +405,7 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk3.json"),
+                path.join(__dirname, "./circuits/asterisk3.json"),
                 "utf8"
             )
         )[0];
@@ -430,7 +430,7 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk3.json"),
+                path.join(__dirname, "./circuits/asterisk3.json"),
                 "utf8"
             )
         )[0];
@@ -455,7 +455,7 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk3.json"),
+                path.join(__dirname, "./circuits/asterisk3.json"),
                 "utf8"
             )
         )[0];
@@ -508,7 +508,7 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk4.json"),
+                path.join(__dirname, "./circuits/asterisk4.json"),
                 "utf8"
             )
         )[0];
@@ -547,7 +547,7 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk5.json"),
+                path.join(__dirname, "./circuits/asterisk5.json"),
                 "utf8"
             )
         )[0];
@@ -572,7 +572,7 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk5.json"),
+                path.join(__dirname, "./circuits/asterisk5.json"),
                 "utf8"
             )
         )[0];
@@ -611,7 +611,7 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk6.json"),
+                path.join(__dirname, "./circuits/asterisk6.json"),
                 "utf8"
             )
         )[0];
@@ -636,7 +636,7 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk6.json"),
+                path.join(__dirname, "./circuits/asterisk6.json"),
                 "utf8"
             )
         )[0];
@@ -661,7 +661,7 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/asterisk6.json"),
+                path.join(__dirname, "./circuits/asterisk6.json"),
                 "utf8"
             )
         )[0];
