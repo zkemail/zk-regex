@@ -13,7 +13,7 @@ use crate::regex::*;
 use itertools::Itertools;
 use petgraph::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::PathBuf;
 use thiserror::Error;
 
@@ -31,7 +31,7 @@ pub enum CompilerError {
 /// A configuration of decomposed regexes.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DecomposedRegexConfig {
-    pub parts: Vec<RegexPartConfig>,
+    pub parts: VecDeque<RegexPartConfig>,
 }
 
 /// Decomposed regex part.
@@ -64,7 +64,7 @@ pub struct DFAState {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DFAGraph {
-    states: Vec<DFAState>,
+    pub states: Vec<DFAState>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -89,7 +89,7 @@ pub struct SubstrsDefsJson {
 }
 
 impl DecomposedRegexConfig {
-    pub fn to_regex_and_dfa(&self) -> Result<RegexAndDFA, CompilerError> {
+    pub fn to_regex_and_dfa(&mut self) -> Result<RegexAndDFA, CompilerError> {
         Ok(regex_and_dfa(self))
     }
 }
@@ -127,7 +127,7 @@ pub fn gen_from_decomposed(
     circom_template_name: Option<&str>,
     gen_substrs: Option<bool>,
 ) {
-    let decomposed_regex_config: DecomposedRegexConfig =
+    let mut decomposed_regex_config: DecomposedRegexConfig =
         serde_json::from_reader(File::open(decomposed_regex_path).unwrap()).unwrap();
     let regex_and_dfa = decomposed_regex_config
         .to_regex_and_dfa()

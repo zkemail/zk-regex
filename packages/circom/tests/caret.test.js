@@ -104,7 +104,7 @@ describe("Caret Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/caret1.json"),
+                path.join(__dirname, "./circuits/caret1.json"),
                 "utf8"
             )
         )[0];
@@ -129,7 +129,7 @@ describe("Caret Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/caret1.json"),
+                path.join(__dirname, "./circuits/caret1.json"),
                 "utf8"
             )
         )[0];
@@ -150,7 +150,7 @@ describe("Caret Regex", () => {
         };
         const witness = await circuit1.calculateWitness(circuitInputs);
         await circuit1.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
+        expect(0n).toEqual(witness[1]);
         for (let idx = 0; idx < 8; ++idx) {
             expect(0n).toEqual(witness[2 + idx]);
         }
@@ -164,7 +164,7 @@ describe("Caret Regex", () => {
         };
         const witness = await circuit1.calculateWitness(circuitInputs);
         await circuit1.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
+        expect(0n).toEqual(witness[1]);
         for (let idx = 0; idx < 8; ++idx) {
             expect(0n).toEqual(witness[2 + idx]);
         }
@@ -183,7 +183,7 @@ describe("Caret Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/caret2.json"),
+                path.join(__dirname, "./circuits/caret2.json"),
                 "utf8"
             )
         )[0];
@@ -208,7 +208,7 @@ describe("Caret Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/caret2.json"),
+                path.join(__dirname, "./circuits/caret2.json"),
                 "utf8"
             )
         )[0];
@@ -233,7 +233,7 @@ describe("Caret Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/caret2.json"),
+                path.join(__dirname, "./circuits/caret2.json"),
                 "utf8"
             )
         )[0];
@@ -254,14 +254,14 @@ describe("Caret Regex", () => {
         };
         const witness = await circuit2.calculateWitness(circuitInputs);
         await circuit2.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
+        expect(0n).toEqual(witness[1]);
         for (let idx = 0; idx < 8; ++idx) {
             expect(0n).toEqual(witness[2 + idx]);
         }
     });
 
     it("caret3 valid case 1", async () => {
-        const inputStr = `a7hv8a9b`;
+        const inputStr = `bb817267`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
@@ -272,7 +272,32 @@ describe("Caret Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/caret3.json"),
+                path.join(__dirname, "./circuits/caret3.json"),
+                "utf8"
+            )
+        )[0];
+        for (let idx = 0; idx < 8; ++idx) {
+            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+            } else {
+                expect(0n).toEqual(witness[2 + idx]);
+            }
+        }
+    });
+
+    it("caret3 valid case 2", async () => {
+        const inputStr = `818abbb9`;
+        const paddedStr = apis.padString(inputStr, 8);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        const witness = await circuit3.calculateWitness(circuitInputs);
+        await circuit3.checkConstraints(witness);
+        expect(1n).toEqual(witness[1]);
+        const prefixIdxes = apis.extractSubstrIdxes(
+            inputStr,
+            readFileSync(
+                path.join(__dirname, "./circuits/caret3.json"),
                 "utf8"
             )
         )[0];
@@ -286,32 +311,21 @@ describe("Caret Regex", () => {
     });
 
     it("caret3 invalid case 1", async () => {
-        const inputStr = ``;
+        const inputStr = `81b`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
         };
         const witness = await circuit3.calculateWitness(circuitInputs);
         await circuit3.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        const prefixIdxes = apis.extractSubstrIdxes(
-            inputStr,
-            readFileSync(
-                path.join(__dirname, "../circuits/common/caret3.json"),
-                "utf8"
-            )
-        )[0];
+        expect(0n).toEqual(witness[1]);
         for (let idx = 0; idx < 8; ++idx) {
-            if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-                expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-            } else {
-                expect(0n).toEqual(witness[2 + idx]);
-            }
+            expect(0n).toEqual(witness[2 + idx]);
         }
     });
 
     it("caret4 valid case 1", async () => {
-        const inputStr = `abaaabba`;
+        const inputStr = `xabaaabb`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
@@ -322,7 +336,7 @@ describe("Caret Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/caret4.json"),
+                path.join(__dirname, "./circuits/caret4.json"),
                 "utf8"
             )
         )[0];
@@ -336,7 +350,7 @@ describe("Caret Regex", () => {
     });
 
     it("caret4 valid case 2", async () => {
-        const inputStr = `baab82ab`;
+        const inputStr = `xbaab82a`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
@@ -347,7 +361,7 @@ describe("Caret Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/caret4.json"),
+                path.join(__dirname, "./circuits/caret4.json"),
                 "utf8"
             )
         )[0];
@@ -361,7 +375,7 @@ describe("Caret Regex", () => {
     });
 
     it("caret4 valid case 3", async () => {
-        const inputStr = `7w1\nabba`;
+        const inputStr = `7w1\nxabb`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
@@ -372,7 +386,7 @@ describe("Caret Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/caret4.json"),
+                path.join(__dirname, "./circuits/caret4.json"),
                 "utf8"
             )
         )[0];
@@ -386,7 +400,7 @@ describe("Caret Regex", () => {
     });
 
     it("caret4 valid case 4", async () => {
-        const inputStr = `7w\nbbba9`;
+        const inputStr = `7w\nxbbb9`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
@@ -397,7 +411,7 @@ describe("Caret Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/caret4.json"),
+                path.join(__dirname, "./circuits/caret4.json"),
                 "utf8"
             )
         )[0];
@@ -412,35 +426,35 @@ describe("Caret Regex", () => {
 
 
     it("caret4 invalid case 1", async () => {
-        const inputStr = `7w1nabba`;
+        const inputStr = `7w1nxaba`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
         };
         const witness = await circuit4.calculateWitness(circuitInputs);
         await circuit4.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
+        expect(0n).toEqual(witness[1]);
         for (let idx = 0; idx < 8; ++idx) {
             expect(0n).toEqual(witness[2 + idx]);
         }
     });
 
     it("caret4 invalid case 2", async () => {
-        const inputStr = `7wnbbba9`;
+        const inputStr = `abba\nx`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
         };
         const witness = await circuit4.calculateWitness(circuitInputs);
         await circuit4.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
+        expect(0n).toEqual(witness[1]);
         for (let idx = 0; idx < 8; ++idx) {
             expect(0n).toEqual(witness[2 + idx]);
         }
     });
 
     it("caret5 valid case 1", async () => {
-        const inputStr = `defabc81`;
+        const inputStr = `xdefabc1`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
@@ -451,7 +465,7 @@ describe("Caret Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/caret5.json"),
+                path.join(__dirname, "./circuits/caret5.json"),
                 "utf8"
             )
         )[0];
@@ -465,7 +479,7 @@ describe("Caret Regex", () => {
     });
 
     it("caret5 valid case 2", async () => {
-        const inputStr = `91\n9eabc`;
+        const inputStr = `9\nx9eabc`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
@@ -476,7 +490,7 @@ describe("Caret Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "../circuits/common/caret5.json"),
+                path.join(__dirname, "./circuits/caret5.json"),
                 "utf8"
             )
         )[0];
@@ -490,21 +504,36 @@ describe("Caret Regex", () => {
     });
 
     it("caret5 invalid case 1", async () => {
-        const inputStr = `abc`;
+        const inputStr = `xabc`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
             msg: paddedStr,
         };
         const witness = await circuit5.calculateWitness(circuitInputs);
         await circuit5.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
+        expect(0n).toEqual(witness[1]);
+        for (let idx = 0; idx < 8; ++idx) {
+            expect(0n).toEqual(witness[2 + idx]);
+        }
+    });
+
+    it("caret5 invalid case 2", async () => {
+        const inputStr = `1\ndef`;
+        const paddedStr = apis.padString(inputStr, 8);
+        const circuitInputs = {
+            msg: paddedStr,
+        };
+        const witness = await circuit5.calculateWitness(circuitInputs);
+        await circuit5.checkConstraints(witness);
+        expect(0n).toEqual(witness[1]);
         for (let idx = 0; idx < 8; ++idx) {
             expect(0n).toEqual(witness[2 + idx]);
         }
     });
 
 
-    it("caret5 invalid case 2", async () => {
+
+    it("caret5 invalid case 3", async () => {
         const inputStr = `a8abc8`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
@@ -512,13 +541,13 @@ describe("Caret Regex", () => {
         };
         const witness = await circuit5.calculateWitness(circuitInputs);
         await circuit5.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
+        expect(0n).toEqual(witness[1]);
         for (let idx = 0; idx < 8; ++idx) {
             expect(0n).toEqual(witness[2 + idx]);
         }
     });
 
-    it("caret5 invalid case 2", async () => {
+    it("caret5 invalid case 4", async () => {
         const inputStr = `71\na81ma`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
@@ -526,24 +555,10 @@ describe("Caret Regex", () => {
         };
         const witness = await circuit5.calculateWitness(circuitInputs);
         await circuit5.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
+        expect(0n).toEqual(witness[1]);
         for (let idx = 0; idx < 8; ++idx) {
             expect(0n).toEqual(witness[2 + idx]);
         }
     });
 
-
-    it("caret5 invalid case 3", async () => {
-        const inputStr = `91n9eabc`;
-        const paddedStr = apis.padString(inputStr, 8);
-        const circuitInputs = {
-            msg: paddedStr,
-        };
-        const witness = await circuit5.calculateWitness(circuitInputs);
-        await circuit5.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
-        for (let idx = 0; idx < 8; ++idx) {
-            expect(0n).toEqual(witness[2 + idx]);
-        }
-    });
 });

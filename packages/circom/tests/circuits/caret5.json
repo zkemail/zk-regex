@@ -1,8 +1,12 @@
 {
     "parts": [
         {
+            "is_public": false,
+            "regex_def": "(\n|^)x"
+        },
+        {
             "is_public": true,
-            "regex_def": "(\n|^)[^abc]+"
+            "regex_def": "[^abc]+"
         }
     ]
 }

@@ -1,4 +1,4 @@
-use crate::{DFAGraph, DFAState, DecomposedRegexConfig, RegexAndDFA, SubstrsDefs};
+use crate::{DFAGraph, DFAState, DecomposedRegexConfig, RegexAndDFA, RegexPartConfig, SubstrsDefs};
 use regex::Regex;
 use regex_automata::dfa::{dense::DFA, StartKind};
 use std::collections::{BTreeMap, BTreeSet};
@@ -252,7 +252,7 @@ fn add_dfa(net_dfa: &DFAGraph, graph: &DFAGraph) -> DFAGraph {
     net_dfa
 }
 
-pub fn regex_and_dfa(decomposed_regex: &DecomposedRegexConfig) -> RegexAndDFA {
+pub fn regex_and_dfa(decomposed_regex: &mut DecomposedRegexConfig) -> RegexAndDFA {
     let mut config = DFA::config().minimize(true);
     config = config.start_kind(StartKind::Anchored);
     config = config.byte_classes(false);
@@ -260,17 +260,87 @@ pub fn regex_and_dfa(decomposed_regex: &DecomposedRegexConfig) -> RegexAndDFA {
 
     let mut net_dfa = DFAGraph { states: Vec::new() };
     let mut substr_defs_array = Vec::new();
+    
+    let caret_regex_index = {
+        let first_regex = decomposed_regex.parts[0].regex_def.as_bytes();
+        let mut is_in_parenthesis = false;
+        let mut caret_found = false;
+        let mut idx = 0;
+        while idx < first_regex.len() {
+            let byte = first_regex[idx];
+            if byte == b'\\' {
+                idx += 2;
+            } else if byte == b'(' {
+                is_in_parenthesis = true;
+                idx += 1;
+            } else if byte == b'[' {
+                idx += 2;
+            } else if byte == b')' {
+                debug_assert!(is_in_parenthesis, "Unmatched parenthesis");
+                is_in_parenthesis = false;
+                idx += 1;
+                if caret_found {
+                    break;
+                }
+            } else if byte == b'^' {
+                caret_found = true;
+                idx += 1;
+                if !is_in_parenthesis {
+                    break;
+                }
+            } else {
+                idx += 1;
+            }
+        }
 
-    for regex in decomposed_regex.parts.iter() {
-        let regex_str = regex.regex_def.as_str();
-        println!("{:?}", regex_str);
+        if caret_found {
+            Some(idx)
+        } else {
+            None
+        }
+    };
+    if let Some(index) = caret_regex_index {
+        let caret_regex = decomposed_regex.parts[0].regex_def[0..index].to_string();
+        decomposed_regex.parts.push_front(RegexPartConfig {
+            is_public: false,
+            regex_def: caret_regex,
+        });
+        decomposed_regex.parts[1].regex_def = decomposed_regex.parts[1].regex_def[index..].to_string();
+    }
+
+    for (idx, regex) in decomposed_regex.parts.iter().enumerate() {
         let re = DFA::builder()
             .configure(config.clone())
-            .build(&format!(r"^{}$", regex_str))
+            .build(&format!(r"^{}$", regex.regex_def.as_str()))
             .unwrap();
         let re_str = format!("{:?}", re);
         let mut graph = dfa_to_graph(&parse_dfa_output(&re_str));
-        println!("{:?}", graph);
+        if idx == 0 && caret_regex_index.is_some() {
+            if regex.regex_def.as_str() == "^" {
+                graph = DFAGraph {
+                    states: vec![
+                        DFAState {
+                            r#type: "".to_string(),
+                            edges: BTreeMap::from([(1, BTreeSet::from([255u8]))]),
+                            state: 0,
+                        },
+                        DFAState {
+                            r#type: "accept".to_string(),
+                            edges: BTreeMap::new(),
+                            state: 1,
+                        }
+                    ],
+                }
+            } else {
+                if let Some(edge) = graph.states[0].edges.get_mut(&1) {
+                    edge.insert(255u8);
+                } else {
+                    graph.states[0].edges.insert(1, BTreeSet::from([255u8]));
+                }
+                graph.states[0].r#type = "".to_string();
+            }
+        }
+        // println!("{:?}", graph);
         // Find max state in net_dfa
         let mut max_state_index = 0;
         for state in net_dfa.states.iter() {
@@ -324,7 +394,7 @@ pub fn regex_and_dfa(decomposed_regex: &DecomposedRegexConfig) -> RegexAndDFA {
 
         net_dfa = add_dfa(&net_dfa, &graph);
     }
-    println!("{:?}", net_dfa);
+    // println!("{:?}", net_dfa);
 
     let mut regex_str = String::new();
     for regex in decomposed_regex.parts.iter() {
