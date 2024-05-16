@@ -29,7 +29,7 @@ fn parse_dfa_output(output: &str) -> DFAGraphInfo {
         if &captures[0][0..1] == "*" {
             state.typ = String::from("accept");
         }
-        for transition in Regex::new(r"\s+[^=]+\s*=>\s*(\d+)+\s*|\s+=+\s*=>\s*(\d+)+")
+        for transition in Regex::new(r"\s+[^=]+\s*=>\s*(\d+)+\s*|\s+=+\s*=>\s*(\d+)+|\s+=-[^=]+=>\s*\s*(\d+)+\s*|\s+[^=]+-=\s*=>\s*(\d+)+\s*")
             .unwrap()
             .captures_iter(&captures[0].to_string())
         {

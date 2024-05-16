@@ -221,10 +221,9 @@ describe("To Addr Regex", () => {
     const circuitInputs = {
       msg: paddedStr,
     };
-    const witness = await circuit.calculateWitness(circuitInputs);
-    await circuit.checkConstraints(witness);
-    for (let idx = 0; idx < 1024; ++idx) {
-      expect(0n).toEqual(witness[2 + idx]);
+    async function failFn() {
+      await circuit.calculateWitness(circuitInputs);
     }
+    await expect(failFn).rejects.toThrow();
   });
 });
