@@ -6,7 +6,7 @@
         },
         {
             "is_public": true,
-            "regex_def": ".*"
+            "regex_def": "(x|y)*"
         },
         {
             "is_public": false,

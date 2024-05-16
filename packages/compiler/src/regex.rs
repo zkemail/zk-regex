@@ -332,12 +332,13 @@ pub fn regex_and_dfa(decomposed_regex: &mut DecomposedRegexConfig) -> RegexAndDF
                     ],
                 }
             } else {
-                if let Some(edge) = graph.states[0].edges.get_mut(&1) {
+                graph.states[0].r#type = "".to_string();
+                let accepted_state = graph.states.iter().find(|state| state.r#type == "accept").unwrap().clone();
+                if let Some(edge) = graph.states[0].edges.get_mut(&accepted_state.state) {
                     edge.insert(255u8);
                 } else {
-                    graph.states[0].edges.insert(1, BTreeSet::from([255u8]));
+                    graph.states[0].edges.insert(accepted_state.state, BTreeSet::from([255u8]));
                 }
-                graph.states[0].r#type = "".to_string();
             }
         }
         // println!("{:?}", graph);

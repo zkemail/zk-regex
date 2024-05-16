@@ -2,7 +2,7 @@ pragma circom 2.1.5;
 
 include "@zk-email/zk-regex-circom/circuits/regex_helpers.circom";
 
-// regex: [A-Za-z0-9!#$%&'*+=?^_`{|}~.]+@[A-Za-z0-9.-]+
+// regex: [A-Za-z0-9!#$%&'*+=?\^_`{|}~.]+@[A-Za-z0-9.-]+
 template EmailAddrRegex(msg_bytes) {
 	signal input msg[msg_bytes];
 	signal output out;
@@ -207,12 +207,18 @@ template EmailAddrRegex(msg_bytes) {
 		is_consecutive[msg_bytes-1-i][2] <== ORAnd()([(1 - from_zero_enabled[msg_bytes-i+1]), states[num_bytes-i][3], is_consecutive[msg_bytes-1-i][1]]);
 	}
 	// substrings calculated: [{(0, 1), (1, 1), (1, 2), (2, 3), (3, 3)}]
+	signal prev_states0[5][msg_bytes];
 	signal is_substr0[msg_bytes];
 	signal is_reveal0[msg_bytes];
 	signal output reveal0[msg_bytes];
 	for (var i = 0; i < msg_bytes; i++) {
 		 // the 0-th substring transitions: [(0, 1), (1, 1), (1, 2), (2, 3), (3, 3)]
-		is_substr0[i] <== MultiOR(5)([states[i+1][0] * states[i+2][1], states[i+1][1] * states[i+2][1], states[i+1][1] * states[i+2][2], states[i+1][2] * states[i+2][3], states[i+1][3] * states[i+2][3]]);
+		prev_states0[0][i] <== from_zero_enabled[i+1] * states[i+1][0];
+		prev_states0[1][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][1];
+		prev_states0[2][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][1];
+		prev_states0[3][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][2];
+		prev_states0[4][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][3];
+		is_substr0[i] <== MultiOR(5)([prev_states0[0][i] * states[i+2][1], prev_states0[1][i] * states[i+2][1], prev_states0[2][i] * states[i+2][2], prev_states0[3][i] * states[i+2][3], prev_states0[4][i] * states[i+2][3]]);
 		is_reveal0[i] <== is_substr0[i] * is_consecutive[i][2];
 		reveal0[i] <== in[i+1] * is_reveal0[i];
 	}

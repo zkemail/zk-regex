@@ -2,7 +2,7 @@
   "parts": [
     {
       "is_public": false,
-      "regex_def": "((\r\n)|^)subject:"
+      "regex_def": "(\r\n|^)subject:"
     },
     {
       "is_public": true,

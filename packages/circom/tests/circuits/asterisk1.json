@@ -1,6 +1,10 @@
 {
     "parts": [
         {
+            "is_public": false,
+            "regex_def": "x"
+        },
+        {
             "is_public": true,
             "regex_def": "a*"
         },

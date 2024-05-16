@@ -1,3 +1,3 @@
-include "./circuits/asterisk4_regex.circom";
+include "./asterisk4_regex.circom";
 
 component main = Asterisk4Regex(8);

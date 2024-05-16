@@ -67,4 +67,19 @@ describe("Timestamp Regex", () => {
       }
     }
   });
+
+
+  it("invalid timestamp", async () => {
+    const signatureField = `to:dkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20230601; t=1694989812; x=1695594612; dara=google.com; h=to:subject:message-id:date:from:mime-version:from:to:cc:subject :date:message-id:reply-to; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=`;
+    const paddedStr = apis.padString(signatureField, 1024);
+    const circuitInputs = {
+      msg: paddedStr,
+    };
+    const witness = await circuit.calculateWitness(circuitInputs);
+    await circuit.checkConstraints(witness);
+    expect(0n).toEqual(witness[1]);
+    for (let idx = 0; idx < 1024; ++idx) {
+      expect(0n).toEqual(witness[2 + idx]);
+    }
+  });
 });
