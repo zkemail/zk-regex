@@ -31,7 +31,7 @@ pub fn genFromRaw(rawRegex: &str, substrsJson: &str, circomTemplateName: &str) -
 #[allow(non_snake_case)]
 pub fn genRegexAndDfa(decomposedRegex: JsValue) -> JsValue {
     let mut decomposed_regex_config: DecomposedRegexConfig = from_value(decomposedRegex).unwrap();
-    let regex_and_dfa = regex_and_dfa(&mut decomposed_regex_config);
+    let regex_and_dfa = regex_and_dfa(&mut decomposed_regex_config).unwrap();
     let dfa_val_str = serde_json::to_string(&regex_and_dfa).unwrap();
     JsValue::from_str(&dfa_val_str)
 }
@@ -42,6 +42,7 @@ pub fn genCircom(decomposedRegex: JsValue, circomTemplateName: &str) -> String {
     let mut decomposed_regex_config: DecomposedRegexConfig = from_value(decomposedRegex).unwrap();
     let regex_and_dfa = regex_and_dfa(&mut decomposed_regex_config);
     regex_and_dfa
+        .expect("failed to convert the decomposed regex to dfa")
         .gen_circom_str(&circomTemplateName)
         .expect("failed to generate circom")
 }

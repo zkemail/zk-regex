@@ -1,3 +1,4 @@
+use super::CompilerError;
 use crate::{DFAGraph, DFAState, DecomposedRegexConfig, RegexAndDFA, RegexPartConfig, SubstrsDefs};
 use regex::Regex;
 use regex_automata::dfa::{dense::DFA, StartKind};
@@ -252,7 +253,9 @@ fn add_dfa(net_dfa: &DFAGraph, graph: &DFAGraph) -> DFAGraph {
     net_dfa
 }
 
-pub fn regex_and_dfa(decomposed_regex: &mut DecomposedRegexConfig) -> RegexAndDFA {
+pub fn regex_and_dfa(
+    decomposed_regex: &mut DecomposedRegexConfig,
+) -> Result<RegexAndDFA, CompilerError> {
     let mut config = DFA::config().minimize(true);
     config = config.start_kind(StartKind::Anchored);
     config = config.byte_classes(false);
@@ -316,7 +319,9 @@ pub fn regex_and_dfa(decomposed_regex: &mut DecomposedRegexConfig) -> RegexAndDF
             1 => regex.regex_def.ends_with("$"),
             2 => {
                 if idx == 0 && regex.regex_def.ends_with("$") {
-                    panic!("Invalid regex");
+                    return Err(CompilerError::GenericError(
+                        "Invalid regex, $ can only be at the end of the regex".to_string(),
+                    ));
                 }
                 idx == 1 && regex.regex_def.ends_with("$")
             }
@@ -324,7 +329,9 @@ pub fn regex_and_dfa(decomposed_regex: &mut DecomposedRegexConfig) -> RegexAndDF
                 0 | _ if idx == decomposed_regex.parts.len() - 1 => {
                     if regex.regex_def.ends_with("$") {
                         if idx == 0 {
-                            panic!("Invalid regex");
+                            return Err(CompilerError::GenericError(
+                                "Invalid regex, $ can only be at the end of the regex".to_string(),
+                            ));
                         }
                         true
                     } else {
@@ -336,9 +343,14 @@ pub fn regex_and_dfa(decomposed_regex: &mut DecomposedRegexConfig) -> RegexAndDF
         };
         let re = DFA::builder()
             .configure(config.clone())
-            .build(&format!(r"^({})$", regex.regex_def.as_str()))
-            .unwrap();
-        let re_str = format!("{:?}", re);
+            .build(&format!(r"^({})$", regex.regex_def.as_str()));
+        if re.is_err() {
+            return Err(CompilerError::GenericError(format!(
+                "Failed to build DFA for regex: "{}", please check your regex",
+                regex.regex_def
+            )));
+        }
+        let re_str = format!("{:?}", re.unwrap());
         // println!("{:?}", re_str);
         let mut graph = dfa_to_graph(&parse_dfa_output(&re_str));
         if idx == 0 && caret_regex_index.is_some() {
@@ -435,7 +447,7 @@ pub fn regex_and_dfa(decomposed_regex: &mut DecomposedRegexConfig) -> RegexAndDF
         regex_str += &regex.regex_def;
     }
 
-    RegexAndDFA {
+    Ok(RegexAndDFA {
         regex_str: regex_str,
         dfa_val: net_dfa,
         end_anchor,
@@ -443,7 +455,7 @@ pub fn regex_and_dfa(decomposed_regex: &mut DecomposedRegexConfig) -> RegexAndDF
             substr_defs_array: substr_defs_array,
             substr_endpoints_array: None,
         },
-    }
+    })
 }
 
 pub fn dfa_from_regex_str(regex: &str) -> DFAGraph {
