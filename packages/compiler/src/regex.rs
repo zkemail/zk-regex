@@ -327,8 +327,11 @@ pub fn regex_and_dfa(decomposed_regex: &mut DecomposedRegexConfig) -> RegexAndDF
                             panic!("Invalid regex");
                         }
                         true
+                    } else {
+                        false
                     }
                 }
+                _ => false,
             },
         };
         let re = DFA::builder()
