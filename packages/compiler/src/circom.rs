@@ -116,6 +116,7 @@ fn gen_circom_allstr(dfa_graph: &DFAGraph, template_name: &str, regex_str: &str)
                 zero_starting_states.push(i);
             }
             let mut k = k.clone();
+            k.retain(|&x| x != 0);
             k.sort();
 
             let mut eq_outputs = vec![];

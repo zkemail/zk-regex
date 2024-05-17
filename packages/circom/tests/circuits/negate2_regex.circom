@@ -2,8 +2,8 @@ pragma circom 2.1.5;
 
 include "@zk-email/zk-regex-circom/circuits/regex_helpers.circom";
 
-// regex: .
-template Dot1Regex(msg_bytes) {
+// regex: [^ab]
+template Negate2Regex(msg_bytes) {
 	signal input msg[msg_bytes];
 	signal output out;
 
@@ -14,9 +14,9 @@ template Dot1Regex(msg_bytes) {
 		in[i+1] <== msg[i];
 	}
 
-	component eq[46][num_bytes];
-	component lt[12][num_bytes];
-	component and[21][num_bytes];
+	component eq[37][num_bytes];
+	component lt[14][num_bytes];
+	component and[22][num_bytes];
 	component multi_or[6][num_bytes];
 	signal states[num_bytes+1][9];
 	signal states_tmp[num_bytes+1][9];
@@ -278,59 +278,33 @@ template Dot1Regex(msg_bytes) {
 		and[17][i].b <== eq[36][i].out;
 		states_tmp[i+1][7] <== 0;
 		lt[10][i] = LessEqThan(8);
-		lt[10][i].in[0] <== 11;
+		lt[10][i].in[0] <== 1;
 		lt[10][i].in[1] <== in[i];
 		lt[11][i] = LessEqThan(8);
 		lt[11][i].in[0] <== in[i];
-		lt[11][i].in[1] <== 127;
+		lt[11][i].in[1] <== 96;
 		and[18][i] = AND();
 		and[18][i].a <== lt[10][i].out;
 		and[18][i].b <== lt[11][i].out;
-		eq[37][i] = IsEqual();
-		eq[37][i].in[0] <== in[i];
-		eq[37][i].in[1] <== 1;
-		eq[38][i] = IsEqual();
-		eq[38][i].in[0] <== in[i];
-		eq[38][i].in[1] <== 2;
-		eq[39][i] = IsEqual();
-		eq[39][i].in[0] <== in[i];
-		eq[39][i].in[1] <== 3;
-		eq[40][i] = IsEqual();
-		eq[40][i].in[0] <== in[i];
-		eq[40][i].in[1] <== 4;
-		eq[41][i] = IsEqual();
-		eq[41][i].in[0] <== in[i];
-		eq[41][i].in[1] <== 5;
-		eq[42][i] = IsEqual();
-		eq[42][i].in[0] <== in[i];
-		eq[42][i].in[1] <== 6;
-		eq[43][i] = IsEqual();
-		eq[43][i].in[0] <== in[i];
-		eq[43][i].in[1] <== 7;
-		eq[44][i] = IsEqual();
-		eq[44][i].in[0] <== in[i];
-		eq[44][i].in[1] <== 8;
-		eq[45][i] = IsEqual();
-		eq[45][i].in[0] <== in[i];
-		eq[45][i].in[1] <== 9;
+		lt[12][i] = LessEqThan(8);
+		lt[12][i].in[0] <== 99;
+		lt[12][i].in[1] <== in[i];
+		lt[13][i] = LessEqThan(8);
+		lt[13][i].in[0] <== in[i];
+		lt[13][i].in[1] <== 127;
 		and[19][i] = AND();
-		and[19][i].a <== states[i][0];
-		multi_or[5][i] = MultiOR(10);
-		multi_or[5][i].in[0] <== and[18][i].out;
-		multi_or[5][i].in[1] <== eq[37][i].out;
-		multi_or[5][i].in[2] <== eq[38][i].out;
-		multi_or[5][i].in[3] <== eq[39][i].out;
-		multi_or[5][i].in[4] <== eq[40][i].out;
-		multi_or[5][i].in[5] <== eq[41][i].out;
-		multi_or[5][i].in[6] <== eq[42][i].out;
-		multi_or[5][i].in[7] <== eq[43][i].out;
-		multi_or[5][i].in[8] <== eq[44][i].out;
-		multi_or[5][i].in[9] <== eq[45][i].out;
-		and[19][i].b <== multi_or[5][i].out;
+		and[19][i].a <== lt[12][i].out;
+		and[19][i].b <== lt[13][i].out;
 		and[20][i] = AND();
-		and[20][i].a <== states[i][1];
-		and[20][i].b <== and[4][i].out;
-		states_tmp[i+1][8] <== and[20][i].out;
+		and[20][i].a <== states[i][0];
+		multi_or[5][i] = MultiOR(2);
+		multi_or[5][i].in[0] <== and[18][i].out;
+		multi_or[5][i].in[1] <== and[19][i].out;
+		and[20][i].b <== multi_or[5][i].out;
+		and[21][i] = AND();
+		and[21][i].a <== states[i][1];
+		and[21][i].b <== and[4][i].out;
+		states_tmp[i+1][8] <== and[21][i].out;
 		from_zero_enabled[i] <== MultiNOR(8)([states_tmp[i+1][1], states_tmp[i+1][2], states_tmp[i+1][3], states_tmp[i+1][4], states_tmp[i+1][5], states_tmp[i+1][6], states_tmp[i+1][7], states_tmp[i+1][8]]);
 		states[i+1][1] <== MultiOR(2)([states_tmp[i+1][1], from_zero_enabled[i] * and[1][i].out]);
 		states[i+1][2] <== MultiOR(2)([states_tmp[i+1][2], from_zero_enabled[i] * and[8][i].out]);
@@ -339,7 +313,7 @@ template Dot1Regex(msg_bytes) {
 		states[i+1][5] <== MultiOR(2)([states_tmp[i+1][5], from_zero_enabled[i] * and[15][i].out]);
 		states[i+1][6] <== MultiOR(2)([states_tmp[i+1][6], from_zero_enabled[i] * and[16][i].out]);
 		states[i+1][7] <== MultiOR(2)([states_tmp[i+1][7], from_zero_enabled[i] * and[17][i].out]);
-		states[i+1][8] <== MultiOR(2)([states_tmp[i+1][8], from_zero_enabled[i] * and[19][i].out]);
+		states[i+1][8] <== MultiOR(2)([states_tmp[i+1][8], from_zero_enabled[i] * and[20][i].out]);
 		state_changed[i].in[0] <== states[i+1][1];
 		state_changed[i].in[1] <== states[i+1][2];
 		state_changed[i].in[2] <== states[i+1][3];

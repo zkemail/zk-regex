@@ -220,7 +220,7 @@ template TimestampRegex(msg_bytes) {
 		and[24][i].b <== eq[22][i].out;
 		states[i+1][19] <== and[24][i].out;
 		lt[4][i] = LessEqThan(8);
-		lt[4][i].in[0] <== 0;
+		lt[4][i].in[0] <== 1;
 		lt[4][i].in[1] <== in[i];
 		lt[5][i] = LessEqThan(8);
 		lt[5][i].in[0] <== in[i];
@@ -259,7 +259,7 @@ template TimestampRegex(msg_bytes) {
 		and[30][i].a <== states[i][21];
 		and[30][i].b <== and[29][i].out;
 		lt[10][i] = LessEqThan(8);
-		lt[10][i].in[0] <== 0;
+		lt[10][i].in[0] <== 1;
 		lt[10][i].in[1] <== in[i];
 		lt[11][i] = LessEqThan(8);
 		lt[11][i].in[0] <== in[i];

@@ -332,7 +332,7 @@ template Negate1Regex(msg_bytes) {
 		multi_or[9][i].in[1] <== and[26][i].out;
 		states[i+1][9] <== multi_or[9][i].out;
 		lt[10][i] = LessEqThan(8);
-		lt[10][i].in[0] <== 0;
+		lt[10][i].in[0] <== 1;
 		lt[10][i].in[1] <== in[i];
 		lt[11][i] = LessEqThan(8);
 		lt[11][i].in[0] <== in[i];

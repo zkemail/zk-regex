@@ -311,9 +311,10 @@ pub fn regex_and_dfa(decomposed_regex: &mut DecomposedRegexConfig) -> RegexAndDF
     for (idx, regex) in decomposed_regex.parts.iter().enumerate() {
         let re = DFA::builder()
             .configure(config.clone())
-            .build(&format!(r"^{}$", regex.regex_def.as_str()))
+            .build(&format!(r"^({})$", regex.regex_def.as_str()))
             .unwrap();
         let re_str = format!("{:?}", re);
+        // println!("{:?}", re_str);
         let mut graph = dfa_to_graph(&parse_dfa_output(&re_str));
         if idx == 0 && caret_regex_index.is_some() {
             if regex.regex_def.as_str() == "^" {
@@ -395,7 +396,7 @@ pub fn regex_and_dfa(decomposed_regex: &mut DecomposedRegexConfig) -> RegexAndDF
 
         net_dfa = add_dfa(&net_dfa, &graph);
     }
-    // println!("{:?}", net_dfa);
+    println!("{:?}", net_dfa);
 
     let mut regex_str = String::new();
     for regex in decomposed_regex.parts.iter() {

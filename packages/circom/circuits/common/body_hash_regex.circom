@@ -237,7 +237,7 @@ template BodyHashRegex(msg_bytes) {
 		multi_or[3][i].in[1] <== and[27][i].out;
 		states[i+1][19] <== multi_or[3][i].out;
 		lt[6][i] = LessEqThan(8);
-		lt[6][i].in[0] <== 0;
+		lt[6][i].in[0] <== 1;
 		lt[6][i].in[1] <== in[i];
 		lt[7][i] = LessEqThan(8);
 		lt[7][i].in[0] <== in[i];
@@ -276,7 +276,7 @@ template BodyHashRegex(msg_bytes) {
 		and[33][i].a <== states[i][21];
 		and[33][i].b <== and[32][i].out;
 		lt[12][i] = LessEqThan(8);
-		lt[12][i].in[0] <== 0;
+		lt[12][i].in[0] <== 1;
 		lt[12][i].in[1] <== in[i];
 		lt[13][i] = LessEqThan(8);
 		lt[13][i].in[0] <== in[i];
