@@ -346,7 +346,7 @@ pub fn regex_and_dfa(
             .build(&format!(r"^({})$", regex.regex_def.as_str()));
         if re.is_err() {
             return Err(CompilerError::GenericError(format!(
-                "Failed to build DFA for regex: "{}", please check your regex",
+                "Failed to build DFA for regex: \"{}\", please check your regex",
                 regex.regex_def
             )));
         }
