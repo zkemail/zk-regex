@@ -73,6 +73,7 @@ pub struct RegexAndDFA {
     // Original regex string, only here to be printed in generated file to make it more reproducible
     pub regex_str: String,
     pub dfa_val: DFAGraph,
+    pub end_anchor: bool,
     pub substrs_defs: SubstrsDefs,
 }
 
@@ -116,6 +117,7 @@ impl RegexAndDFA {
             // max_byte_size,
             regex_str: regex_str.to_string(),
             dfa_val,
+            end_anchor: regex_str.ends_with('$'),
             substrs_defs,
         })
     }

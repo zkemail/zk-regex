@@ -260,7 +260,7 @@ pub fn regex_and_dfa(decomposed_regex: &mut DecomposedRegexConfig) -> RegexAndDF
 
     let mut net_dfa = DFAGraph { states: Vec::new() };
     let mut substr_defs_array = Vec::new();
-    
+
     let caret_regex_index = {
         let first_regex = decomposed_regex.parts[0].regex_def.as_bytes();
         let mut is_in_parenthesis = false;
@@ -305,10 +305,32 @@ pub fn regex_and_dfa(decomposed_regex: &mut DecomposedRegexConfig) -> RegexAndDF
             is_public: false,
             regex_def: caret_regex,
         });
-        decomposed_regex.parts[1].regex_def = decomposed_regex.parts[1].regex_def[index..].to_string();
+        decomposed_regex.parts[1].regex_def =
+            decomposed_regex.parts[1].regex_def[index..].to_string();
     }
 
+    let mut end_anchor = false;
+
     for (idx, regex) in decomposed_regex.parts.iter().enumerate() {
+        end_anchor = match decomposed_regex.parts.len() {
+            1 => regex.regex_def.ends_with("$"),
+            2 => {
+                if idx == 0 && regex.regex_def.ends_with("$") {
+                    panic!("Invalid regex");
+                }
+                idx == 1 && regex.regex_def.ends_with("$")
+            }
+            _ => match idx {
+                0 | _ if idx == decomposed_regex.parts.len() - 1 => {
+                    if regex.regex_def.ends_with("$") {
+                        if idx == 0 {
+                            panic!("Invalid regex");
+                        }
+                        true
+                    }
+                }
+            },
+        };
         let re = DFA::builder()
             .configure(config.clone())
             .build(&format!(r"^({})$", regex.regex_def.as_str()))
@@ -329,16 +351,23 @@ pub fn regex_and_dfa(decomposed_regex: &mut DecomposedRegexConfig) -> RegexAndDF
                             r#type: "accept".to_string(),
                             edges: BTreeMap::new(),
                             state: 1,
-                        }
+                        },
                     ],
                 }
             } else {
                 graph.states[0].r#type = "".to_string();
-                let accepted_state = graph.states.iter().find(|state| state.r#type == "accept").unwrap().clone();
+                let accepted_state = graph
+                    .states
+                    .iter()
+                    .find(|state| state.r#type == "accept")
+                    .unwrap()
+                    .clone();
                 if let Some(edge) = graph.states[0].edges.get_mut(&accepted_state.state) {
                     edge.insert(255u8);
                 } else {
-                    graph.states[0].edges.insert(accepted_state.state, BTreeSet::from([255u8]));
+                    graph.states[0]
+                        .edges
+                        .insert(accepted_state.state, BTreeSet::from([255u8]));
                 }
             }
         }
@@ -406,6 +435,7 @@ pub fn regex_and_dfa(decomposed_regex: &mut DecomposedRegexConfig) -> RegexAndDF
     RegexAndDFA {
         regex_str: regex_str,
         dfa_val: net_dfa,
+        end_anchor,
         substrs_defs: SubstrsDefs {
             substr_defs_array: substr_defs_array,
             substr_endpoints_array: None,

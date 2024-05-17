@@ -10,7 +10,12 @@ use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 
-fn gen_circom_allstr(dfa_graph: &DFAGraph, template_name: &str, regex_str: &str) -> String {
+fn gen_circom_allstr(
+    dfa_graph: &DFAGraph,
+    template_name: &str,
+    regex_str: &str,
+    end_anchor: bool,
+) -> String {
     let n = dfa_graph.states.len();
     let mut rev_graph = BTreeMap::<usize, BTreeMap<usize, Vec<u8>>>::new();
     let mut to_init_graph = vec![];
@@ -104,7 +109,10 @@ fn gen_circom_allstr(dfa_graph: &DFAGraph, template_name: &str, regex_str: &str)
     lines.push("\tfor (var i = 0; i < num_bytes; i++) {".to_string());
     lines.push(format!("\t\tstate_changed[i] = MultiOR({});", n - 1));
     lines.push(format!("\t\tstates[i][0] <== 1;"));
-    assert!(rev_graph.get(&0).unwrap().len() == 0, "state transition to the 0-th state is not allowed");
+    assert!(
+        rev_graph.get(&0).unwrap().len() == 0,
+        "state transition to the 0-th state is not allowed"
+    );
     for i in 1..n {
         let mut outputs = vec![];
         zero_starting_and_idxes.insert(i, vec![]);
@@ -442,7 +450,12 @@ impl RegexAndDFA {
         template_name: &str,
         gen_substrs: bool,
     ) -> Result<(), CompilerError> {
-        let circom = gen_circom_allstr(&self.dfa_val, template_name, &self.regex_str);
+        let circom = gen_circom_allstr(
+            &self.dfa_val,
+            template_name,
+            &self.regex_str,
+            self.end_anchor,
+        );
         let mut circom_file = File::create(circom_path)?;
         write!(circom_file, "{}", circom)?;
         if gen_substrs {
@@ -454,7 +467,12 @@ impl RegexAndDFA {
     }
 
     pub fn gen_circom_str(&self, template_name: &str) -> Result<String, CompilerError> {
-        let circom = gen_circom_allstr(&self.dfa_val, template_name, &self.regex_str);
+        let circom = gen_circom_allstr(
+            &self.dfa_val,
+            template_name,
+            &self.regex_str,
+            self.end_anchor,
+        );
         let substrs = self.add_substrs_constraints()?;
         let result = circom + &substrs;
         Ok(result)
@@ -479,7 +497,7 @@ impl RegexAndDFA {
         );
         for (idx, defs) in substr_defs_array.into_iter().enumerate() {
             let num_defs = defs.len();
-            circom += &format!("\tsignal prev_states{}[{}][msg_bytes];\n", idx,defs.len());
+            circom += &format!("\tsignal prev_states{}[{}][msg_bytes];\n", idx, defs.len());
             circom += &format!("\tsignal is_substr{}[msg_bytes];\n", idx);
             circom += &format!("\tsignal is_reveal{}[msg_bytes];\n", idx);
             circom += &format!("\tsignal output reveal{}[msg_bytes];\n", idx);
@@ -496,13 +514,11 @@ impl RegexAndDFA {
                 }
             });
             circom += &format!("\t\t // the {}-th substring transitions: {:?}\n", idx, defs);
-            for (trans_idx, (cur,_)) in defs.iter().enumerate() {
+            for (trans_idx, (cur, _)) in defs.iter().enumerate() {
                 if *cur == 0 {
                     circom += &format!(
                         "\t\tprev_states{}[{}][i] <== from_zero_enabled[i+1] * states[i+1][{}];\n",
-                        idx,
-                        trans_idx,
-                        cur
+                        idx, trans_idx, cur
                     );
                 } else {
                     circom += &format!(
@@ -517,8 +533,12 @@ impl RegexAndDFA {
                 "\t\tis_substr{}[i] <== MultiOR({})([{}]);\n",
                 idx,
                 num_defs,
-                defs.iter().enumerate()
-                    .map(|(trans_idx, (_, next))| format!("prev_states{}[{}][i] * states[i+2][{}]", idx, trans_idx, next))
+                defs.iter()
+                    .enumerate()
+                    .map(|(trans_idx, (_, next))| format!(
+                        "prev_states{}[{}][i] * states[i+2][{}]",
+                        idx, trans_idx, next
+                    ))
                     .collect::<Vec<_>>()
                     .join(", ")
             );
