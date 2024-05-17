@@ -26,6 +26,8 @@ pub enum CompilerError {
     IoError(#[from] std::io::Error),
     #[error(transparent)]
     RegexError(#[from] fancy_regex::Error),
+    #[error("Generic error: {0}")]
+    GenericError(String),
 }
 
 /// A configuration of decomposed regexes.
@@ -91,7 +93,7 @@ pub struct SubstrsDefsJson {
 
 impl DecomposedRegexConfig {
     pub fn to_regex_and_dfa(&mut self) -> Result<RegexAndDFA, CompilerError> {
-        Ok(regex_and_dfa(self))
+        regex_and_dfa(self)
     }
 }
 
