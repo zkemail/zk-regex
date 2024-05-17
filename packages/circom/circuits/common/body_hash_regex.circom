@@ -813,11 +813,11 @@ template BodyHashRegex(msg_bytes) {
 		state_changed[i].in[33] <== states[i+1][34];
 	}
 
-	component final_state_result = MultiOR(num_bytes+1);
+	component is_accepted = MultiOR(num_bytes+1);
 	for (var i = 0; i <= num_bytes; i++) {
-		final_state_result.in[i] <== states[i][34];
+		is_accepted.in[i] <== states[i][34];
 	}
-	out <== final_state_result.out;
+	out <== is_accepted.out;
 	signal is_consecutive[msg_bytes+1][3];
 	is_consecutive[msg_bytes][2] <== 0;
 	for (var i = 0; i < msg_bytes; i++) {
@@ -835,7 +835,7 @@ template BodyHashRegex(msg_bytes) {
 		prev_states0[0][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][32];
 		prev_states0[1][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][33];
 		is_substr0[i] <== MultiOR(2)([prev_states0[0][i] * states[i+2][33], prev_states0[1][i] * states[i+2][33]]);
-		is_reveal0[i] <== is_substr0[i] * is_consecutive[i][2];
+		is_reveal0[i] <== MultiAND(3)([out, is_substr0[i], is_consecutive[i][2]]);
 		reveal0[i] <== in[i+1] * is_reveal0[i];
 	}
 }

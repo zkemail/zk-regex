@@ -815,11 +815,11 @@ template InternationalCharsDecomposed(msg_bytes) {
 		state_changed[i].in[88] <== states[i+1][89];
 	}
 
-	component final_state_result = MultiOR(num_bytes+1);
+	component is_accepted = MultiOR(num_bytes+1);
 	for (var i = 0; i <= num_bytes; i++) {
-		final_state_result.in[i] <== states[i][89];
+		is_accepted.in[i] <== states[i][89];
 	}
-	out <== final_state_result.out;
+	out <== is_accepted.out;
 	signal is_consecutive[msg_bytes+1][3];
 	is_consecutive[msg_bytes][2] <== 0;
 	for (var i = 0; i < msg_bytes; i++) {
@@ -841,7 +841,7 @@ template InternationalCharsDecomposed(msg_bytes) {
 		prev_states0[4][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][19];
 		prev_states0[5][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][19];
 		is_substr0[i] <== MultiOR(6)([prev_states0[0][i] * states[i+2][17], prev_states0[1][i] * states[i+2][18], prev_states0[2][i] * states[i+2][19], prev_states0[3][i] * states[i+2][19], prev_states0[4][i] * states[i+2][17], prev_states0[5][i] * states[i+2][18]]);
-		is_reveal0[i] <== is_substr0[i] * is_consecutive[i][2];
+		is_reveal0[i] <== MultiAND(3)([out, is_substr0[i], is_consecutive[i][2]]);
 		reveal0[i] <== in[i+1] * is_reveal0[i];
 	}
 	signal prev_states1[6][msg_bytes];
@@ -857,7 +857,7 @@ template InternationalCharsDecomposed(msg_bytes) {
 		prev_states1[4][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][29];
 		prev_states1[5][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][29];
 		is_substr1[i] <== MultiOR(6)([prev_states1[0][i] * states[i+2][27], prev_states1[1][i] * states[i+2][28], prev_states1[2][i] * states[i+2][29], prev_states1[3][i] * states[i+2][29], prev_states1[4][i] * states[i+2][27], prev_states1[5][i] * states[i+2][28]]);
-		is_reveal1[i] <== is_substr1[i] * is_consecutive[i][2];
+		is_reveal1[i] <== MultiAND(3)([out, is_substr1[i], is_consecutive[i][2]]);
 		reveal1[i] <== in[i+1] * is_reveal1[i];
 	}
 	signal prev_states2[3][msg_bytes];
@@ -870,7 +870,7 @@ template InternationalCharsDecomposed(msg_bytes) {
 		prev_states2[1][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][40];
 		prev_states2[2][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][41];
 		is_substr2[i] <== MultiOR(3)([prev_states2[0][i] * states[i+2][40], prev_states2[1][i] * states[i+2][41], prev_states2[2][i] * states[i+2][40]]);
-		is_reveal2[i] <== is_substr2[i] * is_consecutive[i][2];
+		is_reveal2[i] <== MultiAND(3)([out, is_substr2[i], is_consecutive[i][2]]);
 		reveal2[i] <== in[i+1] * is_reveal2[i];
 	}
 	signal prev_states3[3][msg_bytes];
@@ -883,7 +883,7 @@ template InternationalCharsDecomposed(msg_bytes) {
 		prev_states3[1][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][50];
 		prev_states3[2][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][51];
 		is_substr3[i] <== MultiOR(3)([prev_states3[0][i] * states[i+2][50], prev_states3[1][i] * states[i+2][51], prev_states3[2][i] * states[i+2][50]]);
-		is_reveal3[i] <== is_substr3[i] * is_consecutive[i][2];
+		is_reveal3[i] <== MultiAND(3)([out, is_substr3[i], is_consecutive[i][2]]);
 		reveal3[i] <== in[i+1] * is_reveal3[i];
 	}
 	signal prev_states4[4][msg_bytes];
@@ -897,7 +897,7 @@ template InternationalCharsDecomposed(msg_bytes) {
 		prev_states4[2][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][65];
 		prev_states4[3][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][66];
 		is_substr4[i] <== MultiOR(4)([prev_states4[0][i] * states[i+2][64], prev_states4[1][i] * states[i+2][65], prev_states4[2][i] * states[i+2][66], prev_states4[3][i] * states[i+2][64]]);
-		is_reveal4[i] <== is_substr4[i] * is_consecutive[i][2];
+		is_reveal4[i] <== MultiAND(3)([out, is_substr4[i], is_consecutive[i][2]]);
 		reveal4[i] <== in[i+1] * is_reveal4[i];
 	}
 	signal prev_states5[6][msg_bytes];
@@ -913,7 +913,7 @@ template InternationalCharsDecomposed(msg_bytes) {
 		prev_states5[4][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][88];
 		prev_states5[5][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][89];
 		is_substr5[i] <== MultiOR(6)([prev_states5[0][i] * states[i+2][86], prev_states5[1][i] * states[i+2][87], prev_states5[2][i] * states[i+2][88], prev_states5[3][i] * states[i+2][89], prev_states5[4][i] * states[i+2][89], prev_states5[5][i] * states[i+2][86]]);
-		is_reveal5[i] <== is_substr5[i] * is_consecutive[i][2];
+		is_reveal5[i] <== MultiAND(3)([out, is_substr5[i], is_consecutive[i][2]]);
 		reveal5[i] <== in[i+1] * is_reveal5[i];
 	}
 }

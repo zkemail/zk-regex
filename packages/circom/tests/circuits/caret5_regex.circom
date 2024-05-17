@@ -386,11 +386,11 @@ template Caret5Regex(msg_bytes) {
 		state_changed[i].in[9] <== states[i+1][10];
 	}
 
-	component final_state_result = MultiOR(num_bytes+1);
+	component is_accepted = MultiOR(num_bytes+1);
 	for (var i = 0; i <= num_bytes; i++) {
-		final_state_result.in[i] <== states[i][10];
+		is_accepted.in[i] <== states[i][10];
 	}
-	out <== final_state_result.out;
+	out <== is_accepted.out;
 	signal is_consecutive[msg_bytes+1][3];
 	is_consecutive[msg_bytes][2] <== 0;
 	for (var i = 0; i < msg_bytes; i++) {
@@ -429,7 +429,7 @@ template Caret5Regex(msg_bytes) {
 		prev_states0[21][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][10];
 		prev_states0[22][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][10];
 		is_substr0[i] <== MultiOR(23)([prev_states0[0][i] * states[i+2][3], prev_states0[1][i] * states[i+2][4], prev_states0[2][i] * states[i+2][5], prev_states0[3][i] * states[i+2][6], prev_states0[4][i] * states[i+2][7], prev_states0[5][i] * states[i+2][8], prev_states0[6][i] * states[i+2][9], prev_states0[7][i] * states[i+2][10], prev_states0[8][i] * states[i+2][10], prev_states0[9][i] * states[i+2][3], prev_states0[10][i] * states[i+2][3], prev_states0[11][i] * states[i+2][3], prev_states0[12][i] * states[i+2][5], prev_states0[13][i] * states[i+2][5], prev_states0[14][i] * states[i+2][5], prev_states0[15][i] * states[i+2][3], prev_states0[16][i] * states[i+2][4], prev_states0[17][i] * states[i+2][5], prev_states0[18][i] * states[i+2][6], prev_states0[19][i] * states[i+2][7], prev_states0[20][i] * states[i+2][8], prev_states0[21][i] * states[i+2][9], prev_states0[22][i] * states[i+2][10]]);
-		is_reveal0[i] <== is_substr0[i] * is_consecutive[i][2];
+		is_reveal0[i] <== MultiAND(3)([out, is_substr0[i], is_consecutive[i][2]]);
 		reveal0[i] <== in[i+1] * is_reveal0[i];
 	}
 }

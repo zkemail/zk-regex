@@ -113,6 +113,9 @@ fn gen_circom_allstr(
         rev_graph.get(&0).unwrap().len() == 0,
         "state transition to the 0-th state is not allowed"
     );
+    if end_anchor {
+        lines.push(format!("\t\tpadding_start[i+1] <== IsNotZeroAcc()(padding_start[i], in[i]);"));
+    }
     for i in 1..n {
         let mut outputs = vec![];
         zero_starting_and_idxes.insert(i, vec![]);
@@ -411,6 +414,10 @@ fn gen_circom_allstr(
     declarations.push(format!("\tsignal from_zero_enabled[num_bytes+1];"));
     declarations.push(format!("\tfrom_zero_enabled[num_bytes] <== 0;"));
     declarations.push("\tcomponent state_changed[num_bytes];\n".to_string());
+    if end_anchor {
+        declarations.push("\tsignal padding_start[num_bytes+1];".to_string());
+        declarations.push("\tpadding_start[0] <== 0;".to_string());
+    }
 
     let mut init_code = vec![];
     // init_code.push("\tstates[0][0] <== 1;".to_string());
@@ -429,15 +436,30 @@ fn gen_circom_allstr(
     let mut accept_lines = vec![];
 
     accept_lines.push("".to_string());
-    accept_lines.push("\tcomponent final_state_result = MultiOR(num_bytes+1);".to_string());
+    accept_lines.push("\tcomponent is_accepted = MultiOR(num_bytes+1);".to_string());
     accept_lines.push("\tfor (var i = 0; i <= num_bytes; i++) {".to_string());
     accept_lines.push(format!(
-        "\t\tfinal_state_result.in[i] <== states[i][{}];",
+        "\t\tis_accepted.in[i] <== states[i][{}];",
         accept_node
     ));
     accept_lines.push("\t}".to_string());
-    accept_lines.push("\tout <== final_state_result.out;".to_string());
-
+    if end_anchor {
+        accept_lines.push("\tsignal end_anchor_check[num_bytes+1][2];".to_string());
+        accept_lines.push("\tend_anchor_check[0][1] <== 0;".to_string());
+        accept_lines.push("\tfor (var i = 0; i < num_bytes; i++) {".to_string());
+        accept_lines.push(format!(
+            "\t\tend_anchor_check[i+1][0] <== IsEqual()([i, padding_start[num_bytes]]);",
+        ));
+        accept_lines.push(format!(
+            "\t\tend_anchor_check[i+1][1] <== end_anchor_check[i][1] + states[i][{}] * end_anchor_check[i+1][0];",
+            accept_node
+        ));
+        accept_lines.push("\t}".to_string());
+        accept_lines.push("\tout <== is_accepted.out * end_anchor_check[num_bytes][1];".to_string());
+    } else {
+        accept_lines.push("\tout <== is_accepted.out;".to_string());
+    }
+    
     final_code.extend(accept_lines);
 
     final_code.join("\n")
@@ -558,7 +580,7 @@ impl RegexAndDFA {
             //     // }
             // }
             circom += &format!(
-                "\t\tis_reveal{}[i] <== is_substr{}[i] * is_consecutive[i][2];\n",
+                "\t\tis_reveal{}[i] <== MultiAND(3)([out, is_substr{}[i], is_consecutive[i][2]]);\n",
                 idx, idx
             );
             circom += &format!("\t\treveal{}[i] <== in[i+1] * is_reveal{}[i];\n", idx, idx);

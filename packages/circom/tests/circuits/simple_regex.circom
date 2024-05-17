@@ -121,11 +121,11 @@ template SimpleRegex(msg_bytes) {
 		state_changed[i].in[8] <== states[i+1][9];
 	}
 
-	component final_state_result = MultiOR(num_bytes+1);
+	component is_accepted = MultiOR(num_bytes+1);
 	for (var i = 0; i <= num_bytes; i++) {
-		final_state_result.in[i] <== states[i][9];
+		is_accepted.in[i] <== states[i][9];
 	}
-	out <== final_state_result.out;
+	out <== is_accepted.out;
 	signal is_consecutive[msg_bytes+1][3];
 	is_consecutive[msg_bytes][2] <== 0;
 	for (var i = 0; i < msg_bytes; i++) {
@@ -142,7 +142,7 @@ template SimpleRegex(msg_bytes) {
 		 // the 0-th substring transitions: [(2, 3)]
 		prev_states0[0][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][2];
 		is_substr0[i] <== MultiOR(1)([prev_states0[0][i] * states[i+2][3]]);
-		is_reveal0[i] <== is_substr0[i] * is_consecutive[i][2];
+		is_reveal0[i] <== MultiAND(3)([out, is_substr0[i], is_consecutive[i][2]]);
 		reveal0[i] <== in[i+1] * is_reveal0[i];
 	}
 	signal prev_states1[2][msg_bytes];
@@ -154,7 +154,7 @@ template SimpleRegex(msg_bytes) {
 		prev_states1[0][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][6];
 		prev_states1[1][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][7];
 		is_substr1[i] <== MultiOR(2)([prev_states1[0][i] * states[i+2][7], prev_states1[1][i] * states[i+2][7]]);
-		is_reveal1[i] <== is_substr1[i] * is_consecutive[i][2];
+		is_reveal1[i] <== MultiAND(3)([out, is_substr1[i], is_consecutive[i][2]]);
 		reveal1[i] <== in[i+1] * is_reveal1[i];
 	}
 	signal prev_states2[1][msg_bytes];
@@ -165,7 +165,7 @@ template SimpleRegex(msg_bytes) {
 		 // the 2-th substring transitions: [(8, 9)]
 		prev_states2[0][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][8];
 		is_substr2[i] <== MultiOR(1)([prev_states2[0][i] * states[i+2][9]]);
-		is_reveal2[i] <== is_substr2[i] * is_consecutive[i][2];
+		is_reveal2[i] <== MultiAND(3)([out, is_substr2[i], is_consecutive[i][2]]);
 		reveal2[i] <== in[i+1] * is_reveal2[i];
 	}
 }
