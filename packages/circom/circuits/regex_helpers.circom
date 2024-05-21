@@ -54,10 +54,21 @@ template MultiNOR(n) {
     out <== 1 - or;
 }
 
+
+
 template ORAnd() {
     signal input in[3];
     signal output out;
 
     signal or <== OR()(in[0], in[1]);
     out <== AND()(or, in[2]);
+}
+
+template IsNotZeroAcc() {
+    signal input acc;
+    signal input in;
+    signal output out;
+
+    signal is_zero <== IsZero()(in);
+    out <== acc + (1 - is_zero);
 }

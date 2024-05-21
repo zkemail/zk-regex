@@ -160,26 +160,37 @@ template InvitationCodeWithPrefixRegex(msg_bytes) {
 		state_changed[i].in[6] <== states[i+1][7];
 	}
 
-	component final_state_result = MultiOR(num_bytes+1);
+	component is_accepted = MultiOR(num_bytes+1);
 	for (var i = 0; i <= num_bytes; i++) {
-		final_state_result.in[i] <== states[i][7];
+		is_accepted.in[i] <== states[i][7];
 	}
-	out <== final_state_result.out;
+	out <== is_accepted.out;
 	signal is_consecutive[msg_bytes+1][3];
-	is_consecutive[msg_bytes][2] <== 1;
+	is_consecutive[msg_bytes][2] <== 0;
 	for (var i = 0; i < msg_bytes; i++) {
 		is_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][7] * (1 - is_consecutive[msg_bytes-i][2]) + is_consecutive[msg_bytes-i][2];
 		is_consecutive[msg_bytes-1-i][1] <== state_changed[msg_bytes-i].out * is_consecutive[msg_bytes-1-i][0];
 		is_consecutive[msg_bytes-1-i][2] <== ORAnd()([(1 - from_zero_enabled[msg_bytes-i+1]), states[num_bytes-i][7], is_consecutive[msg_bytes-1-i][1]]);
 	}
 	// substrings calculated: [{(0, 1), (0, 2), (1, 3), (2, 1), (3, 4), (4, 5), (5, 6), (5, 7), (6, 7), (7, 7)}]
+	signal prev_states0[10][msg_bytes];
 	signal is_substr0[msg_bytes];
 	signal is_reveal0[msg_bytes];
 	signal output reveal0[msg_bytes];
 	for (var i = 0; i < msg_bytes; i++) {
 		 // the 0-th substring transitions: [(0, 1), (0, 2), (1, 3), (2, 1), (3, 4), (4, 5), (5, 6), (5, 7), (6, 7), (7, 7)]
-		is_substr0[i] <== MultiOR(10)([states[i+1][0] * states[i+2][1], states[i+1][0] * states[i+2][2], states[i+1][1] * states[i+2][3], states[i+1][2] * states[i+2][1], states[i+1][3] * states[i+2][4], states[i+1][4] * states[i+2][5], states[i+1][5] * states[i+2][6], states[i+1][5] * states[i+2][7], states[i+1][6] * states[i+2][7], states[i+1][7] * states[i+2][7]]);
-		is_reveal0[i] <== is_substr0[i] * is_consecutive[i][2];
+		prev_states0[0][i] <== from_zero_enabled[i+1] * states[i+1][0];
+		prev_states0[1][i] <== from_zero_enabled[i+1] * states[i+1][0];
+		prev_states0[2][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][1];
+		prev_states0[3][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][2];
+		prev_states0[4][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][3];
+		prev_states0[5][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][4];
+		prev_states0[6][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][5];
+		prev_states0[7][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][5];
+		prev_states0[8][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][6];
+		prev_states0[9][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][7];
+		is_substr0[i] <== MultiOR(10)([prev_states0[0][i] * states[i+2][1], prev_states0[1][i] * states[i+2][2], prev_states0[2][i] * states[i+2][3], prev_states0[3][i] * states[i+2][1], prev_states0[4][i] * states[i+2][4], prev_states0[5][i] * states[i+2][5], prev_states0[6][i] * states[i+2][6], prev_states0[7][i] * states[i+2][7], prev_states0[8][i] * states[i+2][7], prev_states0[9][i] * states[i+2][7]]);
+		is_reveal0[i] <== MultiAND(3)([out, is_substr0[i], is_consecutive[i][2]]);
 		reveal0[i] <== in[i+1] * is_reveal0[i];
 	}
 }

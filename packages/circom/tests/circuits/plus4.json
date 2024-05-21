@@ -1,0 +1,12 @@
+{
+    "parts": [
+        {
+            "is_public": true,
+            "regex_def": "(12|345)+"
+        },
+        {
+            "is_public": false,
+            "regex_def": "b"
+        }
+    ]
+}

@@ -49,7 +49,7 @@ describe("Message Id Regex", () => {
     }
   });
 
-  it("subject after new line", async () => {
+  it("message id after new line", async () => {
     const messageIdStr =
       "dummy\r\nmessage-id:<CAJ7Y6jdOGRFj4RbA=JU034DwHUnRapUZzqLN4hGkG3ou23dFbw@mail.gmail.com>\r\n";
     const paddedStr = apis.padString(messageIdStr, 256);
@@ -66,6 +66,20 @@ describe("Message Id Regex", () => {
       } else {
         expect(0n).toEqual(witness[2 + idx]);
       }
+    }
+  });
+
+  it("invalid message id", async () => {
+    const messageIdStr = `to:message-id:<CAJ7Y6jdOGRFj4RbA=JU034DwHUnRapUZzqLN4hGkG3ou23dFbw@mail.gmail.com>\r\n`;
+    const paddedStr = apis.padString(messageIdStr, 256);
+    const circuitInputs = {
+      msg: paddedStr,
+    };
+    const witness = await circuit.calculateWitness(circuitInputs);
+    await circuit.checkConstraints(witness);
+    expect(0n).toEqual(witness[1]);
+    for (let idx = 0; idx < 256; ++idx) {
+      expect(0n).toEqual(witness[2 + idx]);
     }
   });
 });

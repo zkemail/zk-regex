@@ -48,18 +48,16 @@ pub fn extract_substr_idxes(
         ExtractSubstrssError::SubstringOfEntireNotFound(entire_regex, input_str.to_string())
     })?;
     let mut start = entire_found.start();
-    let entire_end = entire_found.end();
+    // let entire_end: usize = entire_found.end();
 
     let mut public_idxes = vec![];
     for part_idx in 0..regex_config.parts.len() {
-        let regex = Regex::new(&regex_config.parts[part_idx].regex_def.as_str())?;
-        let found = regex.find_from_pos(&input_str, start)?.ok_or_else(|| {
-            ExtractSubstrssError::SubstringNotFound(
-                regex.clone(),
-                input_str[start..entire_end].to_string(),
-            )
-        })?;
-        let end = found.end();
+        let regex_def = regex_config.parts[part_idx].regex_def.as_str();
+        let regex = Regex::new(&regex_def)?;
+        let end = match regex.find_from_pos(&input_str, start)? {
+            Some(found) => found.end(),
+            None => start,
+        };
         if regex_config.parts[part_idx].is_public {
             public_idxes.push((start, end));
         }
@@ -234,4 +232,48 @@ mod test {
         let idxes = extract_message_id_idxes(input_str).unwrap();
         assert_eq!(idxes, vec![(11, 79)]);
     }
+
+
+    #[test]
+    fn test_dot_plus_valid() {
+        let code_regex = DecomposedRegexConfig {
+            parts: vec![
+                RegexPartConfig {
+                    is_public: false,
+                    regex_def: "a".to_string(),
+                },
+                RegexPartConfig {
+                    is_public: true,
+                    regex_def: ".+?".to_string(),
+                },
+                RegexPartConfig {
+                    is_public: false,
+                    regex_def: "b".to_string(),
+                },
+            ],
+        };
+        let input_str = "azb";
+        let idxes = extract_substr_idxes(input_str, &code_regex).unwrap();
+        assert_eq!(idxes, vec![(1, 2)]);
+    }
+
+    #[test]
+    fn test_dot_question_valid() {
+        let code_regex = DecomposedRegexConfig {
+            parts: vec![
+                RegexPartConfig {
+                    is_public: true,
+                    regex_def: ".??".to_string(),
+                },
+                RegexPartConfig {
+                    is_public: false,
+                    regex_def: "b".to_string(),
+                },
+            ],
+        };
+        let input_str = "b";
+        let idxes = extract_substr_idxes(input_str, &code_regex).unwrap();
+        assert_eq!(idxes, vec![(0, 0)]);
+    }
+    
 }

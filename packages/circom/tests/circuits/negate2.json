@@ -1,0 +1,8 @@
+{
+    "parts": [
+        {
+            "is_public": true,
+            "regex_def": "[^ab]"
+        }
+    ]
+}

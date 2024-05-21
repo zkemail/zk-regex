@@ -2,7 +2,7 @@ pragma circom 2.1.5;
 
 include "@zk-email/zk-regex-circom/circuits/regex_helpers.circom";
 
-// regex: [A-Za-z0-9!#$%&'*+=?^_`{|}~.]+@[A-Za-z0-9.-]+
+// regex: [A-Za-z0-9!#$%&'*+=?\^_`{|}~.]+@[A-Za-z0-9.-]+
 template EmailAddrRegex(msg_bytes) {
 	signal input msg[msg_bytes];
 	signal output out;
@@ -14,10 +14,10 @@ template EmailAddrRegex(msg_bytes) {
 		in[i+1] <== msg[i];
 	}
 
-	component eq[24][num_bytes];
-	component lt[8][num_bytes];
-	component and[9][num_bytes];
-	component multi_or[4][num_bytes];
+	component eq[23][num_bytes];
+	component lt[6][num_bytes];
+	component and[8][num_bytes];
+	component multi_or[3][num_bytes];
 	signal states[num_bytes+1][4];
 	signal states_tmp[num_bytes+1][4];
 	signal from_zero_enabled[num_bytes+1];
@@ -41,7 +41,7 @@ template EmailAddrRegex(msg_bytes) {
 		and[0][i].a <== lt[0][i].out;
 		and[0][i].b <== lt[1][i].out;
 		lt[2][i] = LessEqThan(8);
-		lt[2][i].in[0] <== 95;
+		lt[2][i].in[0] <== 94;
 		lt[2][i].in[1] <== in[i];
 		lt[3][i] = LessEqThan(8);
 		lt[3][i].in[0] <== in[i];
@@ -112,12 +112,9 @@ template EmailAddrRegex(msg_bytes) {
 		eq[20][i] = IsEqual();
 		eq[20][i].in[0] <== in[i];
 		eq[20][i].in[1] <== 63;
-		eq[21][i] = IsEqual();
-		eq[21][i].in[0] <== in[i];
-		eq[21][i].in[1] <== 255;
 		and[2][i] = AND();
 		and[2][i].a <== states[i][0];
-		multi_or[0][i] = MultiOR(24);
+		multi_or[0][i] = MultiOR(23);
 		multi_or[0][i].in[0] <== and[0][i].out;
 		multi_or[0][i].in[1] <== and[1][i].out;
 		multi_or[0][i].in[2] <== eq[0][i].out;
@@ -141,89 +138,55 @@ template EmailAddrRegex(msg_bytes) {
 		multi_or[0][i].in[20] <== eq[18][i].out;
 		multi_or[0][i].in[21] <== eq[19][i].out;
 		multi_or[0][i].in[22] <== eq[20][i].out;
-		multi_or[0][i].in[23] <== eq[21][i].out;
 		and[2][i].b <== multi_or[0][i].out;
+		and[3][i] = AND();
+		and[3][i].a <== states[i][1];
+		and[3][i].b <== multi_or[0][i].out;
+		states_tmp[i+1][1] <== and[3][i].out;
+		eq[21][i] = IsEqual();
+		eq[21][i].in[0] <== in[i];
+		eq[21][i].in[1] <== 64;
+		and[4][i] = AND();
+		and[4][i].a <== states[i][1];
+		and[4][i].b <== eq[21][i].out;
+		states[i+1][2] <== and[4][i].out;
 		lt[4][i] = LessEqThan(8);
-		lt[4][i].in[0] <== 94;
+		lt[4][i].in[0] <== 97;
 		lt[4][i].in[1] <== in[i];
 		lt[5][i] = LessEqThan(8);
 		lt[5][i].in[0] <== in[i];
-		lt[5][i].in[1] <== 126;
-		and[3][i] = AND();
-		and[3][i].a <== lt[4][i].out;
-		and[3][i].b <== lt[5][i].out;
-		and[4][i] = AND();
-		and[4][i].a <== states[i][1];
-		multi_or[1][i] = MultiOR(23);
-		multi_or[1][i].in[0] <== and[0][i].out;
-		multi_or[1][i].in[1] <== and[3][i].out;
-		multi_or[1][i].in[2] <== eq[0][i].out;
-		multi_or[1][i].in[3] <== eq[1][i].out;
-		multi_or[1][i].in[4] <== eq[2][i].out;
-		multi_or[1][i].in[5] <== eq[3][i].out;
-		multi_or[1][i].in[6] <== eq[4][i].out;
-		multi_or[1][i].in[7] <== eq[5][i].out;
-		multi_or[1][i].in[8] <== eq[6][i].out;
-		multi_or[1][i].in[9] <== eq[7][i].out;
-		multi_or[1][i].in[10] <== eq[8][i].out;
-		multi_or[1][i].in[11] <== eq[9][i].out;
-		multi_or[1][i].in[12] <== eq[10][i].out;
-		multi_or[1][i].in[13] <== eq[11][i].out;
-		multi_or[1][i].in[14] <== eq[12][i].out;
-		multi_or[1][i].in[15] <== eq[13][i].out;
-		multi_or[1][i].in[16] <== eq[14][i].out;
-		multi_or[1][i].in[17] <== eq[15][i].out;
-		multi_or[1][i].in[18] <== eq[16][i].out;
-		multi_or[1][i].in[19] <== eq[17][i].out;
-		multi_or[1][i].in[20] <== eq[18][i].out;
-		multi_or[1][i].in[21] <== eq[19][i].out;
-		multi_or[1][i].in[22] <== eq[20][i].out;
-		and[4][i].b <== multi_or[1][i].out;
-		states_tmp[i+1][1] <== and[4][i].out;
+		lt[5][i].in[1] <== 122;
+		and[5][i] = AND();
+		and[5][i].a <== lt[4][i].out;
+		and[5][i].b <== lt[5][i].out;
 		eq[22][i] = IsEqual();
 		eq[22][i].in[0] <== in[i];
-		eq[22][i].in[1] <== 64;
-		and[5][i] = AND();
-		and[5][i].a <== states[i][1];
-		and[5][i].b <== eq[22][i].out;
-		states[i+1][2] <== and[5][i].out;
-		lt[6][i] = LessEqThan(8);
-		lt[6][i].in[0] <== 97;
-		lt[6][i].in[1] <== in[i];
-		lt[7][i] = LessEqThan(8);
-		lt[7][i].in[0] <== in[i];
-		lt[7][i].in[1] <== 122;
+		eq[22][i].in[1] <== 45;
 		and[6][i] = AND();
-		and[6][i].a <== lt[6][i].out;
-		and[6][i].b <== lt[7][i].out;
-		eq[23][i] = IsEqual();
-		eq[23][i].in[0] <== in[i];
-		eq[23][i].in[1] <== 45;
+		and[6][i].a <== states[i][2];
+		multi_or[1][i] = MultiOR(14);
+		multi_or[1][i].in[0] <== and[0][i].out;
+		multi_or[1][i].in[1] <== and[5][i].out;
+		multi_or[1][i].in[2] <== eq[22][i].out;
+		multi_or[1][i].in[3] <== eq[8][i].out;
+		multi_or[1][i].in[4] <== eq[9][i].out;
+		multi_or[1][i].in[5] <== eq[10][i].out;
+		multi_or[1][i].in[6] <== eq[11][i].out;
+		multi_or[1][i].in[7] <== eq[12][i].out;
+		multi_or[1][i].in[8] <== eq[13][i].out;
+		multi_or[1][i].in[9] <== eq[14][i].out;
+		multi_or[1][i].in[10] <== eq[15][i].out;
+		multi_or[1][i].in[11] <== eq[16][i].out;
+		multi_or[1][i].in[12] <== eq[17][i].out;
+		multi_or[1][i].in[13] <== eq[18][i].out;
+		and[6][i].b <== multi_or[1][i].out;
 		and[7][i] = AND();
-		and[7][i].a <== states[i][2];
-		multi_or[2][i] = MultiOR(14);
-		multi_or[2][i].in[0] <== and[0][i].out;
-		multi_or[2][i].in[1] <== and[6][i].out;
-		multi_or[2][i].in[2] <== eq[23][i].out;
-		multi_or[2][i].in[3] <== eq[8][i].out;
-		multi_or[2][i].in[4] <== eq[9][i].out;
-		multi_or[2][i].in[5] <== eq[10][i].out;
-		multi_or[2][i].in[6] <== eq[11][i].out;
-		multi_or[2][i].in[7] <== eq[12][i].out;
-		multi_or[2][i].in[8] <== eq[13][i].out;
-		multi_or[2][i].in[9] <== eq[14][i].out;
-		multi_or[2][i].in[10] <== eq[15][i].out;
-		multi_or[2][i].in[11] <== eq[16][i].out;
-		multi_or[2][i].in[12] <== eq[17][i].out;
-		multi_or[2][i].in[13] <== eq[18][i].out;
-		and[7][i].b <== multi_or[2][i].out;
-		and[8][i] = AND();
-		and[8][i].a <== states[i][3];
-		and[8][i].b <== multi_or[2][i].out;
-		multi_or[3][i] = MultiOR(2);
-		multi_or[3][i].in[0] <== and[7][i].out;
-		multi_or[3][i].in[1] <== and[8][i].out;
-		states[i+1][3] <== multi_or[3][i].out;
+		and[7][i].a <== states[i][3];
+		and[7][i].b <== multi_or[1][i].out;
+		multi_or[2][i] = MultiOR(2);
+		multi_or[2][i].in[0] <== and[6][i].out;
+		multi_or[2][i].in[1] <== and[7][i].out;
+		states[i+1][3] <== multi_or[2][i].out;
 		from_zero_enabled[i] <== MultiNOR(3)([states_tmp[i+1][1], states[i+1][2], states[i+1][3]]);
 		states[i+1][1] <== MultiOR(2)([states_tmp[i+1][1], from_zero_enabled[i] * and[2][i].out]);
 		state_changed[i].in[0] <== states[i+1][1];
@@ -231,26 +194,32 @@ template EmailAddrRegex(msg_bytes) {
 		state_changed[i].in[2] <== states[i+1][3];
 	}
 
-	component final_state_result = MultiOR(num_bytes+1);
+	component is_accepted = MultiOR(num_bytes+1);
 	for (var i = 0; i <= num_bytes; i++) {
-		final_state_result.in[i] <== states[i][3];
+		is_accepted.in[i] <== states[i][3];
 	}
-	out <== final_state_result.out;
+	out <== is_accepted.out;
 	signal is_consecutive[msg_bytes+1][3];
-	is_consecutive[msg_bytes][2] <== 1;
+	is_consecutive[msg_bytes][2] <== 0;
 	for (var i = 0; i < msg_bytes; i++) {
 		is_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][3] * (1 - is_consecutive[msg_bytes-i][2]) + is_consecutive[msg_bytes-i][2];
 		is_consecutive[msg_bytes-1-i][1] <== state_changed[msg_bytes-i].out * is_consecutive[msg_bytes-1-i][0];
 		is_consecutive[msg_bytes-1-i][2] <== ORAnd()([(1 - from_zero_enabled[msg_bytes-i+1]), states[num_bytes-i][3], is_consecutive[msg_bytes-1-i][1]]);
 	}
 	// substrings calculated: [{(0, 1), (1, 1), (1, 2), (2, 3), (3, 3)}]
+	signal prev_states0[5][msg_bytes];
 	signal is_substr0[msg_bytes];
 	signal is_reveal0[msg_bytes];
 	signal output reveal0[msg_bytes];
 	for (var i = 0; i < msg_bytes; i++) {
 		 // the 0-th substring transitions: [(0, 1), (1, 1), (1, 2), (2, 3), (3, 3)]
-		is_substr0[i] <== MultiOR(5)([states[i+1][0] * states[i+2][1], states[i+1][1] * states[i+2][1], states[i+1][1] * states[i+2][2], states[i+1][2] * states[i+2][3], states[i+1][3] * states[i+2][3]]);
-		is_reveal0[i] <== is_substr0[i] * is_consecutive[i][2];
+		prev_states0[0][i] <== from_zero_enabled[i+1] * states[i+1][0];
+		prev_states0[1][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][1];
+		prev_states0[2][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][1];
+		prev_states0[3][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][2];
+		prev_states0[4][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][3];
+		is_substr0[i] <== MultiOR(5)([prev_states0[0][i] * states[i+2][1], prev_states0[1][i] * states[i+2][1], prev_states0[2][i] * states[i+2][2], prev_states0[3][i] * states[i+2][3], prev_states0[4][i] * states[i+2][3]]);
+		is_reveal0[i] <== MultiAND(3)([out, is_substr0[i], is_consecutive[i][2]]);
 		reveal0[i] <== in[i+1] * is_reveal0[i];
 	}
 }

@@ -1,7 +1,6 @@
 use std::fs::File;
 use std::iter::FromIterator;
 pub mod circom;
-pub mod halo2;
 pub mod regex;
 #[cfg(target_arch = "wasm32")]
 mod wasm;
@@ -14,7 +13,7 @@ use crate::regex::*;
 use itertools::Itertools;
 use petgraph::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::PathBuf;
 use thiserror::Error;
 
@@ -27,12 +26,14 @@ pub enum CompilerError {
     IoError(#[from] std::io::Error),
     #[error(transparent)]
     RegexError(#[from] fancy_regex::Error),
+    #[error("Generic error: {0}")]
+    GenericError(String),
 }
 
 /// A configuration of decomposed regexes.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DecomposedRegexConfig {
-    pub parts: Vec<RegexPartConfig>,
+    pub parts: VecDeque<RegexPartConfig>,
 }
 
 /// Decomposed regex part.
@@ -65,7 +66,7 @@ pub struct DFAState {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DFAGraph {
-    states: Vec<DFAState>,
+    pub states: Vec<DFAState>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -74,6 +75,7 @@ pub struct RegexAndDFA {
     // Original regex string, only here to be printed in generated file to make it more reproducible
     pub regex_str: String,
     pub dfa_val: DFAGraph,
+    pub end_anchor: bool,
     pub substrs_defs: SubstrsDefs,
 }
 
@@ -90,8 +92,8 @@ pub struct SubstrsDefsJson {
 }
 
 impl DecomposedRegexConfig {
-    pub fn to_regex_and_dfa(&self) -> Result<RegexAndDFA, CompilerError> {
-        Ok(regex_and_dfa(self))
+    pub fn to_regex_and_dfa(&mut self) -> Result<RegexAndDFA, CompilerError> {
+        regex_and_dfa(self)
     }
 }
 
@@ -117,6 +119,7 @@ impl RegexAndDFA {
             // max_byte_size,
             regex_str: regex_str.to_string(),
             dfa_val,
+            end_anchor: regex_str.ends_with('$'),
             substrs_defs,
         })
     }
@@ -124,33 +127,16 @@ impl RegexAndDFA {
 
 pub fn gen_from_decomposed(
     decomposed_regex_path: &str,
-    // halo2_dir_path: Option<&str>,
     circom_file_path: Option<&str>,
     circom_template_name: Option<&str>,
     gen_substrs: Option<bool>,
 ) {
-    let decomposed_regex_config: DecomposedRegexConfig =
+    let mut decomposed_regex_config: DecomposedRegexConfig =
         serde_json::from_reader(File::open(decomposed_regex_path).unwrap()).unwrap();
     let regex_and_dfa = decomposed_regex_config
         .to_regex_and_dfa()
         .expect("failed to convert the decomposed regex to dfa");
     let gen_substrs = gen_substrs.unwrap_or(true);
-    // if let Some(halo2_dir_path) = halo2_dir_path {
-    //     let halo2_dir_path = PathBuf::from(halo2_dir_path);
-    //     let allstr_file_path = halo2_dir_path.join("allstr.txt");
-    //     let mut num_public_parts = 0usize;
-    //     for part in decomposed_regex_config.parts.iter() {
-    //         if part.is_public {
-    //             num_public_parts += 1;
-    //         }
-    //     }
-    //     let substr_file_paths = (0..num_public_parts)
-    //         .map(|idx| halo2_dir_path.join(format!("substr_{}.txt", idx)))
-    //         .collect_vec();
-    //     regex_and_dfa
-    //         .gen_halo2_tables(&allstr_file_path, &substr_file_paths, gen_substrs)
-    //         .expect("failed to generate halo2 tables");
-    // }
     if let Some(circom_file_path) = circom_file_path {
         let circom_file_path = PathBuf::from(circom_file_path);
         let circom_template_name = circom_template_name
@@ -163,9 +149,7 @@ pub fn gen_from_decomposed(
 
 pub fn gen_from_raw(
     raw_regex: &str,
-    // max_bytes: usize,
     substrs_json_path: Option<&str>,
-    // halo2_dir_path: Option<&str>,
     circom_file_path: Option<&str>,
     template_name: Option<&str>,
     gen_substrs: Option<bool>,
@@ -184,16 +168,7 @@ pub fn gen_from_raw(
     let regex_and_dfa = RegexAndDFA::from_regex_str_and_substr_defs(raw_regex, substrs_defs_json)
         .expect("failed to convert the raw regex and state transitions to dfa");
     let gen_substrs = gen_substrs.unwrap_or(true);
-    // if let Some(halo2_dir_path) = halo2_dir_path {
-    //     let halo2_dir_path = PathBuf::from(halo2_dir_path);
-    //     let allstr_file_path = halo2_dir_path.join("allstr.txt");
-    //     let substr_file_paths = (0..num_public_parts)
-    //         .map(|idx| halo2_dir_path.join(format!("substr_{}.txt", idx)))
-    //         .collect_vec();
-    //     regex_and_dfa
-    //         .gen_halo2_tables(&allstr_file_path, &substr_file_paths, gen_substrs)
-    //         .expect("failed to generate halo2 tables");
-    // }
+
     if let Some(circom_file_path) = circom_file_path {
         let circom_file_path = PathBuf::from(circom_file_path);
         let template_name = template_name

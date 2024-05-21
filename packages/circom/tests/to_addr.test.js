@@ -214,4 +214,16 @@ describe("To Addr Regex", () => {
       }
     }
   });
+
+  it("invalid to field", async () => {
+    const toStr = "subject:to:adityabisht@gmail.com\r\n";
+    const paddedStr = apis.padString(toStr, 1024);
+    const circuitInputs = {
+      msg: paddedStr,
+    };
+    async function failFn() {
+      await circuit.calculateWitness(circuitInputs);
+    }
+    await expect(failFn).rejects.toThrow();
+  });
 });
