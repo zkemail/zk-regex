@@ -2,7 +2,7 @@
   "parts": [
     {
       "is_public": false,
-      "regex_def": "((\r\n)|^)message-id:"
+      "regex_def": "(\r\n|^)message-id:"
     },
     {
       "is_public": true,

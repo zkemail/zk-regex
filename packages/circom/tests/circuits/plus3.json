@@ -1,0 +1,12 @@
+{
+    "parts": [
+        {
+            "is_public": false,
+            "regex_def": "a"
+        },
+        {
+            "is_public": true,
+            "regex_def": "(bc)+"
+        }
+    ]
+}

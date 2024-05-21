@@ -56,7 +56,7 @@ describe("Bodyhash Regex", () => {
     }
   });
 
-  it("timestamp after new line", async () => {
+  it("bodyhash after new line", async () => {
     const signatureField = `\r\ndkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20230601; t=1694989812; x=1695594612; dara=google.com; h=to:subject:message-id:date:from:mime-version:from:to:cc:subject :date:message-id:reply-to; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=`;
     const paddedStr = apis.padString(signatureField, 1024);
     const circuitInputs = {
@@ -78,6 +78,20 @@ describe("Bodyhash Regex", () => {
       } else {
         expect(0n).toEqual(witness[2 + idx]);
       }
+    }
+  });
+
+  it("invalid bodyhash", async () => {
+    const signatureField = `\r\nto: dkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20230601; t=1694989812; x=1695594612; dara=google.com; h=to:subject:message-id:date:from:mime-version:from:to:cc:subject :date:message-id:reply-to; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=`;
+    const paddedStr = apis.padString(signatureField, 1024);
+    const circuitInputs = {
+      msg: paddedStr,
+    };
+    const witness = await circuit.calculateWitness(circuitInputs);
+    await circuit.checkConstraints(witness);
+    expect(0n).toEqual(witness[1]);
+    for (let idx = 0; idx < 1024; ++idx) {
+      expect(0n).toEqual(witness[2 + idx]);
     }
   });
 });

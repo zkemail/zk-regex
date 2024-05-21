@@ -815,71 +815,105 @@ template InternationalCharsDecomposed(msg_bytes) {
 		state_changed[i].in[88] <== states[i+1][89];
 	}
 
-	component final_state_result = MultiOR(num_bytes+1);
+	component is_accepted = MultiOR(num_bytes+1);
 	for (var i = 0; i <= num_bytes; i++) {
-		final_state_result.in[i] <== states[i][89];
+		is_accepted.in[i] <== states[i][89];
 	}
-	out <== final_state_result.out;
+	out <== is_accepted.out;
 	signal is_consecutive[msg_bytes+1][3];
-	is_consecutive[msg_bytes][2] <== 1;
+	is_consecutive[msg_bytes][2] <== 0;
 	for (var i = 0; i < msg_bytes; i++) {
 		is_consecutive[msg_bytes-1-i][0] <== states[num_bytes-i][89] * (1 - is_consecutive[msg_bytes-i][2]) + is_consecutive[msg_bytes-i][2];
 		is_consecutive[msg_bytes-1-i][1] <== state_changed[msg_bytes-i].out * is_consecutive[msg_bytes-1-i][0];
 		is_consecutive[msg_bytes-1-i][2] <== ORAnd()([(1 - from_zero_enabled[msg_bytes-i+1]), states[num_bytes-i][89], is_consecutive[msg_bytes-1-i][1]]);
 	}
 	// substrings calculated: [{(16, 17), (16, 18), (17, 19), (18, 19), (19, 17), (19, 18)}, {(26, 27), (26, 28), (27, 29), (28, 29), (29, 27), (29, 28)}, {(39, 40), (40, 41), (41, 40)}, {(49, 50), (50, 51), (51, 50)}, {(63, 64), (64, 65), (65, 66), (66, 64)}, {(85, 86), (86, 87), (86, 88), (87, 89), (88, 89), (89, 86)}]
+	signal prev_states0[6][msg_bytes];
 	signal is_substr0[msg_bytes];
 	signal is_reveal0[msg_bytes];
 	signal output reveal0[msg_bytes];
 	for (var i = 0; i < msg_bytes; i++) {
 		 // the 0-th substring transitions: [(16, 17), (16, 18), (17, 19), (18, 19), (19, 17), (19, 18)]
-		is_substr0[i] <== MultiOR(6)([states[i+1][16] * states[i+2][17], states[i+1][16] * states[i+2][18], states[i+1][17] * states[i+2][19], states[i+1][18] * states[i+2][19], states[i+1][19] * states[i+2][17], states[i+1][19] * states[i+2][18]]);
-		is_reveal0[i] <== is_substr0[i] * is_consecutive[i][2];
+		prev_states0[0][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][16];
+		prev_states0[1][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][16];
+		prev_states0[2][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][17];
+		prev_states0[3][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][18];
+		prev_states0[4][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][19];
+		prev_states0[5][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][19];
+		is_substr0[i] <== MultiOR(6)([prev_states0[0][i] * states[i+2][17], prev_states0[1][i] * states[i+2][18], prev_states0[2][i] * states[i+2][19], prev_states0[3][i] * states[i+2][19], prev_states0[4][i] * states[i+2][17], prev_states0[5][i] * states[i+2][18]]);
+		is_reveal0[i] <== MultiAND(3)([out, is_substr0[i], is_consecutive[i][2]]);
 		reveal0[i] <== in[i+1] * is_reveal0[i];
 	}
+	signal prev_states1[6][msg_bytes];
 	signal is_substr1[msg_bytes];
 	signal is_reveal1[msg_bytes];
 	signal output reveal1[msg_bytes];
 	for (var i = 0; i < msg_bytes; i++) {
 		 // the 1-th substring transitions: [(26, 27), (26, 28), (27, 29), (28, 29), (29, 27), (29, 28)]
-		is_substr1[i] <== MultiOR(6)([states[i+1][26] * states[i+2][27], states[i+1][26] * states[i+2][28], states[i+1][27] * states[i+2][29], states[i+1][28] * states[i+2][29], states[i+1][29] * states[i+2][27], states[i+1][29] * states[i+2][28]]);
-		is_reveal1[i] <== is_substr1[i] * is_consecutive[i][2];
+		prev_states1[0][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][26];
+		prev_states1[1][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][26];
+		prev_states1[2][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][27];
+		prev_states1[3][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][28];
+		prev_states1[4][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][29];
+		prev_states1[5][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][29];
+		is_substr1[i] <== MultiOR(6)([prev_states1[0][i] * states[i+2][27], prev_states1[1][i] * states[i+2][28], prev_states1[2][i] * states[i+2][29], prev_states1[3][i] * states[i+2][29], prev_states1[4][i] * states[i+2][27], prev_states1[5][i] * states[i+2][28]]);
+		is_reveal1[i] <== MultiAND(3)([out, is_substr1[i], is_consecutive[i][2]]);
 		reveal1[i] <== in[i+1] * is_reveal1[i];
 	}
+	signal prev_states2[3][msg_bytes];
 	signal is_substr2[msg_bytes];
 	signal is_reveal2[msg_bytes];
 	signal output reveal2[msg_bytes];
 	for (var i = 0; i < msg_bytes; i++) {
 		 // the 2-th substring transitions: [(39, 40), (40, 41), (41, 40)]
-		is_substr2[i] <== MultiOR(3)([states[i+1][39] * states[i+2][40], states[i+1][40] * states[i+2][41], states[i+1][41] * states[i+2][40]]);
-		is_reveal2[i] <== is_substr2[i] * is_consecutive[i][2];
+		prev_states2[0][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][39];
+		prev_states2[1][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][40];
+		prev_states2[2][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][41];
+		is_substr2[i] <== MultiOR(3)([prev_states2[0][i] * states[i+2][40], prev_states2[1][i] * states[i+2][41], prev_states2[2][i] * states[i+2][40]]);
+		is_reveal2[i] <== MultiAND(3)([out, is_substr2[i], is_consecutive[i][2]]);
 		reveal2[i] <== in[i+1] * is_reveal2[i];
 	}
+	signal prev_states3[3][msg_bytes];
 	signal is_substr3[msg_bytes];
 	signal is_reveal3[msg_bytes];
 	signal output reveal3[msg_bytes];
 	for (var i = 0; i < msg_bytes; i++) {
 		 // the 3-th substring transitions: [(49, 50), (50, 51), (51, 50)]
-		is_substr3[i] <== MultiOR(3)([states[i+1][49] * states[i+2][50], states[i+1][50] * states[i+2][51], states[i+1][51] * states[i+2][50]]);
-		is_reveal3[i] <== is_substr3[i] * is_consecutive[i][2];
+		prev_states3[0][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][49];
+		prev_states3[1][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][50];
+		prev_states3[2][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][51];
+		is_substr3[i] <== MultiOR(3)([prev_states3[0][i] * states[i+2][50], prev_states3[1][i] * states[i+2][51], prev_states3[2][i] * states[i+2][50]]);
+		is_reveal3[i] <== MultiAND(3)([out, is_substr3[i], is_consecutive[i][2]]);
 		reveal3[i] <== in[i+1] * is_reveal3[i];
 	}
+	signal prev_states4[4][msg_bytes];
 	signal is_substr4[msg_bytes];
 	signal is_reveal4[msg_bytes];
 	signal output reveal4[msg_bytes];
 	for (var i = 0; i < msg_bytes; i++) {
 		 // the 4-th substring transitions: [(63, 64), (64, 65), (65, 66), (66, 64)]
-		is_substr4[i] <== MultiOR(4)([states[i+1][63] * states[i+2][64], states[i+1][64] * states[i+2][65], states[i+1][65] * states[i+2][66], states[i+1][66] * states[i+2][64]]);
-		is_reveal4[i] <== is_substr4[i] * is_consecutive[i][2];
+		prev_states4[0][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][63];
+		prev_states4[1][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][64];
+		prev_states4[2][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][65];
+		prev_states4[3][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][66];
+		is_substr4[i] <== MultiOR(4)([prev_states4[0][i] * states[i+2][64], prev_states4[1][i] * states[i+2][65], prev_states4[2][i] * states[i+2][66], prev_states4[3][i] * states[i+2][64]]);
+		is_reveal4[i] <== MultiAND(3)([out, is_substr4[i], is_consecutive[i][2]]);
 		reveal4[i] <== in[i+1] * is_reveal4[i];
 	}
+	signal prev_states5[6][msg_bytes];
 	signal is_substr5[msg_bytes];
 	signal is_reveal5[msg_bytes];
 	signal output reveal5[msg_bytes];
 	for (var i = 0; i < msg_bytes; i++) {
 		 // the 5-th substring transitions: [(85, 86), (86, 87), (86, 88), (87, 89), (88, 89), (89, 86)]
-		is_substr5[i] <== MultiOR(6)([states[i+1][85] * states[i+2][86], states[i+1][86] * states[i+2][87], states[i+1][86] * states[i+2][88], states[i+1][87] * states[i+2][89], states[i+1][88] * states[i+2][89], states[i+1][89] * states[i+2][86]]);
-		is_reveal5[i] <== is_substr5[i] * is_consecutive[i][2];
+		prev_states5[0][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][85];
+		prev_states5[1][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][86];
+		prev_states5[2][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][86];
+		prev_states5[3][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][87];
+		prev_states5[4][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][88];
+		prev_states5[5][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][89];
+		is_substr5[i] <== MultiOR(6)([prev_states5[0][i] * states[i+2][86], prev_states5[1][i] * states[i+2][87], prev_states5[2][i] * states[i+2][88], prev_states5[3][i] * states[i+2][89], prev_states5[4][i] * states[i+2][89], prev_states5[5][i] * states[i+2][86]]);
+		is_reveal5[i] <== MultiAND(3)([out, is_substr5[i], is_consecutive[i][2]]);
 		reveal5[i] <== in[i+1] * is_reveal5[i];
 	}
 }

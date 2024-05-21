@@ -215,4 +215,17 @@ describe("From Addr Regex", () => {
       }
     }
   });
+
+  it("invalid from field", async () => {
+    const fromStr = "\r\nto:from:Sora Suegami <suegamisora@gmail.com>\r\n";
+    const paddedStr = apis.padString(fromStr, 1024);
+    const circuitInputs = {
+      msg: paddedStr,
+    };
+    async function failFn() {
+      await circuit.calculateWitness(circuitInputs);
+    }
+    await expect(failFn).rejects.toThrow();
+  });
+
 });

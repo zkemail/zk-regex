@@ -2,7 +2,7 @@
   "parts": [
     {
       "is_public": false,
-      "regex_def": "((\r\n)|^)dkim-signature:"
+      "regex_def": "(\r\n|^)dkim-signature:"
     },
     {
       "is_public": false,

@@ -86,4 +86,18 @@ describe("Subject All Regex", () => {
       }
     }
   });
+
+  it("invalid subject", async () => {
+    const subjectStr = "\r\nto:subject:This is a subject in To field.\r\n";
+    const paddedStr = apis.padString(subjectStr, 256);
+    const circuitInputs = {
+      msg: paddedStr,
+    };
+    const witness = await circuit.calculateWitness(circuitInputs);
+    await circuit.checkConstraints(witness);
+    expect(0n).toEqual(witness[1]);
+    for (let idx = 0; idx < 256; ++idx) {
+      expect(0n).toEqual(witness[2 + idx]);
+    }
+  });
 });

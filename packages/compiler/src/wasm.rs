@@ -5,7 +5,7 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn genFromDecomposed(decomposedRegexJson: &str, circomTemplateName: &str) -> String {
-    let decomposed_regex_config: DecomposedRegexConfig =
+    let mut decomposed_regex_config: DecomposedRegexConfig =
         serde_json::from_str(decomposedRegexJson).expect("failed to parse decomposed_regex json");
     let regex_and_dfa = decomposed_regex_config
         .to_regex_and_dfa()
@@ -30,8 +30,8 @@ pub fn genFromRaw(rawRegex: &str, substrsJson: &str, circomTemplateName: &str) -
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn genRegexAndDfa(decomposedRegex: JsValue) -> JsValue {
-    let decomposed_regex_config: DecomposedRegexConfig = from_value(decomposedRegex).unwrap();
-    let regex_and_dfa = regex_and_dfa(&decomposed_regex_config);
+    let mut decomposed_regex_config: DecomposedRegexConfig = from_value(decomposedRegex).unwrap();
+    let regex_and_dfa = regex_and_dfa(&mut decomposed_regex_config).unwrap();
     let dfa_val_str = serde_json::to_string(&regex_and_dfa).unwrap();
     JsValue::from_str(&dfa_val_str)
 }
@@ -39,9 +39,10 @@ pub fn genRegexAndDfa(decomposedRegex: JsValue) -> JsValue {
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn genCircom(decomposedRegex: JsValue, circomTemplateName: &str) -> String {
-    let decomposed_regex_config: DecomposedRegexConfig = from_value(decomposedRegex).unwrap();
-    let regex_and_dfa = regex_and_dfa(&decomposed_regex_config);
+    let mut decomposed_regex_config: DecomposedRegexConfig = from_value(decomposedRegex).unwrap();
+    let regex_and_dfa = regex_and_dfa(&mut decomposed_regex_config);
     regex_and_dfa
+        .expect("failed to convert the decomposed regex to dfa")
         .gen_circom_str(&circomTemplateName)
         .expect("failed to generate circom")
 }
