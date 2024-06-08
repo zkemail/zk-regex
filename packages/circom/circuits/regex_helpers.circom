@@ -2,7 +2,8 @@ pragma circom 2.0.3;
 
 include "circomlib/circuits/comparators.circom";
 include "circomlib/circuits/gates.circom";
-
+include "circomlib/circuits/poseidon.circom";
+include "circomlib/circuits/bitify.circom";
 // template MultiOROld(n) {
 //     signal input in[n];
 //     signal output out;
@@ -71,4 +72,27 @@ template IsNotZeroAcc() {
 
     signal is_zero <== IsZero()(in);
     out <== acc + (1 - is_zero);
+}
+
+template GenRLCRands(n) {
+    signal input rand;
+    signal output rands[n+1];
+
+    rands[0] <== rand;
+    for (var i = 0; i < n; i++) {
+        rands[i+1] <== rands[i] * rand;
+    }
+}
+
+template RLC(n) {
+    signal input in[n];
+    signal input init_rlc;
+    signal input rands[n+1];
+
+    signal acc[n+1];
+    acc[0] <== init_rlc;
+    for (var i = 0; i < n; i++) {
+        acc[i+1] <== acc[i] + rands[i] * in[i];
+    }
+    signal output rlc <== acc[n];
 }
