@@ -1,7 +1,9 @@
 use std::fs::File;
 use std::iter::FromIterator;
 pub mod circom;
+pub mod halo2;
 pub mod regex;
+
 #[cfg(target_arch = "wasm32")]
 mod wasm;
 #[cfg(target_arch = "wasm32")]
@@ -188,15 +190,15 @@ pub(crate) fn get_accepted_state(dfa_val: &DFAGraph) -> Option<usize> {
     None
 }
 
-// pub(crate) fn get_max_state(dfa_val: &DFAGraph) -> usize {
-//     let mut max_state = 0;
-//     for (_i, val) in dfa_val.states.iter().enumerate() {
-//         if val.state > max_state {
-//             max_state = val.state;
-//         }
-//     }
-//     max_state
-// }
+pub(crate) fn get_max_state(dfa_val: &DFAGraph) -> usize {
+    let mut max_state = 0;
+    for (_i, val) in dfa_val.states.iter().enumerate() {
+        if val.state > max_state {
+            max_state = val.state;
+        }
+    }
+    max_state
+}
 
 #[cfg(test)]
 mod tests {

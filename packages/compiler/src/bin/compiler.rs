@@ -65,6 +65,6 @@ fn main() {
                 template_name.as_ref().map(|s| s.as_str()),
                 gen_substrs,
             );
-        } 
+        }
     }
 }
