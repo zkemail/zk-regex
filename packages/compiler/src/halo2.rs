@@ -67,10 +67,11 @@ impl RegexAndDFA {
         let mut text = format!("0\n{}\n{}\n", accepted_state, max_state);
 
         for (i, state) in self.dfa_val.states.iter().enumerate() {
-            for (key, next_node_val) in state.edges.iter() {
-                let key_char = *key as u8 as char;
-                let next_node = next_node_val.iter().next().unwrap();
-                text += &format!("{} {} {}\n", i, next_node, key_char as u8);
+            for (next_state, chars) in state.edges.iter() {
+                for &char in chars {
+                    let char_u8 = char as u8;
+                    text += &format!("{} {} {}\n", i, next_state, char_u8);
+                }
             }
         }
         text
