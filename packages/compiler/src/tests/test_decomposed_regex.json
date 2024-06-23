@@ -1,8 +1,0 @@
-{
-    "parts": [
-        {
-            "regex_def": "a[0-9]{2,4}b",
-            "is_public": false
-        }
-    ]
-}
