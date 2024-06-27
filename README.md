@@ -37,7 +37,9 @@ The regular expressions supported by our compiler version 2.1.0 are **audited by
 5. Regular expressions that, when converted to DFA, have multiple accepting states are not supported.
 6. Decomposed regex defintions must alternate public and private states.
 
-Note that all international characters are supported.
+Note that all international characters are supported. 
+
+If you want to use this circuit in practice, we strongly recommend using [AssertZero](https://github.com/zkemail/zk-email-verify/blob/29d5c873161c30ebb98a00efb3a145275d0f0833/packages/circuits/utils/array.circom#L144) on the bytes before and after your match. This is because you likely have shift viaan unconstrained index passed in as the witnesss to represent the start of the regex match. Since that value can be arbitrarily manipulated, you need to manually constrain that there are no extra matches that can be used to exploit the circuit. You can see how we do this in [zk-email here](https://github.com/zkemail/zk-email-verify/blob/29d5c873161c30ebb98a00efb3a145275d0f0833/packages/circuits/email-verifier.circom#L99).
 
 ## How to use
 
