@@ -98,6 +98,7 @@ mod tests {
             .expect("failed to convert the decomposed regex to dfa");
 
         let regex_def_text = regex_and_dfa.dfa_to_regex_def_text();
-        println!("result: {}", regex_def_text);
+        let expected_text = "0\n5\n5\n0 1 109\n1 2 48\n1 2 49\n2 2 48\n2 2 49\n2 3 45\n3 4 97\n3 4 98\n4 5 59\n";
+        assert_eq!(regex_def_text, expected_text);
     }
 }
