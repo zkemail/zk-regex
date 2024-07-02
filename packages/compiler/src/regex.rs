@@ -121,6 +121,9 @@ fn dfa_to_graph(dfa_info: &DFAGraphInfo) -> DFAGraph {
             ("\\v", 11),
             ("\\f", 12),
             ("\\0", 0),
+            ("\\\"", 34),
+            ("\\'", 39),
+            ("\\", 92),
         ]
         .into();
         for (key, value) in &state.edges {
