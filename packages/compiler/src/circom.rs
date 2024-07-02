@@ -114,7 +114,9 @@ fn gen_circom_allstr(
         "state transition to the 0-th state is not allowed"
     );
     if end_anchor {
-        lines.push(format!("\t\tpadding_start[i+1] <== IsNotZeroAcc()(padding_start[i], in[i]);"));
+        lines.push(format!(
+            "\t\tpadding_start[i+1] <== IsNotZeroAcc()(padding_start[i], in[i]);"
+        ));
     }
     for i in 1..n {
         let mut outputs = vec![];
@@ -455,11 +457,12 @@ fn gen_circom_allstr(
             accept_node
         ));
         accept_lines.push("\t}".to_string());
-        accept_lines.push("\tout <== is_accepted.out * end_anchor_check[num_bytes][1];".to_string());
+        accept_lines
+            .push("\tout <== is_accepted.out * end_anchor_check[num_bytes][1];".to_string());
     } else {
         accept_lines.push("\tout <== is_accepted.out;".to_string());
     }
-    
+
     final_code.extend(accept_lines);
 
     final_code.join("\n")
