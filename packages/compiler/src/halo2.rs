@@ -1,4 +1,3 @@
-use std::collections::BTreeSet;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
@@ -6,12 +5,6 @@ use std::path::PathBuf;
 use crate::{get_accepted_state, get_max_state, CompilerError, RegexAndDFA};
 
 impl RegexAndDFA {
-    fn extract_endpoints_from_defs(defs: &BTreeSet<(usize, usize)>) -> (Vec<usize>, Vec<usize>) {
-        let starts: Vec<usize> = defs.iter().map(|(start, _)| *start).collect();
-        let ends: Vec<usize> = defs.iter().map(|(_, end)| *end).collect();
-        (starts, ends)
-    }
-
     pub fn gen_halo2_tables(
         &self,
         allstr_file_path: &PathBuf,
@@ -29,8 +22,7 @@ impl RegexAndDFA {
 
         for (idx, defs) in self.substrs_defs.substr_defs_array.iter().enumerate() {
             let mut writer = BufWriter::new(File::create(&substr_file_paths[idx])?);
-
-            let (starts, ends) = Self::extract_endpoints_from_defs(defs);
+            let (starts, ends) = &self.substrs_defs.substr_endpoints_array.as_ref().unwrap()[idx];
             let starts_str = starts
                 .iter()
                 .map(|s| s.to_string())
@@ -98,7 +90,8 @@ mod tests {
             .expect("failed to convert the decomposed regex to dfa");
 
         let regex_def_text = regex_and_dfa.dfa_to_regex_def_text();
-        let expected_text = "0\n5\n5\n0 1 109\n1 2 48\n1 2 49\n2 2 48\n2 2 49\n2 3 45\n3 4 97\n3 4 98\n4 5 59\n";
+        let expected_text =
+            "0\n5\n5\n0 1 109\n1 2 48\n1 2 49\n2 2 48\n2 2 49\n2 3 45\n3 4 97\n3 4 98\n4 5 59\n";
         assert_eq!(regex_def_text, expected_text);
     }
 }
