@@ -30,17 +30,19 @@ fn parse_dfa_output(output: &str) -> DFAGraphInfo {
         if &captures[0][0..1] == "*" {
             state.typ = String::from("accept");
         }
-        for transition in Regex::new(r"\s+[^=]+\s*=>\s*(\d+)+\s*|\s+=+\s*=>\s*(\d+)+|\s+=-[^=]+=>\s*\s*(\d+)+\s*|\s+[^=]+-=\s*=>\s*(\d+)+\s*")
+        for transition in Regex::new(
+            r"\s+[^=]+\s*=>\s*(\d+)+\s*|\s+=+\s*=>\s*(\d+)+|\s+=-[^=]+=>\s*\s*(\d+)+\s*|\s+[^=]+-=\s*=>\s*(\d+)+\s*"
+        )
             .unwrap()
-            .captures_iter(&captures[0].to_string())
-        {
+            .captures_iter(&captures[0].to_string()) {
             let trimmed_transition = transition[0].trim();
             let transition_vec = trimmed_transition.split("=>").collect::<Vec<&str>>();
             let mut transition_vec_iter = transition_vec.iter();
             let mut src = transition_vec_iter.next().unwrap().trim().to_string();
-            if src.len() > 2
-                && src.chars().nth(2).unwrap() == '\\'
-                && !(src.chars().nth(3).unwrap() == 'x')
+            if
+                src.len() > 2 &&
+                src.chars().nth(2).unwrap() == '\\' &&
+                !(src.chars().nth(3).unwrap() == 'x')
             {
                 src = format!("{}{}", &src[0..2], &src[3..]);
             }
@@ -124,6 +126,7 @@ fn dfa_to_graph(dfa_info: &DFAGraphInfo) -> DFAGraph {
             ("\\\"", 34),
             ("\\'", 39),
             ("\\", 92),
+            ("' '", 32),
         ]
         .into();
         for (key, value) in &state.edges {
@@ -265,6 +268,7 @@ pub fn regex_and_dfa(
     config = config.accelerate(true);
 
     let mut net_dfa = DFAGraph { states: Vec::new() };
+    let mut substr_endpoints_array = Vec::new();
     let mut substr_defs_array = Vec::new();
 
     let caret_regex_index = {
@@ -371,7 +375,7 @@ pub fn regex_and_dfa(
                             state: 1,
                         },
                     ],
-                }
+                };
             } else {
                 graph.states[0].r#type = "".to_string();
                 let accepted_state = graph
@@ -401,10 +405,14 @@ pub fn regex_and_dfa(
         graph = rename_states(&graph, max_state_index);
 
         if regex.is_public {
+            let mut substr_starts = BTreeSet::new();
+            let mut substr_ends = BTreeSet::new();
+
             let mut accepting_states = Vec::new();
             for state in &net_dfa.states {
                 if state.r#type == "accept" {
                     accepting_states.push(state);
+                    substr_starts.insert(state.state);
                 }
             }
 
@@ -412,6 +420,12 @@ pub fn regex_and_dfa(
             for state in &graph.states {
                 for (key, _) in &state.edges {
                     public_edges.insert((state.state, *key));
+                }
+            }
+
+            for state in &graph.states {
+                if state.r#type == "accept" {
+                    substr_ends.insert(state.state);
                 }
             }
 
@@ -439,6 +453,7 @@ pub fn regex_and_dfa(
             }
 
             substr_defs_array.push(public_edges);
+            substr_endpoints_array.push((substr_starts, substr_ends));
         }
 
         net_dfa = add_dfa(&net_dfa, &graph);
@@ -456,7 +471,7 @@ pub fn regex_and_dfa(
         end_anchor,
         substrs_defs: SubstrsDefs {
             substr_defs_array: substr_defs_array,
-            substr_endpoints_array: None,
+            substr_endpoints_array: Some(substr_endpoints_array),
         },
     })
 }

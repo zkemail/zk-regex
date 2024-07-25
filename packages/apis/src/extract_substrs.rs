@@ -233,7 +233,6 @@ mod test {
         assert_eq!(idxes, vec![(11, 79)]);
     }
 
-
     #[test]
     fn test_dot_plus_valid() {
         let code_regex = DecomposedRegexConfig {
@@ -275,5 +274,4 @@ mod test {
         let idxes = extract_substr_idxes(input_str, &code_regex).unwrap();
         assert_eq!(idxes, vec![(0, 0)]);
     }
-    
 }
