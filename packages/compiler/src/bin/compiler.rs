@@ -46,7 +46,7 @@
 //! ```
 
 use clap::{Parser, Subcommand};
-use zk_regex_compiler::*;
+use zk_regex_compiler::{gen_from_decomposed, gen_from_raw};
 
 #[derive(Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]

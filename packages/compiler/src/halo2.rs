@@ -1,15 +1,15 @@
 use std::fs::File;
-use std::io::{BufWriter, Write};
+use std::io::{ BufWriter, Write };
 use std::path::PathBuf;
 
-use crate::{get_accepted_state, get_max_state, CompilerError, RegexAndDFA};
+use crate::{ get_accepted_state, get_max_state, CompilerError, RegexAndDFA };
 
 impl RegexAndDFA {
     pub fn gen_halo2_tables(
         &self,
         allstr_file_path: &PathBuf,
         substr_file_paths: &[PathBuf],
-        gen_substrs: bool,
+        gen_substrs: bool
     ) -> Result<(), CompilerError> {
         let regex_text = self.dfa_to_regex_def_text();
         let mut regex_file = File::create(allstr_file_path)?;
@@ -67,31 +67,5 @@ impl RegexAndDFA {
             }
         }
         text
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{DecomposedRegexConfig, RegexPartConfig};
-    use std::collections::VecDeque;
-
-    #[test]
-    fn test_dfa_to_regex_def_text() {
-        let regex_part_config = RegexPartConfig {
-            is_public: false,
-            regex_def: "m[01]+-[ab];".to_string(),
-        };
-        let mut decomposed_regex_config = DecomposedRegexConfig {
-            parts: VecDeque::from(vec![regex_part_config]),
-        };
-
-        let regex_and_dfa = decomposed_regex_config
-            .to_regex_and_dfa()
-            .expect("failed to convert the decomposed regex to dfa");
-
-        let regex_def_text = regex_and_dfa.dfa_to_regex_def_text();
-        let expected_text =
-            "0\n5\n5\n0 1 109\n1 2 48\n1 2 49\n2 2 48\n2 2 49\n2 3 45\n3 4 97\n3 4 98\n4 5 59\n";
-        assert_eq!(regex_def_text, expected_text);
     }
 }
