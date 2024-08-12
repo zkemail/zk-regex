@@ -569,7 +569,7 @@ fn add_dfa(net_dfa: &DFAGraph, graph: &DFAGraph) -> DFAGraph {
     new_dfa
 }
 
-pub fn get_regex_and_dfa(
+pub(crate) fn get_regex_and_dfa(
     decomposed_regex: &mut DecomposedRegexConfig,
 ) -> Result<RegexAndDFA, CompilerError> {
     let mut net_dfa_graph = DFAGraph { states: Vec::new() };
@@ -631,4 +631,18 @@ pub fn get_regex_and_dfa(
             substring_boundaries: Some(ubstring_boundaries_array),
         },
     })
+}
+
+pub(crate) fn get_accepted_state(dfa: &DFAGraph) -> Option<usize> {
+    dfa.states
+        .iter()
+        .position(|state| state.state_type == "accept")
+}
+
+pub(crate) fn get_max_state(dfa: &DFAGraph) -> usize {
+    dfa.states
+        .iter()
+        .map(|state| state.state_id)
+        .max()
+        .unwrap_or_default()
 }

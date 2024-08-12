@@ -1,71 +1,74 @@
-use std::fs::File;
-use std::io::{ BufWriter, Write };
-use std::path::PathBuf;
+use crate::{
+    errors::CompilerError,
+    regex::{get_accepted_state, get_max_state},
+    structs::RegexAndDFA,
+};
+use std::{
+    fs::File,
+    io::{BufWriter, Write},
+    path::PathBuf,
+};
 
-use crate::{ get_accepted_state, get_max_state, CompilerError, RegexAndDFA };
+fn dfa_to_regex_def_text(regex_and_dfa: &RegexAndDFA) -> String {
+    let accepted_state = get_accepted_state(&regex_and_dfa.dfa).unwrap();
+    let max_state = get_max_state(&regex_and_dfa.dfa);
+    let mut text = format!("0\n{}\n{}\n", accepted_state, max_state);
 
-impl RegexAndDFA {
-    pub fn gen_halo2_tables(
-        &self,
-        allstr_file_path: &PathBuf,
-        substr_file_paths: &[PathBuf],
-        gen_substrs: bool
-    ) -> Result<(), CompilerError> {
-        let regex_text = self.dfa_to_regex_def_text();
-        let mut regex_file = File::create(allstr_file_path)?;
-        write!(regex_file, "{}", regex_text)?;
-        regex_file.flush()?;
-
-        if !gen_substrs {
-            return Ok(());
-        }
-
-        for (idx, defs) in self.substrs_defs.substr_defs_array.iter().enumerate() {
-            let mut writer = BufWriter::new(File::create(&substr_file_paths[idx])?);
-            let (starts, ends) = &self.substrs_defs.substr_endpoints_array.as_ref().unwrap()[idx];
-            let starts_str = starts
-                .iter()
-                .map(|s| s.to_string())
-                .collect::<Vec<_>>()
-                .join(" ");
-            writer.write_fmt(format_args!("{}\n", starts_str))?;
-            let ends_str = ends
-                .iter()
-                .map(|e| e.to_string())
-                .collect::<Vec<_>>()
-                .join(" ");
-            writer.write_fmt(format_args!("{}\n", ends_str))?;
-
-            let mut defs = defs.iter().collect::<Vec<&(usize, usize)>>();
-            defs.sort_by(|a, b| {
-                let start_cmp = a.0.cmp(&b.0);
-                if start_cmp == std::cmp::Ordering::Equal {
-                    a.1.cmp(&b.1)
-                } else {
-                    start_cmp
-                }
-            });
-
-            for (cur, next) in defs.iter() {
-                writer.write_fmt(format_args!("{} {}\n", cur, next))?;
+    for (i, state) in regex_and_dfa.dfa.states.iter().enumerate() {
+        for (next_state, chars) in state.transitions.iter() {
+            for &char in chars {
+                text += &format!("{} {} {}\n", i, next_state, char as u8);
             }
         }
-        Ok(())
+    }
+    text
+}
+
+pub(crate) fn gen_halo2_tables(
+    regex_and_dfa: &RegexAndDFA,
+    allstr_file_path: &PathBuf,
+    substr_file_paths: &[PathBuf],
+    gen_substrs: bool,
+) -> Result<(), CompilerError> {
+    let regex_text = dfa_to_regex_def_text(regex_and_dfa);
+    std::fs::write(allstr_file_path, regex_text)?;
+
+    if !gen_substrs {
+        return Ok(());
     }
 
-    pub fn dfa_to_regex_def_text(&self) -> String {
-        let accepted_state = get_accepted_state(&self.dfa_val).unwrap();
-        let max_state = get_max_state(&self.dfa_val);
-        let mut text = format!("0\n{}\n{}\n", accepted_state, max_state);
+    for (idx, defs) in regex_and_dfa.substrings.substring_ranges.iter().enumerate() {
+        let mut writer = BufWriter::new(File::create(&substr_file_paths[idx])?);
+        let (starts, ends) = &regex_and_dfa
+            .substrings
+            .substring_boundaries
+            .as_ref()
+            .unwrap()[idx];
 
-        for (i, state) in self.dfa_val.states.iter().enumerate() {
-            for (next_state, chars) in state.edges.iter() {
-                for &char in chars {
-                    let char_u8 = char as u8;
-                    text += &format!("{} {} {}\n", i, next_state, char_u8);
-                }
-            }
+        writeln!(
+            writer,
+            "{}",
+            starts
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(" ")
+        )?;
+        writeln!(
+            writer,
+            "{}",
+            ends.iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(" ")
+        )?;
+
+        let mut sorted_defs: Vec<_> = defs.iter().collect();
+        sorted_defs.sort_unstable_by_key(|&(start, end)| (*start, *end));
+
+        for &(cur, next) in &sorted_defs {
+            writeln!(writer, "{} {}", cur, next)?;
         }
-        text
     }
+    Ok(())
 }

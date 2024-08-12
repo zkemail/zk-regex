@@ -1,10 +1,13 @@
 mod errors;
+mod halo2;
 mod regex;
 mod structs;
 
 use errors::CompilerError;
+use halo2::gen_halo2_tables;
+use itertools::Itertools;
 use regex::get_regex_and_dfa;
-use std::fs::File;
+use std::{fs::File, path::PathBuf};
 use structs::DecomposedRegexConfig;
 
 pub fn gen_from_decomposed(
@@ -19,6 +22,27 @@ pub fn gen_from_decomposed(
     let gen_substrs = gen_substrs.unwrap_or(false);
 
     let regex_and_dfa = get_regex_and_dfa(&mut decomposed_regex_config)?;
+
+    if let Some(halo2_dir_path) = halo2_dir_path {
+        let halo2_dir_path = PathBuf::from(halo2_dir_path);
+        let allstr_file_path = halo2_dir_path.join("allstr.txt");
+        let mut num_public_parts = 0usize;
+        for part in decomposed_regex_config.parts.iter() {
+            if part.is_public {
+                num_public_parts += 1;
+            }
+        }
+        let substr_file_paths = (0..num_public_parts)
+            .map(|idx| halo2_dir_path.join(format!("substr_{}.txt", idx)))
+            .collect_vec();
+        gen_halo2_tables(
+            &regex_and_dfa,
+            &allstr_file_path,
+            &substr_file_paths,
+            gen_substrs,
+        )
+        .expect("failed to generate halo2 tables");
+    }
 
     Ok(())
 }
