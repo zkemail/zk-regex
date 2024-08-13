@@ -70,5 +70,6 @@ pub(crate) fn gen_halo2_tables(
             writeln!(writer, "{} {}", cur, next)?;
         }
     }
+
     Ok(())
 }

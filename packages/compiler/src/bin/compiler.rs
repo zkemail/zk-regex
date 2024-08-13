@@ -102,13 +102,16 @@ fn process_decomposed(cli: Cli) {
         gen_substrs,
     } = cli.command
     {
-        gen_from_decomposed(
+        if let Err(e) = gen_from_decomposed(
             &decomposed_regex_path,
             halo2_dir_path.as_deref(),
             circom_file_path.as_deref(),
             template_name.as_deref(),
             gen_substrs,
-        );
+        ) {
+            eprintln!("Error: {}", e);
+            std::process::exit(1);
+        }
     }
 }
 

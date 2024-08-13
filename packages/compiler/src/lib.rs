@@ -1,3 +1,4 @@
+mod circom;
 mod errors;
 mod halo2;
 mod regex;
@@ -26,15 +27,17 @@ pub fn gen_from_decomposed(
     if let Some(halo2_dir_path) = halo2_dir_path {
         let halo2_dir_path = PathBuf::from(halo2_dir_path);
         let allstr_file_path = halo2_dir_path.join("allstr.txt");
-        let mut num_public_parts = 0usize;
-        for part in decomposed_regex_config.parts.iter() {
-            if part.is_public {
-                num_public_parts += 1;
-            }
-        }
+
+        let num_public_parts = decomposed_regex_config
+            .parts
+            .iter()
+            .filter(|part| part.is_public)
+            .count();
+
         let substr_file_paths = (0..num_public_parts)
             .map(|idx| halo2_dir_path.join(format!("substr_{}.txt", idx)))
             .collect_vec();
+
         gen_halo2_tables(
             &regex_and_dfa,
             &allstr_file_path,
