@@ -3,6 +3,7 @@ mod errors;
 mod halo2;
 mod regex;
 mod structs;
+mod wasm;
 
 use circom::gen_circom_template;
 use errors::CompilerError;
