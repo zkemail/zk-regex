@@ -125,13 +125,16 @@ fn process_raw(cli: Cli) {
         gen_substrs,
     } = cli.command
     {
-        gen_from_raw(
+        if let Err(e) = gen_from_raw(
             &raw_regex,
             substrs_json_path.as_deref(),
             halo2_dir_path.as_deref(),
             circom_file_path.as_deref(),
             template_name.as_deref(),
             gen_substrs,
-        );
+        ) {
+            eprintln!("Error: {}", e);
+            std::process::exit(1);
+        }
     }
 }

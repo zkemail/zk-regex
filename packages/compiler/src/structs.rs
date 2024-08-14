@@ -49,3 +49,8 @@ pub struct RegexAndDFA {
     pub has_end_anchor: bool,
     pub substrings: SubstringDefinitions,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstringDefinitionsJson {
+    pub transitions: Vec<Vec<(usize, usize)>>,
+}

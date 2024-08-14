@@ -2,7 +2,7 @@ use crate::{
     errors::CompilerError,
     structs::{
         DFAGraph, DFAGraphInfo, DFAStateInfo, DFAStateNode, RegexAndDFA, RegexPartConfig,
-        SubstringDefinitions,
+        SubstringDefinitions, SubstringDefinitionsJson,
     },
     DecomposedRegexConfig,
 };
@@ -630,6 +630,53 @@ pub(crate) fn get_regex_and_dfa(
             substring_ranges: substring_ranges_array,
             substring_boundaries: Some(ubstring_boundaries_array),
         },
+    })
+}
+
+fn create_dfa_graph_from_regex(regex: &str) -> Result<DFAGraph, CompilerError> {
+    let config = DFA::config()
+        .minimize(true)
+        .start_kind(StartKind::Anchored)
+        .byte_classes(false)
+        .accelerate(true);
+
+    let dfa = DFA::builder()
+        .configure(config)
+        .build(&format!(r"^{}$", regex))
+        .map_err(|e| CompilerError::BuildError {
+            regex: regex.to_string(),
+            source: e,
+        })?;
+
+    convert_dfa_to_graph(dfa)
+}
+
+pub(crate) fn create_regex_and_dfa_from_str_and_defs(
+    regex_str: &str,
+    substrs_defs_json: SubstringDefinitionsJson,
+) -> Result<RegexAndDFA, CompilerError> {
+    let dfa = create_dfa_graph_from_regex(regex_str)?;
+
+    let substring_ranges = substrs_defs_json
+        .transitions
+        .into_iter()
+        .map(|transitions| {
+            transitions
+                .into_iter()
+                .collect::<BTreeSet<(usize, usize)>>()
+        })
+        .collect();
+
+    let substrings = SubstringDefinitions {
+        substring_ranges,
+        substring_boundaries: None,
+    };
+
+    Ok(RegexAndDFA {
+        regex_pattern: regex_str.to_string(),
+        dfa,
+        has_end_anchor: regex_str.ends_with('$'),
+        substrings,
     })
 }
 

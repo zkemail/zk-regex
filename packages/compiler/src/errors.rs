@@ -22,4 +22,6 @@ pub enum CompilerError {
     ParseError(String),
     #[error("Graph Error: {0}")]
     GraphError(String),
+    #[error("No accepted state found in DFA")]
+    NoAcceptedState,
 }
