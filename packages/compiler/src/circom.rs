@@ -404,6 +404,8 @@ fn generate_state_transition_logic(
     add_zero_starting_state_updates(&mut lines, &zero_starting_and_idxes);
     add_state_changed_updates(&mut lines, state_len);
 
+    lines.push("\t}".to_string());
+
     (eq_i, lt_i, and_i, multi_or_i, lines)
 }
 
@@ -419,7 +421,7 @@ fn generate_declarations(
 ) -> Vec<String> {
     let mut declarations = vec![];
 
-    declarations.push("pragma circom 2.1.5;".to_string());
+    declarations.push("pragma circom 2.1.5;\n".to_string());
     declarations
         .push("include \"@zk-email/zk-regex-circom/circuits/regex_helpers.circom\";\n".to_string());
 

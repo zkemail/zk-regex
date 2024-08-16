@@ -324,7 +324,7 @@ fn convert_dfa_to_graph(dfa: DFA<Vec<u32>>) -> Result<DFAGraph, CompilerError> {
     handle_eoi_transitions(&mut dfa_info);
 
     let start_state = find_start_state(&dfa_str)?;
-    sort_and_rename_states(&mut dfa_info, start_state);
+    dfa_info = sort_and_rename_states(&mut dfa_info, start_state);
 
     let mut graph = DFAGraph { states: Vec::new() };
     for state in &dfa_info.states {
@@ -604,7 +604,7 @@ pub(crate) fn get_regex_and_dfa(
             .max()
             .unwrap_or(0);
 
-        net_dfa_graph = rename_states(&dfa_graph, max_state_index);
+        dfa_graph = rename_states(&dfa_graph, max_state_index);
 
         if regex.is_public {
             let (public_edges, (substr_starts, substr_ends)) =
