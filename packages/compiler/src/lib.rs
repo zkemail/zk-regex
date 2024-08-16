@@ -13,6 +13,15 @@ use regex::{create_regex_and_dfa_from_str_and_defs, get_regex_and_dfa};
 use std::{fs::File, path::PathBuf};
 use structs::{DecomposedRegexConfig, RegexAndDFA, SubstringDefinitionsJson};
 
+/// Loads substring definitions from a JSON file or creates a default one.
+///
+/// # Arguments
+///
+/// * `substrs_json_path` - An optional path to the JSON file containing substring definitions.
+///
+/// # Returns
+///
+/// A `Result` containing either the loaded `SubstringDefinitionsJson` or a `CompilerError`.
 fn load_substring_definitions_json(
     substrs_json_path: Option<&str>,
 ) -> Result<SubstringDefinitionsJson, CompilerError> {
@@ -27,6 +36,20 @@ fn load_substring_definitions_json(
     }
 }
 
+/// Generates output files for Halo2 and Circom based on the provided regex and DFA.
+///
+/// # Arguments
+///
+/// * `regex_and_dfa` - The `RegexAndDFA` struct containing the regex pattern and DFA.
+/// * `halo2_dir_path` - An optional path to the directory for Halo2 output files.
+/// * `circom_file_path` - An optional path to the Circom output file.
+/// * `circom_template_name` - An optional name for the Circom template.
+/// * `num_public_parts` - The number of public parts in the regex.
+/// * `gen_substrs` - A boolean indicating whether to generate substrings.
+///
+/// # Returns
+///
+/// A `Result` indicating success or a `CompilerError`.
 fn generate_outputs(
     regex_and_dfa: &RegexAndDFA,
     halo2_dir_path: Option<&str>,
@@ -66,6 +89,19 @@ fn generate_outputs(
     Ok(())
 }
 
+/// Generates outputs from a decomposed regex configuration file.
+///
+/// # Arguments
+///
+/// * `decomposed_regex_path` - The path to the decomposed regex configuration file.
+/// * `halo2_dir_path` - An optional path to the directory for Halo2 output files.
+/// * `circom_file_path` - An optional path to the Circom output file.
+/// * `circom_template_name` - An optional name for the Circom template.
+/// * `gen_substrs` - An optional boolean indicating whether to generate substrings.
+///
+/// # Returns
+///
+/// A `Result` indicating success or a `CompilerError`.
 pub fn gen_from_decomposed(
     decomposed_regex_path: &str,
     halo2_dir_path: Option<&str>,
@@ -97,6 +133,20 @@ pub fn gen_from_decomposed(
     Ok(())
 }
 
+/// Generates outputs from a raw regex string and optional substring definitions.
+///
+/// # Arguments
+///
+/// * `raw_regex` - The raw regex string.
+/// * `substrs_json_path` - An optional path to the JSON file containing substring definitions.
+/// * `halo2_dir_path` - An optional path to the directory for Halo2 output files.
+/// * `circom_file_path` - An optional path to the Circom output file.
+/// * `template_name` - An optional name for the Circom template.
+/// * `gen_substrs` - An optional boolean indicating whether to generate substrings.
+///
+/// # Returns
+///
+/// A `Result` indicating success or a `CompilerError`.
 pub fn gen_from_raw(
     raw_regex: &str,
     substrs_json_path: Option<&str>,

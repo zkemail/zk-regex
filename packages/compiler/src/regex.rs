@@ -16,14 +16,28 @@ use std::{
     num::ParseIntError,
 };
 
+/// Creates a DFA configuration with specific settings.
+///
+/// # Returns
+///
+/// A `Config` object with minimization, anchored start, no byte classes, and acceleration enabled.
 fn create_dfa_config() -> Config {
-    let mut config = DFA::config().minimize(true);
-    config = config.start_kind(StartKind::Anchored);
-    config = config.byte_classes(false);
-    config = config.accelerate(true);
-    config
+    DFA::config()
+        .minimize(true)
+        .start_kind(StartKind::Anchored)
+        .byte_classes(false)
+        .accelerate(true)
 }
 
+/// Finds the index of the first caret (^) in a regex string that is not inside parentheses.
+///
+/// # Arguments
+///
+/// * `regex` - A string slice containing the regex pattern.
+///
+/// # Returns
+///
+/// An `Option<usize>` containing the index of the caret if found, or `None` if not found.
 fn find_caret_index(regex: &str) -> Option<usize> {
     let regex_bytes = regex.as_bytes();
     let mut is_in_parenthesis = false;
@@ -70,6 +84,15 @@ fn find_caret_index(regex: &str) -> Option<usize> {
     }
 }
 
+/// Processes the caret (^) in a regex, splitting it into two parts if necessary.
+///
+/// # Arguments
+///
+/// * `decomposed_regex` - A mutable reference to a `DecomposedRegexConfig`.
+///
+/// # Returns
+///
+/// A `Result` containing an `Option<usize>` with the caret position, or a `CompilerError`.
 fn process_caret_in_regex(
     decomposed_regex: &mut DecomposedRegexConfig,
 ) -> Result<Option<usize>, CompilerError> {
@@ -88,6 +111,17 @@ fn process_caret_in_regex(
     Ok(caret_position)
 }
 
+/// Validates the end anchor ($) in a regex part.
+///
+/// # Arguments
+///
+/// * `decomposed_regex` - A reference to a `DecomposedRegexConfig`.
+/// * `idx` - The index of the current regex part.
+/// * `regex` - A reference to the current `RegexPartConfig`.
+///
+/// # Returns
+///
+/// A `Result` containing a boolean indicating if the part has a valid end anchor, or a `CompilerError`.
 fn validate_end_anchor(
     decomposed_regex: &DecomposedRegexConfig,
     idx: usize,
@@ -105,6 +139,23 @@ fn validate_end_anchor(
     Ok(is_last_part && ends_with_dollar)
 }
 
+/// Parses DFA states from a string output and populates a `DFAGraphInfo` structure.
+///
+/// # Arguments
+///
+/// * `output` - A string slice containing the DFA state information.
+/// * `dfa_info` - A mutable reference to a `DFAGraphInfo` to be populated with parsed states.
+///
+/// # Returns
+///
+/// A `Result` containing `()` if parsing is successful, or a `CompilerError` if parsing fails.
+///
+/// # Function Behavior
+///
+/// - Uses regex to match state definitions and transitions in the input string.
+/// - Iterates over state matches, creating `DFAStateInfo` objects for each state.
+/// - Parses transitions for each state and adds them to the state's edges.
+/// - Populates `dfa_info.states` with the parsed states.
 fn parse_states(output: &str, dfa_info: &mut DFAGraphInfo) -> Result<(), CompilerError> {
     let state_re = Regex::new(r"\*?(\d+): ((.+?) => (\d+),?)+")?;
     let transition_re = Regex::new(
@@ -136,6 +187,23 @@ fn parse_states(output: &str, dfa_info: &mut DFAGraphInfo) -> Result<(), Compile
     Ok(())
 }
 
+/// Parses a single transition from a string and adds it to the DFA state.
+///
+/// # Arguments
+///
+/// * `state` - A mutable reference to the `DFAStateInfo` to which the transition will be added.
+/// * `transition` - A string slice containing the transition information.
+///
+/// # Returns
+///
+/// A `Result` containing `()` if parsing is successful, or a `CompilerError` if parsing fails.
+///
+/// # Function Behavior
+///
+/// - Splits the transition string into source and destination parts.
+/// - Processes the source string to handle special character cases.
+/// - Parses the destination as a usize.
+/// - Adds the parsed transition to the state's edges.
 fn parse_transition(state: &mut DFAStateInfo, transition: &str) -> Result<(), CompilerError> {
     let parts: Vec<&str> = transition.split("=>").collect();
     if parts.len() != 2 {
@@ -158,6 +226,9 @@ fn parse_transition(state: &mut DFAStateInfo, transition: &str) -> Result<(), Co
     Ok(())
 }
 
+/// Processes EOI (End of Input) transitions in the DFA graph.
+///
+/// Removes EOI transitions and marks their source states as accept states.
 fn handle_eoi_transitions(dfa_info: &mut DFAGraphInfo) {
     for state in &mut dfa_info.states {
         if let Some(_) = state.edges.get("EOI") {
@@ -167,6 +238,15 @@ fn handle_eoi_transitions(dfa_info: &mut DFAGraphInfo) {
     }
 }
 
+/// Finds the start state in the DFA output string.
+///
+/// # Arguments
+///
+/// * `output` - A string slice containing the DFA output.
+///
+/// # Returns
+///
+/// A `Result` containing the start state ID as `usize`, or a `CompilerError` if not found.
 fn find_start_state(output: &str) -> Result<usize, CompilerError> {
     let start_state_re = Regex::new(r"START-GROUP\(anchored\)[\s*\w*\=>]*Text => (\d+)")?;
     start_state_re
@@ -175,11 +255,26 @@ fn find_start_state(output: &str) -> Result<usize, CompilerError> {
         .ok_or_else(|| CompilerError::ParseError("Failed to find start state".to_string()))
 }
 
+/// Sorts and renames states in a DFA graph, starting from a given start state.
+///
+/// # Arguments
+///
+/// * `dfa_info` - A reference to the original `DFAGraphInfo`.
+/// * `start_state` - The ID of the start state.
+///
+/// # Returns
+///
+/// A new `DFAGraphInfo` with sorted and renamed states.
+///
+/// # Function Behavior
+///
+/// 1. Performs a Breadth-First Search (BFS) to sort states, starting from the start state.
+/// 2. Creates a mapping of old state IDs to new state IDs.
+/// 3. Renames states and updates their edges according to the new mapping.
 fn sort_and_rename_states(dfa_info: &DFAGraphInfo, start_state: usize) -> DFAGraphInfo {
     let mut sorted_states = Vec::new();
     let mut visited = BTreeSet::new();
-    let mut queue = VecDeque::new();
-    queue.push_back(start_state);
+    let mut queue = VecDeque::from([start_state]);
 
     // BFS to sort states
     while let Some(state_id) = queue.pop_front() {
@@ -216,6 +311,12 @@ fn sort_and_rename_states(dfa_info: &DFAGraphInfo, start_state: usize) -> DFAGra
     }
 }
 
+/// Creates a mapping of special character representations to their ASCII values.
+///
+/// # Returns
+///
+/// A `BTreeMap` where keys are string representations of special characters,
+/// and values are their corresponding ASCII byte values.
 fn create_special_char_mappings() -> BTreeMap<&'static str, u8> {
     [
         ("\\n", 10),
@@ -234,21 +335,25 @@ fn create_special_char_mappings() -> BTreeMap<&'static str, u8> {
     .collect()
 }
 
-fn process_edge(
-    key: &str,
-    value: usize,
-    edges: &mut BTreeMap<usize, BTreeSet<u8>>,
-    special_char_mappings: &BTreeMap<&str, u8>,
-) -> Result<(), CompilerError> {
-    let re = Regex::new(r"(.+)-(.+)")?;
-    if re.is_match(key) {
-        process_range_edge(key, value, edges, special_char_mappings, &re)?;
-    } else {
-        process_single_edge(key, value, edges, special_char_mappings)?;
-    }
-    Ok(())
-}
-
+/// Processes a range edge in the DFA graph, adding all characters in the range to the edge set.
+///
+/// # Arguments
+///
+/// * `key` - The string representation of the range transition (e.g., "a-z").
+/// * `value` - The destination state ID.
+/// * `edges` - A mutable reference to the map of edges.
+/// * `special_char_mappings` - A reference to the special character mappings.
+/// * `re` - A reference to the compiled Regex for parsing ranges.
+///
+/// # Returns
+///
+/// A `Result` containing `()` if successful, or a `CompilerError` if parsing fails.
+///
+/// # Function Behavior
+///
+/// - Extracts start and end characters of the range using the provided regex.
+/// - Parses start and end characters to their byte values.
+/// - Adds all characters in the range to the edge set for the given destination state.
 fn process_range_edge(
     key: &str,
     value: usize,
@@ -270,6 +375,23 @@ fn process_range_edge(
     Ok(())
 }
 
+/// Processes a single character edge in the DFA graph.
+///
+/// # Arguments
+///
+/// * `key` - The string representation of the character.
+/// * `value` - The destination state ID.
+/// * `edges` - A mutable reference to the map of edges.
+/// * `special_char_mappings` - A reference to the special character mappings.
+///
+/// # Returns
+///
+/// A `Result` containing `()` if successful, or a `CompilerError` if parsing fails.
+///
+/// # Function Behavior
+///
+/// - Parses the character to its byte value.
+/// - Adds the byte to the edge set for the given destination state.
 fn process_single_edge(
     key: &str,
     value: usize,
@@ -284,6 +406,55 @@ fn process_single_edge(
     Ok(())
 }
 
+/// Processes an edge in the DFA graph, handling both range and single character transitions.
+///
+/// # Arguments
+///
+/// * `key` - The string representation of the transition.
+/// * `value` - The destination state ID.
+/// * `edges` - A mutable reference to the map of edges.
+/// * `special_char_mappings` - A reference to the special character mappings.
+///
+/// # Returns
+///
+/// A `Result` containing `()` if successful, or a `CompilerError` if parsing fails.
+///
+/// # Function Behavior
+///
+/// - Checks if the key represents a range (e.g., "a-z") or a single character.
+/// - Delegates to `process_range_edge` or `process_single_edge` accordingly.
+fn process_edge(
+    key: &str,
+    value: usize,
+    edges: &mut BTreeMap<usize, BTreeSet<u8>>,
+    special_char_mappings: &BTreeMap<&str, u8>,
+) -> Result<(), CompilerError> {
+    let re = Regex::new(r"(.+)-(.+)")?;
+    if re.is_match(key) {
+        process_range_edge(key, value, edges, special_char_mappings, &re)?;
+    } else {
+        process_single_edge(key, value, edges, special_char_mappings)?;
+    }
+    Ok(())
+}
+
+/// Parses a character representation into its corresponding byte value.
+///
+/// # Arguments
+///
+/// * `s` - The string representation of the character.
+/// * `special_char_mappings` - A reference to the special character mappings.
+///
+/// # Returns
+///
+/// A `Result` containing the parsed byte value, or a `CompilerError` if parsing fails.
+///
+/// # Function Behavior
+///
+/// - Handles hexadecimal representations (e.g., "\x41").
+/// - Looks up special characters in the provided mappings.
+/// - Converts single-character strings to their byte value.
+/// - Returns an error for invalid inputs.
 fn parse_char(s: &str, special_char_mappings: &BTreeMap<&str, u8>) -> Result<u8, CompilerError> {
     if s.starts_with("\\x") {
         u8::from_str_radix(&s[2..], 16)
@@ -300,6 +471,22 @@ fn parse_char(s: &str, special_char_mappings: &BTreeMap<&str, u8>) -> Result<u8,
     }
 }
 
+/// Processes all edges for a state in the DFA graph.
+///
+/// # Arguments
+///
+/// * `state_edges` - A reference to a map of edge labels to destination state IDs.
+///
+/// # Returns
+///
+/// A `Result` containing a map of destination state IDs to sets of byte values,
+/// or a `CompilerError` if processing fails.
+///
+/// # Function Behavior
+///
+/// - Creates special character mappings.
+/// - Iterates over all edges, processing each one.
+/// - Handles the special case of space character representation.
 fn process_state_edges(
     state_edges: &BTreeMap<String, usize>,
 ) -> Result<BTreeMap<usize, BTreeSet<u8>>, CompilerError> {
@@ -314,6 +501,23 @@ fn process_state_edges(
     Ok(edges)
 }
 
+/// Converts a DFA (Deterministic Finite Automaton) to a DFAGraph structure.
+///
+/// # Arguments
+///
+/// * `dfa` - The DFA to convert.
+///
+/// # Returns
+///
+/// A `Result` containing the converted `DFAGraph`, or a `CompilerError` if conversion fails.
+///
+/// # Function Behavior
+///
+/// 1. Converts the DFA to a string representation.
+/// 2. Parses states from the string representation.
+/// 3. Handles EOI (End of Input) transitions.
+/// 4. Finds the start state and sorts/renames states accordingly.
+/// 5. Processes edges for each state and constructs the final graph.
 fn convert_dfa_to_graph(dfa: DFA<Vec<u32>>) -> Result<DFAGraph, CompilerError> {
     let dfa_str = format!("{:?}", dfa);
 
@@ -339,6 +543,21 @@ fn convert_dfa_to_graph(dfa: DFA<Vec<u32>>) -> Result<DFAGraph, CompilerError> {
     Ok(graph)
 }
 
+/// Modifies the DFA graph to handle the caret (^) anchor at the start of a regex.
+///
+/// # Arguments
+///
+/// * `graph` - A mutable reference to the DFAGraph to be modified.
+///
+/// # Returns
+///
+/// A `Result` containing `()` if successful, or a `CompilerError` if modification fails.
+///
+/// # Function Behavior
+///
+/// 1. Clears the state type of the start state.
+/// 2. Finds the accept state in the graph.
+/// 3. Adds a transition from the start state to the accept state with byte value 255.
 fn modify_graph_for_caret(graph: &mut DFAGraph) -> Result<(), CompilerError> {
     if let Some(start_state) = graph.states.get_mut(0) {
         start_state.state_type.clear();
@@ -366,6 +585,13 @@ fn modify_graph_for_caret(graph: &mut DFAGraph) -> Result<(), CompilerError> {
     Ok(())
 }
 
+/// Creates a simple DFA graph for the caret (^) anchor.
+///
+/// # Returns
+///
+/// A `DFAGraph` with two states:
+/// 1. Start state (id: 0) with a transition to the accept state on byte 255.
+/// 2. Accept state (id: 1) with no outgoing transitions.
 fn create_simple_caret_graph() -> DFAGraph {
     DFAGraph {
         states: vec![
@@ -383,6 +609,24 @@ fn create_simple_caret_graph() -> DFAGraph {
     }
 }
 
+/// Handles the caret (^) anchor in a regex by modifying the DFA graph accordingly.
+///
+/// # Arguments
+///
+/// * `idx` - The index of the current regex part.
+/// * `caret_position` - The position of the caret in the regex, if present.
+/// * `regex` - The current regex part configuration.
+/// * `graph` - The DFA graph to be modified.
+///
+/// # Returns
+///
+/// A `Result` containing `()` if successful, or a `CompilerError` if modification fails.
+///
+/// # Function Behavior
+///
+/// - If it's the first regex part and a caret is present:
+///   - Creates a simple caret graph if the regex is just "^".
+///   - Otherwise, modifies the existing graph to handle the caret.
 fn handle_caret_regex(
     idx: usize,
     caret_position: Option<usize>,
@@ -399,6 +643,22 @@ fn handle_caret_regex(
     Ok(())
 }
 
+/// Renames the states in a DFA graph, offsetting their IDs by a given base value.
+///
+/// # Arguments
+///
+/// * `dfa_graph` - The original DFA graph.
+/// * `base` - The base offset for new state IDs.
+///
+/// # Returns
+///
+/// A new `DFAGraph` with renamed states.
+///
+/// # Function Behavior
+///
+/// 1. Creates a mapping of old state IDs to new state IDs.
+/// 2. Constructs a new graph with updated state IDs and transitions.
+/// 3. Preserves other properties of each state.
 fn rename_states(dfa_graph: &DFAGraph, base: usize) -> DFAGraph {
     let state_id_mapping: BTreeMap<_, _> = dfa_graph
         .states
@@ -430,6 +690,17 @@ fn rename_states(dfa_graph: &DFAGraph, base: usize) -> DFAGraph {
     }
 }
 
+/// Collects accepting states from a DFA graph and their state IDs.
+///
+/// # Arguments
+///
+/// * `net_dfa` - A reference to the DFA graph.
+///
+/// # Returns
+///
+/// A tuple containing:
+/// 1. A vector of references to accepting DFAStateNodes.
+/// 2. A BTreeSet of state IDs of the accepting states.
 fn collect_accepting_states(net_dfa: &DFAGraph) -> (Vec<&DFAStateNode>, BTreeSet<usize>) {
     let mut accepting_states = Vec::new();
     let mut substring_starts = BTreeSet::new();
@@ -444,6 +715,15 @@ fn collect_accepting_states(net_dfa: &DFAGraph) -> (Vec<&DFAStateNode>, BTreeSet
     (accepting_states, substring_starts)
 }
 
+/// Collects all edges in the DFA graph.
+///
+/// # Arguments
+///
+/// * `graph` - A reference to the DFAGraph.
+///
+/// # Returns
+///
+/// A `BTreeSet` containing tuples of (from_state, to_state) representing all edges in the graph.
 fn collect_public_edges(graph: &DFAGraph) -> BTreeSet<(usize, usize)> {
     graph
         .states
@@ -457,6 +737,15 @@ fn collect_public_edges(graph: &DFAGraph) -> BTreeSet<(usize, usize)> {
         .collect()
 }
 
+/// Collects the state IDs of all accepting states in the DFA graph.
+///
+/// # Arguments
+///
+/// * `graph` - A reference to the DFAGraph.
+///
+/// # Returns
+///
+/// A `BTreeSet` containing the state IDs of all accepting states.
 fn collect_substr_ends(graph: &DFAGraph) -> BTreeSet<usize> {
     graph
         .states
@@ -466,6 +755,21 @@ fn collect_substr_ends(graph: &DFAGraph) -> BTreeSet<usize> {
         .collect()
 }
 
+/// Updates the public edges of a DFA graph when merging multiple DFAs.
+///
+/// This function modifies the set of public edges by replacing edges connected
+/// to the maximum state index with edges connected to accepting states.
+///
+/// # Arguments
+///
+/// * `public_edges` - A mutable reference to a BTreeSet of (from, to) state pairs representing public edges.
+/// * `max_state_index` - The maximum state index in the current DFA before merging.
+/// * `accepting_states` - A slice of references to DFAStateNode representing accepting states.
+///
+/// # Notes
+///
+/// This function assumes that `max_state_index` represents a boundary between
+/// two DFAs being merged, and updates edges accordingly.
 fn update_public_edges(
     public_edges: &mut BTreeSet<(usize, usize)>,
     max_state_index: usize,
@@ -502,6 +806,20 @@ fn update_public_edges(
     }
 }
 
+/// Processes a public regex part and updates the DFA graph accordingly.
+///
+/// # Arguments
+///
+/// * `regex` - A reference to the RegexPartConfig being processed.
+/// * `net_dfa` - A reference to the cumulative DFAGraph built so far.
+/// * `graph` - A reference to the DFAGraph for the current regex part.
+/// * `previous_max_state_id` - The maximum state ID from the previous DFA.
+///
+/// # Returns
+///
+/// A tuple containing:
+/// 1. A BTreeSet of public edges (as pairs of state IDs).
+/// 2. A tuple of BTreeSets representing substring starts and ends.
 fn process_public_regex(
     regex: &RegexPartConfig,
     net_dfa: &DFAGraph,
@@ -521,6 +839,12 @@ fn process_public_regex(
     (public_edges, (substring_starts, substring_ends))
 }
 
+/// Merges the edges from a source state into a target state, removing conflicting edges.
+///
+/// # Arguments
+///
+/// * `target_state` - A mutable reference to the DFAStateNode receiving the merged edges.
+/// * `source_state` - A reference to the DFAStateNode providing the edges to be merged.
 fn merge_edges(target_state: &mut DFAStateNode, source_state: &DFAStateNode) {
     for (k, v) in &source_state.transitions {
         for edge_value in v {
@@ -532,6 +856,12 @@ fn merge_edges(target_state: &mut DFAStateNode, source_state: &DFAStateNode) {
     }
 }
 
+/// Updates the state type of a target state based on the source state.
+///
+/// # Arguments
+///
+/// * `target_state` - A mutable reference to the DFAStateNode being updated.
+/// * `source_state` - A reference to the DFAStateNode providing the new state type.
 fn update_state_type(target_state: &mut DFAStateNode, source_state: &DFAStateNode) {
     target_state.state_type.clear();
     if source_state.state_type == "accept" {
@@ -539,11 +869,31 @@ fn update_state_type(target_state: &mut DFAStateNode, source_state: &DFAStateNod
     }
 }
 
+/// Processes an accept state by merging edges and updating its state type.
+///
+/// # Arguments
+///
+/// * `accept_state` - A mutable reference to the accepting DFAStateNode being processed.
+/// * `start_state` - A reference to the start DFAStateNode of the graph being merged.
 fn process_accept_state(accept_state: &mut DFAStateNode, start_state: &DFAStateNode) {
     merge_edges(accept_state, start_state);
     update_state_type(accept_state, start_state);
 }
 
+/// Adds a new DFA graph to an existing net DFA graph.
+///
+/// # Arguments
+///
+/// * `net_dfa` - A reference to the existing DFAGraph.
+/// * `graph` - A reference to the new DFAGraph being added.
+///
+/// # Returns
+///
+/// A new DFAGraph that combines the existing net DFA and the new graph.
+///
+/// # Panics
+///
+/// Panics if the new graph has no states.
 fn add_dfa(net_dfa: &DFAGraph, graph: &DFAGraph) -> DFAGraph {
     if net_dfa.states.is_empty() {
         return graph.clone();
@@ -569,12 +919,25 @@ fn add_dfa(net_dfa: &DFAGraph, graph: &DFAGraph) -> DFAGraph {
     new_dfa
 }
 
+/// Constructs a RegexAndDFA structure from a decomposed regex configuration.
+///
+/// This function processes each part of the decomposed regex, builds individual DFAs,
+/// and combines them into a single DFA graph. It also handles special cases like
+/// caret (^) and end anchor ($) in the regex.
+///
+/// # Arguments
+///
+/// * `decomposed_regex` - A mutable reference to a DecomposedRegexConfig.
+///
+/// # Returns
+///
+/// A Result containing a RegexAndDFA structure if successful, or a CompilerError if an error occurs.
 pub(crate) fn get_regex_and_dfa(
     decomposed_regex: &mut DecomposedRegexConfig,
 ) -> Result<RegexAndDFA, CompilerError> {
     let mut net_dfa_graph = DFAGraph { states: Vec::new() };
     let mut substring_ranges_array = Vec::new();
-    let mut ubstring_boundaries_array = Vec::new();
+    let mut substring_boundaries_array = Vec::new();
 
     let config = create_dfa_config();
 
@@ -610,7 +973,7 @@ pub(crate) fn get_regex_and_dfa(
             let (public_edges, (substr_starts, substr_ends)) =
                 process_public_regex(regex, &net_dfa_graph, &dfa_graph, max_state_index);
             substring_ranges_array.push(public_edges);
-            ubstring_boundaries_array.push((substr_starts, substr_ends));
+            substring_boundaries_array.push((substr_starts, substr_ends));
         }
 
         net_dfa_graph = add_dfa(&net_dfa_graph, &dfa_graph);
@@ -628,11 +991,20 @@ pub(crate) fn get_regex_and_dfa(
         has_end_anchor: end_anchor,
         substrings: SubstringDefinitions {
             substring_ranges: substring_ranges_array,
-            substring_boundaries: Some(ubstring_boundaries_array),
+            substring_boundaries: Some(substring_boundaries_array),
         },
     })
 }
 
+/// Creates a DFA graph from a regex string.
+///
+/// # Arguments
+///
+/// * `regex` - A string slice containing the regex pattern.
+///
+/// # Returns
+///
+/// A `Result` containing a `DFAGraph` or a `CompilerError`.
 fn create_dfa_graph_from_regex(regex: &str) -> Result<DFAGraph, CompilerError> {
     let config = DFA::config()
         .minimize(true)
@@ -651,6 +1023,16 @@ fn create_dfa_graph_from_regex(regex: &str) -> Result<DFAGraph, CompilerError> {
     convert_dfa_to_graph(dfa)
 }
 
+/// Creates a `RegexAndDFA` from a regex string and substring definitions.
+///
+/// # Arguments
+///
+/// * `regex_str` - A string slice containing the regex pattern.
+/// * `substrs_defs_json` - A `SubstringDefinitionsJson` object.
+///
+/// # Returns
+///
+/// A `Result` containing a `RegexAndDFA` or a `CompilerError`.
 pub(crate) fn create_regex_and_dfa_from_str_and_defs(
     regex_str: &str,
     substrs_defs_json: SubstringDefinitionsJson,
@@ -680,12 +1062,30 @@ pub(crate) fn create_regex_and_dfa_from_str_and_defs(
     })
 }
 
+/// Gets the index of the accepted state in a DFA graph.
+///
+/// # Arguments
+///
+/// * `dfa` - A reference to a `DFAGraph`.
+///
+/// # Returns
+///
+/// An `Option<usize>` containing the index of the accepted state, if found.
 pub(crate) fn get_accepted_state(dfa: &DFAGraph) -> Option<usize> {
     dfa.states
         .iter()
         .position(|state| state.state_type == "accept")
 }
 
+/// Gets the maximum state ID in a DFA graph.
+///
+/// # Arguments
+///
+/// * `dfa` - A reference to a `DFAGraph`.
+///
+/// # Returns
+///
+/// A `usize` representing the maximum state ID.
 pub(crate) fn get_max_state(dfa: &DFAGraph) -> usize {
     dfa.states
         .iter()
