@@ -10,6 +10,25 @@ use std::{
     path::Path,
 };
 
+/// Builds a reverse graph from a DFA graph and collects accept nodes.
+///
+/// This function creates a reverse graph where the direction of edges is inverted,
+/// and collects all accepting states.
+///
+/// # Arguments
+///
+/// * `state_len` - The number of states in the DFA.
+/// * `dfa_graph` - A reference to the original DFA graph.
+///
+/// # Returns
+///
+/// A tuple containing:
+/// * The reverse graph as a `BTreeMap<usize, BTreeMap<usize, Vec<u8>>>`.
+/// * A `BTreeSet<usize>` of accepting state IDs.
+///
+/// # Errors
+///
+/// Returns a `CompilerError::NoAcceptedState` if no accepting states are found.
 fn build_reverse_graph(
     state_len: usize,
     dfa_graph: &DFAGraph,
@@ -39,6 +58,24 @@ fn build_reverse_graph(
     (rev_graph, accept_nodes)
 }
 
+/// Optimizes character ranges by grouping consecutive characters and identifying individual characters.
+///
+/// This function takes a slice of u8 values (representing ASCII characters) and groups them into
+/// ranges where possible, while also identifying individual characters that don't fit into ranges.
+///
+/// # Arguments
+///
+/// * `k` - A slice of u8 values representing ASCII characters.
+///
+/// # Returns
+///
+/// A tuple containing:
+/// * A Vec of (u8, u8) tuples representing optimized character ranges (min, max).
+/// * A BTreeSet of u8 values representing individual characters not included in ranges.
+///
+/// # Note
+///
+/// Ranges are only created for sequences of 16 or more consecutive characters.
 fn optimize_char_ranges(k: &[u8]) -> (Vec<(u8, u8)>, BTreeSet<u8>) {
     let mut min_maxes = vec![];
     let mut vals = k.iter().cloned().collect::<BTreeSet<u8>>();
@@ -77,6 +114,20 @@ fn optimize_char_ranges(k: &[u8]) -> (Vec<(u8, u8)>, BTreeSet<u8>) {
     (min_maxes, vals)
 }
 
+/// Adds a range check for character comparisons in the Circom circuit.
+///
+/// This function either reuses an existing range check or creates a new one,
+/// adding the necessary Circom code lines and updating the relevant counters.
+///
+/// # Arguments
+///
+/// * `lines` - A mutable reference to a Vec of Strings containing Circom code lines.
+/// * `range_checks` - A mutable reference to a 2D Vec storing existing range checks.
+/// * `eq_outputs` - A mutable reference to a Vec storing equality check outputs.
+/// * `min` - The minimum value of the range.
+/// * `max` - The maximum value of the range.
+/// * `lt_i` - A mutable reference to the current LessThan component index.
+/// * `and_i` - A mutable reference to the current AND component index.
 fn add_range_check(
     lines: &mut Vec<String>,
     range_checks: &mut Vec<Vec<Option<(usize, usize)>>>,
@@ -113,6 +164,21 @@ fn add_range_check(
     }
 }
 
+/// Adds an equality check for a specific character code in the Circom circuit.
+///
+/// This function either reuses an existing equality check or creates a new one,
+/// adding the necessary Circom code lines and updating the relevant counter.
+///
+/// # Arguments
+///
+/// * `lines` - A mutable reference to a Vec of Strings containing Circom code lines.
+/// * `eq_checks` - A mutable reference to a Vec storing existing equality checks.
+/// * `code` - The ASCII code of the character to check for equality.
+/// * `eq_i` - A mutable reference to the current equality component index.
+///
+/// # Returns
+///
+/// The index of the equality check component used or created.
 fn add_eq_check(
     lines: &mut Vec<String>,
     eq_checks: &mut Vec<Option<usize>>,
@@ -132,6 +198,21 @@ fn add_eq_check(
     }
 }
 
+/// Adds a state transition to the Circom circuit.
+///
+/// This function creates an AND gate for the state transition and handles the
+/// equality outputs, potentially creating a MultiOR gate if necessary.
+///
+/// # Arguments
+///
+/// * `lines` - A mutable reference to a Vec of Strings containing Circom code lines.
+/// * `zero_starting_and_idxes` - A mutable reference to a BTreeMap storing AND indices for zero-starting states.
+/// * `i` - The current state index.
+/// * `prev_i` - The previous state index.
+/// * `eq_outputs` - A Vec of tuples containing equality output types and indices.
+/// * `and_i` - A mutable reference to the current AND gate index.
+/// * `multi_or_checks1` - A mutable reference to a BTreeMap storing MultiOR checks.
+/// * `multi_or_i` - A mutable reference to the current MultiOR gate index.
 fn add_state_transition(
     lines: &mut Vec<String>,
     zero_starting_and_idxes: &mut BTreeMap<usize, Vec<usize>>,
@@ -190,75 +271,87 @@ fn add_state_transition(
     *and_i += 1;
 }
 
+/// Helper function to add a MultiOR gate to the Circom circuit.
+fn add_multi_or_gate(
+    lines: &mut Vec<String>,
+    outputs: &[usize],
+    multi_or_i: &mut usize,
+    i: usize,
+    state_var: &str,
+) {
+    lines.push(format!(
+        "\t\tmulti_or[{multi_or_i}][i] = MultiOR({});",
+        outputs.len()
+    ));
+    for (output_i, and_i) in outputs.iter().enumerate() {
+        lines.push(format!(
+            "\t\tmulti_or[{multi_or_i}][i].in[{output_i}] <== and[{and_i}][i].out;"
+        ));
+    }
+    lines.push(format!(
+        "\t\t{state_var}[i+1][{i}] <== multi_or[{multi_or_i}][i].out;"
+    ));
+}
+
+/// Adds a state update to the Circom circuit.
+///
+/// This function handles the update of state variables, potentially creating
+/// a MultiOR gate if there are multiple outputs to combine.
+///
+/// # Arguments
+///
+/// * `lines` - A mutable reference to a Vec of Strings containing Circom code lines.
+/// * `i` - The current state index.
+/// * `outputs` - A Vec of output indices to be combined.
+/// * `zero_starting_states` - A mutable reference to a Vec of zero-starting state indices.
+/// * `multi_or_checks2` - A mutable reference to a BTreeMap storing MultiOR checks.
+/// * `multi_or_i` - A mutable reference to the current MultiOR gate index.
 fn add_state_update(
     lines: &mut Vec<String>,
     i: usize,
     outputs: Vec<usize>,
-    zero_starting_states: &mut Vec<usize>,
+    zero_starting_states: &[usize],
     multi_or_checks2: &mut BTreeMap<String, usize>,
     multi_or_i: &mut usize,
 ) {
-    if outputs.len() == 1 {
-        if zero_starting_states.contains(&i) {
-            lines.push(format!(
-                "\t\tstates_tmp[i+1][{}] <== and[{}][i].out;",
-                i, outputs[0]
-            ));
-        } else {
-            lines.push(format!(
-                "\t\tstates[i+1][{}] <== and[{}][i].out;",
-                i, outputs[0]
-            ));
-        }
-    } else if outputs.len() > 1 {
-        let outputs_key = serde_json::to_string(&outputs).unwrap();
-        if let Some(&multi_or_index) = multi_or_checks2.get(&outputs_key) {
-            if zero_starting_states.contains(&i) {
-                lines.push(format!(
-                    "\t\tstates_tmp[i+1][{}] <== multi_or[{}][i].out;",
-                    i, multi_or_index
-                ));
-            } else {
-                lines.push(format!(
-                    "\t\tstates[i+1][{}] <== multi_or[{}][i].out;",
-                    i, multi_or_index
-                ));
-            }
-        } else {
-            lines.push(format!(
-                "\t\tmulti_or[{}][i] = MultiOR({});",
-                *multi_or_i,
-                outputs.len()
-            ));
-            for (output_i, and_i) in outputs.iter().enumerate() {
-                lines.push(format!(
-                    "\t\tmulti_or[{}][i].in[{}] <== and[{}][i].out;",
-                    *multi_or_i, output_i, and_i
-                ));
-            }
-            if zero_starting_states.contains(&i) {
-                lines.push(format!(
-                    "\t\tstates_tmp[i+1][{}] <== multi_or[{}][i].out;",
-                    i, *multi_or_i
-                ));
-            } else {
-                lines.push(format!(
-                    "\t\tstates[i+1][{}] <== multi_or[{}][i].out;",
-                    i, *multi_or_i
-                ));
-            }
-            multi_or_checks2.insert(outputs_key, *multi_or_i);
-            *multi_or_i += 1;
-        }
+    let is_zero_starting = zero_starting_states.contains(&i);
+    let state_var = if is_zero_starting {
+        "states_tmp"
     } else {
-        if zero_starting_states.contains(&i) {
-            lines.push(format!("\t\tstates_tmp[i+1][{}] <== 0;", i));
-        } else {
-            lines.push(format!("\t\tstates[i+1][{}] <== 0;", i));
+        "states"
+    };
+
+    match outputs.len() {
+        0 => lines.push(format!("\t\t{state_var}[i+1][{i}] <== 0;")),
+        1 => lines.push(format!(
+            "\t\t{state_var}[i+1][{i}] <== and[{}][i].out;",
+            outputs[0]
+        )),
+        _ => {
+            let outputs_key = serde_json::to_string(&outputs).expect("Failed to serialize outputs");
+            if let Some(&multi_or_index) = multi_or_checks2.get(&outputs_key) {
+                lines.push(format!(
+                    "\t\t{state_var}[i+1][{i}] <== multi_or[{multi_or_index}][i].out;"
+                ));
+            } else {
+                add_multi_or_gate(lines, &outputs, multi_or_i, i, state_var);
+                multi_or_checks2.insert(outputs_key, *multi_or_i);
+                *multi_or_i += 1;
+            }
         }
     }
 }
 
+/// Adds the 'from_zero_enabled' logic to the Circom circuit.
+///
+/// This function creates a MultiNOR gate that checks if all non-zero states are inactive,
+/// which indicates that the current state is the initial (zero) state.
+///
+/// # Arguments
+///
+/// * `lines` - A mutable reference to a Vec of Strings containing Circom code lines.
+/// * `state_len` - The total number of states in the DFA.
+/// * `zero_starting_states` - A reference to a Vec of indices of zero-starting states.
 fn add_from_zero_enabled(
     lines: &mut Vec<String>,
     state_len: usize,
@@ -278,6 +371,16 @@ fn add_from_zero_enabled(
     ));
 }
 
+/// Adds updates for zero-starting states to the Circom circuit.
+///
+/// This function creates MultiOR gates for each zero-starting state,
+/// combining the temporary state with the AND outputs of transitions
+/// from the zero state, gated by the 'from_zero_enabled' signal.
+///
+/// # Arguments
+///
+/// * `lines` - A mutable reference to a Vec of Strings containing Circom code lines.
+/// * `zero_starting_and_idxes` - A reference to a BTreeMap mapping state indices to their corresponding AND gate indices.
 fn add_zero_starting_state_updates(
     lines: &mut Vec<String>,
     zero_starting_and_idxes: &BTreeMap<usize, Vec<usize>>,
@@ -299,6 +402,15 @@ fn add_zero_starting_state_updates(
     }
 }
 
+/// Adds state change detection logic to the Circom circuit.
+///
+/// This function creates inputs for the state_changed component,
+/// which detects changes in non-zero states between consecutive steps.
+///
+/// # Arguments
+///
+/// * `lines` - A mutable reference to a Vec of Strings containing Circom code lines.
+/// * `state_len` - The total number of states in the DFA.
 fn add_state_changed_updates(lines: &mut Vec<String>, state_len: usize) {
     for i in 1..state_len {
         lines.push(format!(
@@ -309,6 +421,25 @@ fn add_state_changed_updates(lines: &mut Vec<String>, state_len: usize) {
     }
 }
 
+/// Generates the state transition logic for the Circom circuit.
+///
+/// This function creates the core logic for state transitions in the DFA,
+/// including range checks, equality checks, and multi-OR operations.
+///
+/// # Arguments
+///
+/// * `rev_graph` - A reference to the reverse graph of the DFA.
+/// * `state_len` - The total number of states in the DFA.
+/// * `end_anchor` - A boolean indicating whether an end anchor is present.
+///
+/// # Returns
+///
+/// A tuple containing:
+/// * The number of equality checks used.
+/// * The number of less-than checks used.
+/// * The number of AND gates used.
+/// * The number of multi-OR gates used.
+/// * A Vec of Strings containing the generated Circom code lines.
 fn generate_state_transition_logic(
     rev_graph: &BTreeMap<usize, BTreeMap<usize, Vec<u8>>>,
     state_len: usize,
@@ -409,6 +540,25 @@ fn generate_state_transition_logic(
     (eq_i, lt_i, and_i, multi_or_i, lines)
 }
 
+/// Generates the declarations for the Circom circuit.
+///
+/// This function creates the initial declarations and setup for the Circom template,
+/// including pragma, includes, input/output signals, and component declarations.
+///
+/// # Arguments
+///
+/// * `template_name` - The name of the Circom template.
+/// * `regex_str` - The regular expression string.
+/// * `state_len` - The total number of states in the DFA.
+/// * `eq_i` - The number of equality components.
+/// * `lt_i` - The number of less-than components.
+/// * `and_i` - The number of AND components.
+/// * `multi_or_i` - The number of multi-OR components.
+/// * `end_anchor` - A boolean indicating whether an end anchor is present.
+///
+/// # Returns
+///
+/// A Vec of Strings containing the generated Circom declarations.
 fn generate_declarations(
     template_name: &str,
     regex_str: &str,
@@ -419,27 +569,25 @@ fn generate_declarations(
     multi_or_i: usize,
     end_anchor: bool,
 ) -> Vec<String> {
-    let mut declarations = vec![];
-
-    declarations.push("pragma circom 2.1.5;\n".to_string());
-    declarations
-        .push("include \"@zk-email/zk-regex-circom/circuits/regex_helpers.circom\";\n".to_string());
-
-    declarations.push(format!(
-        "// regex: {}",
-        regex_str.replace("\n", "\\n").replace("\r", "\\r")
-    ));
-
-    declarations.push(format!("template {}(msg_bytes) {{", template_name));
-    declarations.push("\tsignal input msg[msg_bytes];".to_string());
-    declarations.push("\tsignal output out;\n".to_string());
-
-    declarations.push("\tvar num_bytes = msg_bytes+1;".to_string());
-    declarations.push("\tsignal in[num_bytes];".to_string());
-    declarations.push("\tin[0]<==255;".to_string());
-    declarations.push("\tfor (var i = 0; i < msg_bytes; i++) {".to_string());
-    declarations.push("\t\tin[i+1] <== msg[i];".to_string());
-    declarations.push("\t}\n".to_string());
+    let mut declarations = vec![
+        "pragma circom 2.1.5;\n".to_string(),
+        "include \"@zk-email/zk-regex-circom/circuits/regex_helpers.circom\";\n".to_string(),
+        format!(
+            "// regex: {}",
+            regex_str.replace('\n', "\\n").replace('\r', "\\r")
+        ),
+        format!("template {}(msg_bytes) {{", template_name),
+        "\tsignal input msg[msg_bytes];".to_string(),
+        "\tsignal output out;".to_string(),
+        "".to_string(),
+        "\tvar num_bytes = msg_bytes+1;".to_string(),
+        "\tsignal in[num_bytes];".to_string(),
+        "\tin[0]<==255;".to_string(),
+        "\tfor (var i = 0; i < msg_bytes; i++) {".to_string(),
+        "\t\tin[i+1] <== msg[i];".to_string(),
+        "\t}".to_string(),
+        "".to_string(),
+    ];
 
     if eq_i > 0 {
         declarations.push(format!("\tcomponent eq[{}][num_bytes];", eq_i));
@@ -457,34 +605,62 @@ fn generate_declarations(
         declarations.push(format!("\tcomponent multi_or[{}][num_bytes];", multi_or_i));
     }
 
-    declarations.push(format!("\tsignal states[num_bytes+1][{}];", state_len));
-    declarations.push(format!("\tsignal states_tmp[num_bytes+1][{}];", state_len));
-    declarations.push("\tsignal from_zero_enabled[num_bytes+1];".to_string());
-    declarations.push("\tfrom_zero_enabled[num_bytes] <== 0;".to_string());
-    declarations.push("\tcomponent state_changed[num_bytes];\n".to_string());
+    declarations.extend([
+        format!("\tsignal states[num_bytes+1][{state_len}];"),
+        format!("\tsignal states_tmp[num_bytes+1][{state_len}];"),
+        "\tsignal from_zero_enabled[num_bytes+1];".to_string(),
+        "\tfrom_zero_enabled[num_bytes] <== 0;".to_string(),
+        "\tcomponent state_changed[num_bytes];".to_string(),
+        "".to_string(),
+    ]);
 
     if end_anchor {
-        declarations.push("\tsignal padding_start[num_bytes+1];".to_string());
-        declarations.push("\tpadding_start[0] <== 0;".to_string());
+        declarations.extend([
+            "\tsignal padding_start[num_bytes+1];".to_string(),
+            "\tpadding_start[0] <== 0;".to_string(),
+        ]);
     }
 
     declarations
 }
 
+/// Generates the initialization code for the Circom circuit.
+///
+/// This function creates the code to initialize all states except the first one to 0.
+///
+/// # Arguments
+///
+/// * `state_len` - The total number of states in the DFA.
+///
+/// # Returns
+///
+/// A Vec of Strings containing the generated initialization code.
 fn generate_init_code(state_len: usize) -> Vec<String> {
-    let mut init_code = vec![];
-
-    // Initialize all states except the first one to 0
-    init_code.push(format!("\tfor (var i = 1; i < {}; i++) {{", state_len));
-    init_code.push("\t\tstates[0][i] <== 0;".to_string());
-    init_code.push("\t}".to_string());
-
-    // Add a blank line for readability
-    init_code.push("".to_string());
-
-    init_code
+    vec![
+        format!("\tfor (var i = 1; i < {state_len}; i++) {{"),
+        "\t\tstates[0][i] <== 0;".to_string(),
+        "\t}".to_string(),
+        "".to_string(),
+    ]
 }
 
+/// Generates the acceptance logic for the Circom circuit.
+///
+/// This function creates the code to check if the DFA has reached an accepting state,
+/// and handles the end anchor logic if present.
+///
+/// # Arguments
+///
+/// * `accept_nodes` - A BTreeSet of accepting state indices.
+/// * `end_anchor` - A boolean indicating whether an end anchor is present.
+///
+/// # Returns
+///
+/// A Vec of Strings containing the generated acceptance logic code.
+///
+/// # Panics
+///
+/// Panics if there are no accept nodes or if there is more than one accept node.
 fn generate_accept_logic(accept_nodes: BTreeSet<usize>, end_anchor: bool) -> Vec<String> {
     let mut accept_lines = vec![];
 
@@ -528,6 +704,21 @@ fn generate_accept_logic(accept_nodes: BTreeSet<usize>, end_anchor: bool) -> Vec
     accept_lines
 }
 
+/// Generates the complete Circom circuit as a string.
+///
+/// This function orchestrates the generation of all parts of the Circom circuit,
+/// including declarations, initialization code, state transition logic, and acceptance logic.
+///
+/// # Arguments
+///
+/// * `dfa_graph` - A reference to the DFA graph.
+/// * `template_name` - The name of the Circom template.
+/// * `regex_str` - The regular expression string.
+/// * `end_anchor` - A boolean indicating whether an end anchor is present.
+///
+/// # Returns
+///
+/// A String containing the complete Circom circuit code.
 fn gen_circom_allstr(
     dfa_graph: &DFAGraph,
     template_name: &str,
@@ -561,6 +752,17 @@ fn gen_circom_allstr(
     final_code.join("\n")
 }
 
+/// Writes the consecutive logic for the Circom circuit.
+///
+/// This function generates the logic to check for consecutive accepted states.
+///
+/// # Arguments
+///
+/// * `accepted_state` - The index of the accepted state.
+///
+/// # Returns
+///
+/// A String containing the generated Circom code for consecutive logic.
 fn write_consecutive_logic(accepted_state: usize) -> String {
     let mut logic = String::new();
     logic += "\n";
@@ -579,6 +781,18 @@ fn write_consecutive_logic(accepted_state: usize) -> String {
     logic
 }
 
+/// Writes the previous states logic for the Circom circuit.
+///
+/// This function generates the logic to compute previous states based on transitions.
+///
+/// # Arguments
+///
+/// * `idx` - The index of the current substring.
+/// * `ranges` - A slice of references to tuples representing state transitions.
+///
+/// # Returns
+///
+/// A String containing the generated Circom code for previous states.
 fn write_prev_states(idx: usize, ranges: &[&(usize, usize)]) -> String {
     let mut prev_states = String::new();
     for (trans_idx, &(cur, _)) in ranges.iter().enumerate() {
@@ -595,6 +809,18 @@ fn write_prev_states(idx: usize, ranges: &[&(usize, usize)]) -> String {
     prev_states
 }
 
+/// Writes the substring logic for the Circom circuit.
+///
+/// This function generates the logic to compute if a substring is present.
+///
+/// # Arguments
+///
+/// * `idx` - The index of the current substring.
+/// * `ranges` - A slice of references to tuples representing state transitions.
+///
+/// # Returns
+///
+/// A String containing the generated Circom code for substring logic.
 fn write_is_substr(idx: usize, ranges: &[&(usize, usize)]) -> String {
     let multi_or_inputs = ranges
         .iter()
@@ -611,6 +837,17 @@ fn write_is_substr(idx: usize, ranges: &[&(usize, usize)]) -> String {
     )
 }
 
+/// Writes the reveal logic for the Circom circuit.
+///
+/// This function generates the logic to reveal a substring if it's present and consecutive.
+///
+/// # Arguments
+///
+/// * `idx` - The index of the current substring.
+///
+/// # Returns
+///
+/// A String containing the generated Circom code for reveal logic.
 fn write_is_reveal_and_reveal(idx: usize) -> String {
     let mut reveal = String::new();
     reveal += &format!(
@@ -620,6 +857,18 @@ fn write_is_reveal_and_reveal(idx: usize) -> String {
     reveal
 }
 
+/// Writes the complete substring logic for the Circom circuit.
+///
+/// This function combines all substring-related logic into a single block.
+///
+/// # Arguments
+///
+/// * `idx` - The index of the current substring.
+/// * `ranges` - A slice of tuples representing state transitions.
+///
+/// # Returns
+///
+/// A String containing the generated Circom code for the complete substring logic.
 fn write_substr_logic(idx: usize, ranges: &[(usize, usize)]) -> String {
     let mut logic = String::new();
     logic += &format!("\tsignal prev_states{idx}[{}][msg_bytes];\n", ranges.len());
@@ -642,13 +891,33 @@ fn write_substr_logic(idx: usize, ranges: &[(usize, usize)]) -> String {
     logic
 }
 
+/// Sorts the ranges of state transitions.
+///
+/// # Arguments
+///
+/// * `ranges` - A slice of tuples representing state transitions.
+///
+/// # Returns
+///
+/// A Vec of references to the sorted ranges.
 fn sort_ranges(ranges: &[(usize, usize)]) -> Vec<&(usize, usize)> {
     let mut sorted = ranges.iter().collect::<Vec<_>>();
     sorted.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
     sorted
 }
 
-pub fn add_substrs_constraints(regex_dfa: &RegexAndDFA) -> Result<String, CompilerError> {
+/// Adds substring constraints to the Circom circuit.
+///
+/// This function generates the logic for substring matching and consecutive state tracking.
+///
+/// # Arguments
+///
+/// * `regex_dfa` - A reference to the RegexAndDFA struct containing the DFA and substring information.
+///
+/// # Returns
+///
+/// A Result containing the generated Circom code as a String, or a CompilerError.
+fn add_substrs_constraints(regex_dfa: &RegexAndDFA) -> Result<String, CompilerError> {
     let accepted_state =
         get_accepted_state(&regex_dfa.dfa).ok_or(CompilerError::NoAcceptedState)?;
     let mut circom = String::new();
@@ -668,6 +937,20 @@ pub fn add_substrs_constraints(regex_dfa: &RegexAndDFA) -> Result<String, Compil
     Ok(circom)
 }
 
+/// Generates a Circom template file for the given regex and DFA.
+///
+/// This function creates a Circom file containing the circuit logic for the regex matcher.
+///
+/// # Arguments
+///
+/// * `regex_and_dfa` - A reference to the RegexAndDFA struct containing the regex and DFA information.
+/// * `circom_path` - The path where the generated Circom file should be saved.
+/// * `template_name` - The name of the Circom template.
+/// * `gen_substrs` - A boolean indicating whether to generate substring constraints.
+///
+/// # Returns
+///
+/// A Result indicating success or a CompilerError.
 pub(crate) fn gen_circom_template(
     regex_and_dfa: &RegexAndDFA,
     circom_path: &Path,
@@ -693,6 +976,18 @@ pub(crate) fn gen_circom_template(
     Ok(())
 }
 
+/// Generates a Circom circuit as a string for the given regex and DFA.
+///
+/// This function creates a string containing the Circom circuit logic for the regex matcher.
+///
+/// # Arguments
+///
+/// * `regex_and_dfa` - A reference to the RegexAndDFA struct containing the regex and DFA information.
+/// * `template_name` - The name of the Circom template.
+///
+/// # Returns
+///
+/// A Result containing the generated Circom code as a String, or a CompilerError.
 pub(crate) fn gen_circom_string(
     regex_and_dfa: &RegexAndDFA,
     template_name: &str,

@@ -9,6 +9,15 @@ use std::{
     path::PathBuf,
 };
 
+/// Converts a RegexAndDFA structure to a text representation of the DFA.
+///
+/// # Arguments
+///
+/// * `regex_and_dfa` - A reference to the RegexAndDFA structure.
+///
+/// # Returns
+///
+/// A String containing the text representation of the DFA.
 fn dfa_to_regex_def_text(regex_and_dfa: &RegexAndDFA) -> String {
     let accepted_state = get_accepted_state(&regex_and_dfa.dfa).unwrap();
     let max_state = get_max_state(&regex_and_dfa.dfa);
@@ -24,6 +33,18 @@ fn dfa_to_regex_def_text(regex_and_dfa: &RegexAndDFA) -> String {
     text
 }
 
+/// Generates Halo2 tables from a RegexAndDFA structure.
+///
+/// # Arguments
+///
+/// * `regex_and_dfa` - A reference to the RegexAndDFA structure.
+/// * `allstr_file_path` - The path where the main DFA definition will be written.
+/// * `substr_file_paths` - A slice of paths where substring definitions will be written.
+/// * `gen_substrs` - A boolean indicating whether to generate substring files.
+///
+/// # Returns
+///
+/// A Result indicating success or containing a CompilerError.
 pub(crate) fn gen_halo2_tables(
     regex_and_dfa: &RegexAndDFA,
     allstr_file_path: &PathBuf,
