@@ -1023,6 +1023,44 @@ fn create_dfa_graph_from_regex(regex: &str) -> Result<DFAGraph, CompilerError> {
     convert_dfa_to_graph(dfa)
 }
 
+/// Checks if a given string matches the regex pattern represented by the DFAGraph.
+///
+/// # Arguments
+///
+/// * `graph` - A reference to the DFAGraph obtained from the regex.
+/// * `input` - The string to check against the regex pattern.
+///
+/// # Returns
+///
+/// A boolean indicating whether the input string matches the regex pattern.
+fn match_string_with_dfa_graph(graph: &DFAGraph, input: &str) -> bool {
+    let mut current_state = 0;
+
+    for &byte in input.as_bytes() {
+        let current_node = &graph.states[current_state];
+
+        let mut next_state = None;
+        for (&state, char_set) in &current_node.transitions {
+            if char_set.contains(&byte) {
+                next_state = Some(state);
+                break;
+            }
+        }
+
+        match next_state {
+            Some(state) => {
+                current_state = state;
+            }
+            None => {
+                return false;
+            } // No valid transition found, input doesn't match
+        }
+    }
+
+    // Check if the final state is an accepting state
+    graph.states[current_state].state_type == "accept"
+}
+
 /// Creates a `RegexAndDFA` from a regex string and substring definitions.
 ///
 /// # Arguments
@@ -1092,4 +1130,57 @@ pub(crate) fn get_max_state(dfa: &DFAGraph) -> usize {
         .map(|state| state.state_id)
         .max()
         .unwrap_or_default()
+}
+
+mod dfa_test {
+    use crate::regex::{create_dfa_graph_from_regex, match_string_with_dfa_graph};
+    use serde::{Deserialize, Serialize};
+    use std::{env, fs::File, io::BufReader, path::PathBuf};
+
+    #[derive(Debug, Deserialize, Serialize)]
+    struct RegexTestCase {
+        pub regex: String,
+        pub pass: Vec<String>,
+        pub fail: Vec<String>,
+    }
+
+    #[test]
+    fn test_dfa_graph() {
+        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        path.push("src/dfa_tests.json");
+        let file = File::open(path).expect("Failed to open test cases file");
+        let reader = BufReader::new(file);
+        let test_cases: Vec<RegexTestCase> =
+            serde_json::from_reader(reader).expect("Failed to parse JSON");
+
+        for case in test_cases {
+            let dfa_graph = match create_dfa_graph_from_regex(&case.regex) {
+                Ok(graph) => graph,
+                Err(e) => {
+                    panic!(
+                        "Failed to create DFA graph for regex '{}': {:?}",
+                        case.regex, e
+                    );
+                }
+            };
+
+            for pass_case in case.pass {
+                assert!(
+                    match_string_with_dfa_graph(&dfa_graph, &pass_case),
+                    "Positive case failed for regex '{}': '{}'",
+                    case.regex,
+                    pass_case
+                );
+            }
+
+            for fail_case in case.fail {
+                assert!(
+                    !match_string_with_dfa_graph(&dfa_graph, &fail_case),
+                    "Negative case failed for regex '{}': '{}'",
+                    case.regex,
+                    fail_case
+                );
+            }
+        }
+    }
 }

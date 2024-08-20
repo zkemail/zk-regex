@@ -1,0 +1,17 @@
+[
+    {
+        "regex": "a+b*c?",
+        "pass": ["ab", "ac", "aac", "aabc", "aabc", "aac"],
+        "fail": ["", "b", "c", "bac"]
+    },
+    {
+        "regex": "\\d{3}-\\d{3}-\\d{4}",
+        "pass": ["123-456-7890", "000-000-0000"],
+        "fail": ["123-45-6789", "12-345-6789", "123-456-789", "abc-def-ghij"]
+    },
+    {
+        "regex": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+        "pass": ["user@example.com", "john.doe123@sub.domain.co.uk"],
+        "fail": ["@example.com", "user@.com", "user@com", "user@example.c"]
+    }
+]
