@@ -1,17 +1,41 @@
 [
     {
-        "regex": "a+b*c?",
-        "pass": ["ab", "ac", "aac", "aabc", "aabc", "aac"],
-        "fail": ["", "b", "c", "bac"]
+        "regex": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+        "pass": ["user@example.com", "john.doe123@sub.domain.co.uk"],
+        "fail": ["@example.com", "user@.com", "user@com", "user@example.c"]
     },
     {
-        "regex": "\\d{3}-\\d{3}-\\d{4}",
+        "regex": "^\\d{3}-\\d{3}-\\d{4}$",
         "pass": ["123-456-7890", "000-000-0000"],
         "fail": ["123-45-6789", "12-345-6789", "123-456-789", "abc-def-ghij"]
     },
     {
-        "regex": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
-        "pass": ["user@example.com", "john.doe123@sub.domain.co.uk"],
-        "fail": ["@example.com", "user@.com", "user@com", "user@example.c"]
+        "regex": "^(https?:\\/\\/)?([\\da-z\\.-]+)\\.([a-z\\.]{2,6})([\\/\\w \\.-]*)*\\/?$",
+        "pass": [
+            "http://example.com",
+            "https://sub.domain.co.uk/page",
+            "www.example.com"
+        ],
+        "fail": ["htp://invalid", "http://.com", "https://example."]
+    },
+    {
+        "regex": "^[0-9]{5}(-[0-9]{4})?$",
+        "pass": ["12345", "12345-6789"],
+        "fail": ["1234", "123456", "12345-", "12345-67890"]
+    },
+    {
+        "regex": "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$",
+        "pass": ["#123abc", "#FFF", "#000000"],
+        "fail": ["123abc", "#GGGGGG", "#FFG", "#F0F0F0F"]
+    },
+    {
+        "regex": "^([01]?[0-9]|2[0-3]):[0-5][0-9]$",
+        "pass": ["00:00", "23:59", "1:23", "12:34"],
+        "fail": ["24:00", "12:60", "1:2", "00:0"]
+    },
+    {
+        "regex": "^[a-zA-Z]{2,}\\s[a-zA-Z]{1,}'?-?[a-zA-Z]{2,}\\s?([a-zA-Z]{1,})?$",
+        "pass": ["John Doe", "Mary Jane", "Robert O'Neill", "Sarah Jane-Smith"],
+        "fail": ["J D", "John", "John  Doe", "12John Doe"]
     }
 ]
