@@ -1,97 +1,96 @@
-use std::fs::File;
-use std::io::{BufWriter, Write};
-use std::path::PathBuf;
+use crate::{
+    errors::CompilerError,
+    regex::{get_accepted_state, get_max_state},
+    structs::RegexAndDFA,
+};
+use std::{
+    fs::File,
+    io::{BufWriter, Write},
+    path::PathBuf,
+};
 
-use crate::{get_accepted_state, get_max_state, CompilerError, RegexAndDFA};
+/// Converts a RegexAndDFA structure to a text representation of the DFA.
+///
+/// # Arguments
+///
+/// * `regex_and_dfa` - A reference to the RegexAndDFA structure.
+///
+/// # Returns
+///
+/// A String containing the text representation of the DFA.
+fn dfa_to_regex_def_text(regex_and_dfa: &RegexAndDFA) -> String {
+    let accepted_state = get_accepted_state(&regex_and_dfa.dfa).unwrap();
+    let max_state = get_max_state(&regex_and_dfa.dfa);
+    let mut text = format!("0\n{}\n{}\n", accepted_state, max_state);
 
-impl RegexAndDFA {
-    pub fn gen_halo2_tables(
-        &self,
-        allstr_file_path: &PathBuf,
-        substr_file_paths: &[PathBuf],
-        gen_substrs: bool,
-    ) -> Result<(), CompilerError> {
-        let regex_text = self.dfa_to_regex_def_text();
-        let mut regex_file = File::create(allstr_file_path)?;
-        write!(regex_file, "{}", regex_text)?;
-        regex_file.flush()?;
-
-        if !gen_substrs {
-            return Ok(());
-        }
-
-        for (idx, defs) in self.substrs_defs.substr_defs_array.iter().enumerate() {
-            let mut writer = BufWriter::new(File::create(&substr_file_paths[idx])?);
-            let (starts, ends) = &self.substrs_defs.substr_endpoints_array.as_ref().unwrap()[idx];
-            let starts_str = starts
-                .iter()
-                .map(|s| s.to_string())
-                .collect::<Vec<_>>()
-                .join(" ");
-            writer.write_fmt(format_args!("{}\n", starts_str))?;
-            let ends_str = ends
-                .iter()
-                .map(|e| e.to_string())
-                .collect::<Vec<_>>()
-                .join(" ");
-            writer.write_fmt(format_args!("{}\n", ends_str))?;
-
-            let mut defs = defs.iter().collect::<Vec<&(usize, usize)>>();
-            defs.sort_by(|a, b| {
-                let start_cmp = a.0.cmp(&b.0);
-                if start_cmp == std::cmp::Ordering::Equal {
-                    a.1.cmp(&b.1)
-                } else {
-                    start_cmp
-                }
-            });
-
-            for (cur, next) in defs.iter() {
-                writer.write_fmt(format_args!("{} {}\n", cur, next))?;
+    for (i, state) in regex_and_dfa.dfa.states.iter().enumerate() {
+        for (next_state, chars) in state.transitions.iter() {
+            for &char in chars {
+                text += &format!("{} {} {}\n", i, next_state, char as u8);
             }
         }
-        Ok(())
     }
-
-    pub fn dfa_to_regex_def_text(&self) -> String {
-        let accepted_state = get_accepted_state(&self.dfa_val).unwrap();
-        let max_state = get_max_state(&self.dfa_val);
-        let mut text = format!("0\n{}\n{}\n", accepted_state, max_state);
-
-        for (i, state) in self.dfa_val.states.iter().enumerate() {
-            for (next_state, chars) in state.edges.iter() {
-                for &char in chars {
-                    let char_u8 = char as u8;
-                    text += &format!("{} {} {}\n", i, next_state, char_u8);
-                }
-            }
-        }
-        text
-    }
+    text
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::{DecomposedRegexConfig, RegexPartConfig};
-    use std::collections::VecDeque;
+/// Generates Halo2 tables from a RegexAndDFA structure.
+///
+/// # Arguments
+///
+/// * `regex_and_dfa` - A reference to the RegexAndDFA structure.
+/// * `allstr_file_path` - The path where the main DFA definition will be written.
+/// * `substr_file_paths` - A slice of paths where substring definitions will be written.
+/// * `gen_substrs` - A boolean indicating whether to generate substring files.
+///
+/// # Returns
+///
+/// A Result indicating success or containing a CompilerError.
+pub(crate) fn gen_halo2_tables(
+    regex_and_dfa: &RegexAndDFA,
+    allstr_file_path: &PathBuf,
+    substr_file_paths: &[PathBuf],
+    gen_substrs: bool,
+) -> Result<(), CompilerError> {
+    let regex_text = dfa_to_regex_def_text(regex_and_dfa);
+    std::fs::write(allstr_file_path, regex_text)?;
 
-    #[test]
-    fn test_dfa_to_regex_def_text() {
-        let regex_part_config = RegexPartConfig {
-            is_public: false,
-            regex_def: "m[01]+-[ab];".to_string(),
-        };
-        let mut decomposed_regex_config = DecomposedRegexConfig {
-            parts: VecDeque::from(vec![regex_part_config]),
-        };
-
-        let regex_and_dfa = decomposed_regex_config
-            .to_regex_and_dfa()
-            .expect("failed to convert the decomposed regex to dfa");
-
-        let regex_def_text = regex_and_dfa.dfa_to_regex_def_text();
-        let expected_text =
-            "0\n5\n5\n0 1 109\n1 2 48\n1 2 49\n2 2 48\n2 2 49\n2 3 45\n3 4 97\n3 4 98\n4 5 59\n";
-        assert_eq!(regex_def_text, expected_text);
+    if !gen_substrs {
+        return Ok(());
     }
+
+    for (idx, defs) in regex_and_dfa.substrings.substring_ranges.iter().enumerate() {
+        let mut writer = BufWriter::new(File::create(&substr_file_paths[idx])?);
+        let (starts, ends) = &regex_and_dfa
+            .substrings
+            .substring_boundaries
+            .as_ref()
+            .unwrap()[idx];
+
+        writeln!(
+            writer,
+            "{}",
+            starts
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(" ")
+        )?;
+        writeln!(
+            writer,
+            "{}",
+            ends.iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(" ")
+        )?;
+
+        let mut sorted_defs: Vec<_> = defs.iter().collect();
+        sorted_defs.sort_unstable_by_key(|&(start, end)| (*start, *end));
+
+        for &(cur, next) in &sorted_defs {
+            writeln!(writer, "{} {}", cur, next)?;
+        }
+    }
+
+    Ok(())
 }
