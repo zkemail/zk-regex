@@ -32,52 +32,52 @@ template Plus4Regex(msg_bytes) {
 		states[i][0] <== 1;
 		eq[0][i] = IsEqual();
 		eq[0][i].in[0] <== in[i];
-		eq[0][i].in[1] <== 51;
+		eq[0][i].in[1] <== 49;
 		and[0][i] = AND();
 		and[0][i].a <== states[i][0];
 		and[0][i].b <== eq[0][i].out;
 		and[1][i] = AND();
-		and[1][i].a <== states[i][4];
+		and[1][i].a <== states[i][3];
 		and[1][i].b <== eq[0][i].out;
 		states_tmp[i+1][1] <== and[1][i].out;
 		eq[1][i] = IsEqual();
 		eq[1][i].in[0] <== in[i];
-		eq[1][i].in[1] <== 49;
+		eq[1][i].in[1] <== 51;
 		and[2][i] = AND();
 		and[2][i].a <== states[i][0];
 		and[2][i].b <== eq[1][i].out;
 		and[3][i] = AND();
-		and[3][i].a <== states[i][4];
+		and[3][i].a <== states[i][3];
 		and[3][i].b <== eq[1][i].out;
 		states_tmp[i+1][2] <== and[3][i].out;
 		eq[2][i] = IsEqual();
 		eq[2][i].in[0] <== in[i];
-		eq[2][i].in[1] <== 52;
+		eq[2][i].in[1] <== 50;
 		and[4][i] = AND();
 		and[4][i].a <== states[i][1];
 		and[4][i].b <== eq[2][i].out;
-		states[i+1][3] <== and[4][i].out;
 		eq[3][i] = IsEqual();
 		eq[3][i].in[0] <== in[i];
-		eq[3][i].in[1] <== 50;
+		eq[3][i].in[1] <== 53;
 		and[5][i] = AND();
-		and[5][i].a <== states[i][2];
+		and[5][i].a <== states[i][4];
 		and[5][i].b <== eq[3][i].out;
+		multi_or[0][i] = MultiOR(2);
+		multi_or[0][i].in[0] <== and[4][i].out;
+		multi_or[0][i].in[1] <== and[5][i].out;
+		states[i+1][3] <== multi_or[0][i].out;
 		eq[4][i] = IsEqual();
 		eq[4][i].in[0] <== in[i];
-		eq[4][i].in[1] <== 53;
+		eq[4][i].in[1] <== 52;
 		and[6][i] = AND();
-		and[6][i].a <== states[i][3];
+		and[6][i].a <== states[i][2];
 		and[6][i].b <== eq[4][i].out;
-		multi_or[0][i] = MultiOR(2);
-		multi_or[0][i].in[0] <== and[5][i].out;
-		multi_or[0][i].in[1] <== and[6][i].out;
-		states[i+1][4] <== multi_or[0][i].out;
+		states[i+1][4] <== and[6][i].out;
 		eq[5][i] = IsEqual();
 		eq[5][i].in[0] <== in[i];
 		eq[5][i].in[1] <== 98;
 		and[7][i] = AND();
-		and[7][i].a <== states[i][4];
+		and[7][i].a <== states[i][3];
 		and[7][i].b <== eq[5][i].out;
 		states[i+1][5] <== and[7][i].out;
 		from_zero_enabled[i] <== MultiNOR(5)([states_tmp[i+1][1], states_tmp[i+1][2], states[i+1][3], states[i+1][4], states[i+1][5]]);
@@ -102,21 +102,21 @@ template Plus4Regex(msg_bytes) {
 		is_consecutive[msg_bytes-1-i][1] <== state_changed[msg_bytes-i].out * is_consecutive[msg_bytes-1-i][0];
 		is_consecutive[msg_bytes-1-i][2] <== ORAnd()([(1 - from_zero_enabled[msg_bytes-i+1]), states[num_bytes-i][5], is_consecutive[msg_bytes-1-i][1]]);
 	}
-	// substrings calculated: [{(0, 1), (0, 2), (1, 3), (2, 4), (3, 4), (4, 1), (4, 2)}]
+	// substrings calculated: [{(0, 1), (0, 2), (1, 3), (2, 4), (3, 1), (3, 2), (4, 3)}]
 	signal prev_states0[7][msg_bytes];
 	signal is_substr0[msg_bytes];
 	signal is_reveal0[msg_bytes];
 	signal output reveal0[msg_bytes];
 	for (var i = 0; i < msg_bytes; i++) {
-		 // the 0-th substring transitions: [(0, 1), (0, 2), (1, 3), (2, 4), (3, 4), (4, 1), (4, 2)]
+		 // the 0-th substring transitions: [(0, 1), (0, 2), (1, 3), (2, 4), (3, 1), (3, 2), (4, 3)]
 		prev_states0[0][i] <== from_zero_enabled[i+1] * states[i+1][0];
 		prev_states0[1][i] <== from_zero_enabled[i+1] * states[i+1][0];
 		prev_states0[2][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][1];
 		prev_states0[3][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][2];
 		prev_states0[4][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][3];
-		prev_states0[5][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][4];
+		prev_states0[5][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][3];
 		prev_states0[6][i] <== (1 - from_zero_enabled[i+1]) * states[i+1][4];
-		is_substr0[i] <== MultiOR(7)([prev_states0[0][i] * states[i+2][1], prev_states0[1][i] * states[i+2][2], prev_states0[2][i] * states[i+2][3], prev_states0[3][i] * states[i+2][4], prev_states0[4][i] * states[i+2][4], prev_states0[5][i] * states[i+2][1], prev_states0[6][i] * states[i+2][2]]);
+		is_substr0[i] <== MultiOR(7)([prev_states0[0][i] * states[i+2][1], prev_states0[1][i] * states[i+2][2], prev_states0[2][i] * states[i+2][3], prev_states0[3][i] * states[i+2][4], prev_states0[4][i] * states[i+2][1], prev_states0[5][i] * states[i+2][2], prev_states0[6][i] * states[i+2][3]]);
 		is_reveal0[i] <== MultiAND(3)([out, is_substr0[i], is_consecutive[i][2]]);
 		reveal0[i] <== in[i+1] * is_reveal0[i];
 	}
