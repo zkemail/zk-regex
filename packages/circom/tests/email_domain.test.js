@@ -39,10 +39,47 @@ describe("Email Domain Regex", () => {
     const witness = await circuit.calculateWitness(circuitInputs);
     await circuit.checkConstraints(witness);
     expect(1n).toEqual(witness[1]);
-    for (let idx = 0; idx < 12; ++idx) {
-      expect(0n).toEqual(witness[2 + idx]);
-    }
     const prefixIdxes = apis.extractEmailDomainIdxes(emailAddr)[0];
+    for (let idx = 0; idx < 256; ++idx) {
+      if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+        expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+      } else {
+        expect(0n).toEqual(witness[2 + idx]);
+      }
+    }
+  });
+
+  it("@ inside the name part", async () => {
+    const emailAddr = "suegamisora@gmail.com@dummy.com";
+    const paddedStr = apis.padString(emailAddr, 256);
+    const circuitInputs = {
+      msg: paddedStr,
+    };
+    const witness = await circuit.calculateWitness(circuitInputs);
+    await circuit.checkConstraints(witness);
+    expect(1n).toEqual(witness[1]);
+    const prefixIdxes = apis.extractEmailDomainIdxes(emailAddr)[0];
+    expect("gmail.com@dummy.com").toEqual(emailAddr.slice(prefixIdxes[0], prefixIdxes[1]));
+    for (let idx = 0; idx < 256; ++idx) {
+      if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+        expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+      } else {
+        expect(0n).toEqual(witness[2 + idx]);
+      }
+    }
+  });
+
+  it("starts from @", async () => {
+    const emailAddr = "@gmail.com@dummy.com";
+    const paddedStr = apis.padString(emailAddr, 256);
+    const circuitInputs = {
+      msg: paddedStr,
+    };
+    const witness = await circuit.calculateWitness(circuitInputs);
+    await circuit.checkConstraints(witness);
+    expect(1n).toEqual(witness[1]);
+    const prefixIdxes = apis.extractEmailDomainIdxes(emailAddr)[0];
+    expect("dummy.com").toEqual(emailAddr.slice(prefixIdxes[0], prefixIdxes[1]));
     for (let idx = 0; idx < 256; ++idx) {
       if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
         expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);

@@ -228,4 +228,44 @@ describe("From Addr Regex", () => {
     await expect(failFn).rejects.toThrow();
   });
 
+  it("from field containing @ in the name part", async () => {
+    const fromStr = "from:Sora Suegami <suegamisora@gmail.com@dummy.com>\r\n";
+    const paddedStr = apis.padString(fromStr, 1024);
+    const circuitInputs = {
+      msg: paddedStr,
+    };
+    const witness = await circuit.calculateWitness(circuitInputs);
+    await circuit.checkConstraints(witness);
+    expect(1n).toEqual(witness[1]);
+    const prefixIdxes = apis.extractFromAddrIdxes(fromStr)[0];
+    expect("suegamisora@gmail.com@dummy.com").toEqual(fromStr.slice(prefixIdxes[0], prefixIdxes[1]));
+    for (let idx = 0; idx < 1024; ++idx) {
+      if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+        expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+      } else {
+        expect(0n).toEqual(witness[2 + idx]);
+      }
+    }
+  });
+
+  it("from field starting from @", async () => {
+    const fromStr = "from:Sora Suegami <@gmail.com@dummy.com>\r\n";
+    const paddedStr = apis.padString(fromStr, 1024);
+    const circuitInputs = {
+      msg: paddedStr,
+    };
+    const witness = await circuit.calculateWitness(circuitInputs);
+    await circuit.checkConstraints(witness);
+    expect(1n).toEqual(witness[1]);
+    const prefixIdxes = apis.extractFromAddrIdxes(fromStr)[0];
+    expect("@gmail.com@dummy.com").toEqual(fromStr.slice(prefixIdxes[0], prefixIdxes[1]));
+    for (let idx = 0; idx < 1024; ++idx) {
+      if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+        expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+      } else {
+        expect(0n).toEqual(witness[2 + idx]);
+      }
+    }
+  });
+
 });
