@@ -1,5 +1,4 @@
 use fancy_regex::Regex;
-use js_sys::Array;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -16,10 +15,6 @@ pub struct RegexPartConfig {
     pub is_public: bool,
     /// A regex string.
     pub regex_def: String,
-    // Maximum byte size of the substring in this part.
-    // pub max_size: usize,
-    // (Optional) A solidity type of the substring in this part, e.g., "String", "Int", "Decimal".
-    // pub solidity: Option<SoldityType>,
 }
 
 /// Error definitions of the compiler.
@@ -39,29 +34,36 @@ pub fn extract_substr_idxes(
     input_str: &str,
     regex_config: &DecomposedRegexConfig,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
+    // Construct the full regex pattern with groups for each part
     let mut entire_regex_str = String::new();
-    for part in regex_config.parts.iter() {
-        entire_regex_str += part.regex_def.as_str();
+    for (_, part) in regex_config.parts.iter().enumerate() {
+        entire_regex_str += &format!("({})", part.regex_def); // Wrap each part in a group
     }
+
+    // Compile the entire regex
     let entire_regex = Regex::new(&entire_regex_str)?;
-    let entire_found = entire_regex.find(input_str)?.ok_or_else(|| {
-        ExtractSubstrssError::SubstringOfEntireNotFound(entire_regex, input_str.to_string())
-    })?;
-    let mut start = entire_found.start();
-    // let entire_end: usize = entire_found.end();
+
+    // Find the match for the entire regex
+    let entire_captures = entire_regex
+        .captures(input_str)
+        .map_err(|_| {
+            ExtractSubstrssError::SubstringOfEntireNotFound(
+                entire_regex.clone(),
+                input_str.to_string(),
+            )
+        })?
+        .expect("Expected a match, but none was found");
 
     let mut public_idxes = vec![];
-    for part_idx in 0..regex_config.parts.len() {
-        let regex_def = regex_config.parts[part_idx].regex_def.as_str();
-        let regex = Regex::new(&regex_def)?;
-        let end = match regex.find_from_pos(&input_str, start)? {
-            Some(found) => found.end(),
-            None => start,
-        };
-        if regex_config.parts[part_idx].is_public {
-            public_idxes.push((start, end));
+
+    // Iterate over each part to extract the relevant indices
+    for (i, part) in regex_config.parts.iter().enumerate() {
+        if part.is_public {
+            if let Some(matched) = entire_captures.get(i + 1) {
+                // Capture group indices are 1-based
+                public_idxes.push((matched.start(), matched.end()));
+            }
         }
-        start = end;
     }
 
     Ok(public_idxes)
