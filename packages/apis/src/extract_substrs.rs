@@ -37,7 +37,8 @@ pub fn extract_substr_idxes(
     // Construct the full regex pattern with groups for each part
     let mut entire_regex_str = String::new();
     for (_, part) in regex_config.parts.iter().enumerate() {
-        entire_regex_str += &format!("({})", part.regex_def); // Wrap each part in a group
+        let adjusted_regex_def = part.regex_def.replace("(", "(?:");
+        entire_regex_str += &format!("({})", adjusted_regex_def); // Wrap each part in a group
     }
 
     // Compile the entire regex
