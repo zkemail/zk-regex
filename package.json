@@ -1,6 +1,6 @@
 {
   "name": "@zk-email/zk-regex",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "private": true,
   "description": "zk regex circuit for content attestation",
   "main": "pkg/zk_regex_compiler_bg.wasm",

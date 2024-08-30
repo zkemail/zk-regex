@@ -1,6 +1,6 @@
 {
   "name": "@zk-email/zk-regex-apis",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "apis compatible with [zk-regex](https://github.com/zkemail/zk-regex/tree/main).",
   "contributors": [
     "Javier Su <javier.su.weijie@gmail.com>",

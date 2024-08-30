@@ -10,7 +10,7 @@ This library provides circom circuits that enables you to prove that
 - the input string satisfies regular expressions (regexes) specified in the chip.
 - the substrings are correctly extracted from the input string according to substring definitions.
 
-This is a Rust adaptation of the Python regex-to-circom work done by [sampriti](https://github.com/sampritipanda/) and [yush_g](https://twitter.com/yush_g), along with [sorasue](https://github.com/SoraSuegami/)'s decomposed specifications and [Sora + Bisht13](https://github.com/Bisht13)'s rewrite in Rust to support more characters. You can generate your own regexes via our no-code tool for the old Typescript version 1.X at [zkregex.com](https://www.zkregex.com). Note that zkregex.com does not support all syntax unlike version 2.1.0.
+This is a Rust adaptation of the Python regex-to-circom work done by [sampriti](https://github.com/sampritipanda/) and [yush_g](https://twitter.com/yush_g), along with [sorasue](https://github.com/SoraSuegami/)'s decomposed specifications and [Sora + Bisht13](https://github.com/Bisht13)'s rewrite in Rust to support more characters. You can generate your own regexes via our no-code tool for the old Typescript version 1.X at [zkregex.com](https://www.zkregex.com). Note that zkregex.com does not support all syntax unlike version 2.1.1.
 
 In addition to the original work, this library also supports the following features:
 - CLI to dynamically generate regex circuit based on regex arguments
@@ -28,7 +28,7 @@ While the manual way supports more kinds of regexes than the automatic way, the 
 
 To understand the theory behind the regex circuit compiler, please checkout [our main explanation post](https://prove.email/blog/zkregex), or [this older blog post](https://katat.me/blog/ZK+Regex). To understand how it ties into the original zk email work, you can also read the brief [original zk-email blog post regex overview](https://blog.aayushg.com/posts/zkemail#regex-deterministic-finite-automata-in-zk).
 
-The regular expressions supported by our compiler version 2.1.0 are **audited by zksecurity**, and have the following limitations:
+The regular expressions supported by our compiler version 2.1.1 are **audited by zksecurity**, and have the following limitations:
 
 1. Regular expressions where the results differ between greedy and lazy matching (e.g., .+, .+?) are not supported.
 2. The beginning anchor ^ must either appear at the beginning of the regular expression or be in the format (|^). Additionally, the section containing this ^ must be non-public (is_public: false).
