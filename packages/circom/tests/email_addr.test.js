@@ -83,7 +83,6 @@ describe("Email Address Regex", () => {
     expect(1n).toEqual(witness[1]);
     const prefixIdxes = apis.extractEmailAddrIdxes(string)[0];
     for (let idx = 0; idx < 256; ++idx) {
-      console.log(idx, witness[2 + idx])
       if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
         expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
       } else {
@@ -105,7 +104,6 @@ describe("Email Address Regex", () => {
     expect(1n).toEqual(witness[1]);
     const prefixIdxes = apis.extractEmailAddrIdxes(string)[0];
     for (let idx = 0; idx < 256; ++idx) {
-      console.log(idx, witness[2 + idx])
       if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
         expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
       } else {
