@@ -53,7 +53,12 @@ pub fn extract_substr_idxes(
                 input_str.to_string(),
             )
         })?
-        .expect("Expected a match, but none was found");
+        .ok_or_else(|| {
+            ExtractSubstrssError::SubstringOfEntireNotFound(
+                entire_regex.clone(),
+                input_str.to_string(),
+            )
+        })?;
 
     let mut public_idxes = vec![];
 
