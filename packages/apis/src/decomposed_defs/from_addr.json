@@ -2,7 +2,7 @@
   "parts": [
     {
       "is_public": false,
-      "regex_def": "((\r\n)|^)from:"
+      "regex_def": "(\r\n|^)from:"
     },
     {
       "is_public": false,
@@ -10,7 +10,7 @@
     },
     {
       "is_public": true,
-      "regex_def": "[A-Za-z0-9!#$%&'\\*\\+-/=\\?^_`{\\|}~\\.]+@[A-Za-z0-9\\.-]+"
+      "regex_def": "[A-Za-z0-9!#$%&'*+=?\\-\\^_`{|}~./@]+@[A-Za-z0-9.\\-]+"
     },
     {
       "is_public": false,

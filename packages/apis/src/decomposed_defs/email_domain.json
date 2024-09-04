@@ -2,15 +2,11 @@
   "parts": [
     {
       "is_public": false,
-      "regex_def": "[A-Za-z0-9!#$%&'*+-/=?^_`{\\|}~\\.]+"
-    },
-    {
-      "is_public": false,
-      "regex_def": "@"
+      "regex_def": "[A-Za-z0-9!#$%&'*+=?\\-\\^_`{|}~./]+@"
     },
     {
       "is_public": true,
-      "regex_def": "[A-Za-z0-9\\.-]+"
+      "regex_def": "[A-Za-z0-9.\\-@]+"
     }
   ]
 }

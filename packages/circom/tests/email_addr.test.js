@@ -69,4 +69,46 @@ describe("Email Address Regex", () => {
       }
     }
   });
+
+  it("@ inside the name part", async () => {
+    const prefix = "subject:";
+    const emailAddr = "suegamisora@gmail.com@dummy.com";
+    const string = prefix + emailAddr;
+    const paddedStr = apis.padString(string, 256);
+    const circuitInputs = {
+      msg: paddedStr,
+    };
+    const witness = await circuit.calculateWitness(circuitInputs);
+    await circuit.checkConstraints(witness);
+    expect(1n).toEqual(witness[1]);
+    const prefixIdxes = apis.extractEmailAddrIdxes(string)[0];
+    for (let idx = 0; idx < 256; ++idx) {
+      if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+        expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+      } else {
+        expect(0n).toEqual(witness[2 + idx]);
+      }
+    }
+  });
+
+  it("starts from @", async () => {
+    const prefix = "subject:";
+    const emailAddr = "@gmail.com@dummy.com";
+    const string = prefix + emailAddr;
+    const paddedStr = apis.padString(string, 256);
+    const circuitInputs = {
+      msg: paddedStr,
+    };
+    const witness = await circuit.calculateWitness(circuitInputs);
+    await circuit.checkConstraints(witness);
+    expect(1n).toEqual(witness[1]);
+    const prefixIdxes = apis.extractEmailAddrIdxes(string)[0];
+    for (let idx = 0; idx < 256; ++idx) {
+      if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+        expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+      } else {
+        expect(0n).toEqual(witness[2 + idx]);
+      }
+    }
+  });
 });
