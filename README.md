@@ -1,16 +1,17 @@
 # zk-regex
 
-A library to do regex verification in circom. It will also generate lookup tables compatible with [halo2-regex](https://github.com/zkemail/halo2-regex) soon.
+A library to compile regex verification in circom. Explained on [our blog post](https://prove.email/blog/zkregex).  You can use regex to specify how to parse an email in a ZK Email proof when defining a new patterm on [the ZK Email SDK registry](https://sdk.prove.email/). Noir coming soon.
 
 <!-- We've forked [min-dfa into a UI here](https://mindfa.onrender.com/min_dfa) to create a UI that converts existing regexes with [] support, as well as escapes \_, and the character classes a-z, A-Z, and 0-9. It also shows the DFA states very clearly so you can choose accept states easily. This should make converting regexes into DFA form way cleaner. -->
 
 ## Introduction
 
-This library provides circom circuits that enables you to prove that
+This library provides a compiler for regex that lets you specify public and private parts, then generates circom circuits that enable you to prove that
 - the input string satisfies regular expressions (regexes) specified in the chip.
 - the substrings are correctly extracted from the input string according to substring definitions.
+- the public parts are public outputs but the private parts are kept private
 
-This is a Rust adaptation of the Python regex-to-circom work done by [sampriti](https://github.com/sampritipanda/) and [yush_g](https://twitter.com/yush_g), along with [sorasue](https://github.com/SoraSuegami/)'s decomposed specifications and [Sora + Bisht13](https://github.com/Bisht13)'s rewrite in Rust to support more characters. You can generate your own regexes via our no-code tool for the old Typescript version 1.X at [zkregex.com](https://www.zkregex.com). Note that zkregex.com does not support all syntax unlike version 2.1.1.
+This is a Rust adaptation of the Python regex-to-circom work done by [sampriti](https://github.com/sampritipanda/) and [yush_g](https://twitter.com/yush_g), along with [sorasue](https://github.com/SoraSuegami/)'s and [Shreyas](https://github.com/shreyas-londhe) + [Bisht13](https://github.com/Bisht13)'s rewrite in Rust to support more characters. You can play with the old V1 compiler and DFA visualizations via our no-code tool [zkregex.com](https://www.zkregex.com). Note that zkregex.com does NOT support all syntax from the V2, only the highly restricted set of syntax from V1.
 
 In addition to the original work, this library also supports the following features:
 - CLI to dynamically generate regex circuit based on regex arguments
