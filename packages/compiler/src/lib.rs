@@ -1,6 +1,7 @@
 mod circom;
 mod errors;
 mod halo2;
+mod noir;
 mod regex;
 mod structs;
 mod wasm;
@@ -9,6 +10,7 @@ use circom::gen_circom_template;
 use errors::CompilerError;
 use halo2::gen_halo2_tables;
 use itertools::Itertools;
+use noir::gen_noir_fn;
 use regex::{create_regex_and_dfa_from_str_and_defs, get_regex_and_dfa};
 use std::{fs::File, path::PathBuf};
 use structs::{DecomposedRegexConfig, RegexAndDFA, SubstringDefinitionsJson};
@@ -55,6 +57,7 @@ fn generate_outputs(
     halo2_dir_path: Option<&str>,
     circom_file_path: Option<&str>,
     circom_template_name: Option<&str>,
+    noir_file_path: Option<&str>,
     num_public_parts: usize,
     gen_substrs: bool,
 ) -> Result<(), CompilerError> {
@@ -86,6 +89,10 @@ fn generate_outputs(
         )?;
     }
 
+    if let Some(noir_file_path) = noir_file_path {
+        gen_noir_fn(regex_and_dfa, &PathBuf::from(noir_file_path))?;
+    }
+
     Ok(())
 }
 
@@ -107,6 +114,7 @@ pub fn gen_from_decomposed(
     halo2_dir_path: Option<&str>,
     circom_file_path: Option<&str>,
     circom_template_name: Option<&str>,
+    noir_file_path: Option<&str>,
     gen_substrs: Option<bool>,
 ) -> Result<(), CompilerError> {
     let mut decomposed_regex_config: DecomposedRegexConfig =
@@ -126,6 +134,7 @@ pub fn gen_from_decomposed(
         halo2_dir_path,
         circom_file_path,
         circom_template_name,
+        noir_file_path,
         num_public_parts,
         gen_substrs,
     )?;
@@ -153,6 +162,7 @@ pub fn gen_from_raw(
     halo2_dir_path: Option<&str>,
     circom_file_path: Option<&str>,
     template_name: Option<&str>,
+    noir_file_path: Option<&str>,
     gen_substrs: Option<bool>,
 ) -> Result<(), CompilerError> {
     let substrs_defs_json = load_substring_definitions_json(substrs_json_path)?;
@@ -167,6 +177,7 @@ pub fn gen_from_raw(
         halo2_dir_path,
         circom_file_path,
         template_name,
+        noir_file_path,
         num_public_parts,
         gen_substrs,
     )?;
