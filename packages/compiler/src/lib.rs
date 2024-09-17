@@ -170,7 +170,7 @@ pub fn gen_from_raw(
 
     let regex_and_dfa = create_regex_and_dfa_from_str_and_defs(raw_regex, substrs_defs_json)?;
 
-    let gen_substrs = gen_substrs.unwrap_or(true);
+    let gen_substrs = gen_substrs.unwrap_or(false);
 
     generate_outputs(
         &regex_and_dfa,
