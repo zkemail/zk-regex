@@ -90,7 +90,7 @@ fn generate_outputs(
     }
 
     if let Some(noir_file_path) = noir_file_path {
-        gen_noir_fn(regex_and_dfa, &PathBuf::from(noir_file_path))?;
+        gen_noir_fn(regex_and_dfa, &PathBuf::from(noir_file_path), gen_substrs)?;
     }
 
     Ok(())
