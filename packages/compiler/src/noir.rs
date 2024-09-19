@@ -103,28 +103,30 @@ comptime fn make_lookup_table() -> [Field; {table_size}] {{
         .collect_vec()
         .join(" | ");
 
-    // If substrings have to be extracted, the function returns that amount of BoundedVec,
+    // If substrings have to be extracted, the function returns a vector of BoundedVec
     // otherwise there is no return type
     let fn_body = if gen_substrs {
-        let nr_substrs = substr_states.len();
-        // Initialize a substring BoundedVec for each substr that has to be extracted
-        let mut bounded_vecs_initialization = (0..nr_substrs)
-            .map(|index| format!("let mut substr{} = BoundedVec::new();", index))
-            .collect::<Vec<_>>()
-            .join("\n");
-        bounded_vecs_initialization = indent(&bounded_vecs_initialization, 1); // Indent once for inside the function
 
         // Fill each substring when at the corresponding state
+        // Per state potentially multiple substrings should be extracted
+        // The code keeps track of whether a substring was already in the making, or a new one is started
         let mut conditions = substr_states
             .iter()
-            .enumerate()
-            .map(|(index, state)| {
+            .map(|state| {
                 format!(
-                    "if (s == {state}) {{
-    substr{index_plus_one}.push(temp);
-}}",
-                    index_plus_one = index
-                )
+                    "if ((s_next == {state}) & (consecutive_substr == 0)) {{
+  let mut substr0 = BoundedVec::new();
+  substr0.push(temp);
+  substrings.push(substr0);
+  consecutive_substr = 1;
+  substr_count += 1;
+}} else if ((s_next == {state}) & (s == {state})) {{
+  let mut current: BoundedVec<Field, N> = substrings.get(substr_count - 1);
+  current.push(temp);
+  substrings.set(substr_count - 1, current);
+}} else if (s == {state}) {{
+  consecutive_substr = 0;
+}}")
             })
             .collect::<Vec<_>>()
             .join("\n");
@@ -133,25 +135,30 @@ comptime fn make_lookup_table() -> [Field; {table_size}] {{
         format!(
             r#"
 global table = comptime {{ make_lookup_table() }};
-pub fn regex_match<let N: u32>(input: [u8; N]) -> [BoundedVec<Field, N>; {nr_substrs}] {{
+pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {{
     // regex: {regex_pattern}
-    let mut s = 0;
-    
-{bounded_vecs_initialization}
+    let mut substrings: Vec<BoundedVec<Field, N>> = Vec::new();
+    // Workaround for pop bug with Vec
+    let mut substr_count = 0;
+
+    // "Previous" state
+    let mut s: Field = 0;
+    // "Next"/upcoming state
+    let mut s_next: Field = 0;
+
+    let mut consecutive_substr = 0;
 
     for i in 0..input.len() {{
         let temp = input[i] as Field;
-        s = table[s * {BYTE_SIZE} + input[i] as Field];
+        s_next = table[s * 256 + temp];
+        // Fill up substrings
 {conditions}
+        s = s_next;
     }}
     assert({final_states_condition_body}, f"no match: {{s}}");
-    [{bounded_vec_names}]
+    substrings
 }}"#,
-            regex_pattern = regex_and_dfa.regex_pattern,
-            bounded_vec_names = (0..nr_substrs)
-                .map(|index| format!("substr{}", index))
-                .collect::<Vec<_>>()
-                .join(", "),
+            regex_pattern = regex_and_dfa.regex_pattern
         )
     } else {
         format!(
