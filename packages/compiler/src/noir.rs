@@ -1,3 +1,7 @@
+use std::{collections::BTreeSet, fs::File, io::Write, path::Path};
+
+use itertools::Itertools;
+
 use crate::structs::RegexAndDFA;
 use itertools::Itertools;
 use std::{collections::HashSet, fs::File, io::Write, iter::FromIterator, path::Path};
@@ -84,16 +88,8 @@ comptime fn make_lookup_table() -> [Field; {table_size}] {{
     "#
     );
 
-    // substring_ranges contains the transitions that belong to the substring. 
-    //   in Noir we only need to know in what state the substring needs to be extracted, the transitions are not needed
-    //   Example: SubstringDefinitions { substring_ranges: [{(2, 3)}, {(6, 7), (7, 7)}, {(8, 9)}], substring_boundaries: None }
-    //   for each substring, get the first transition and get the end state
-    let substr_states: Vec<usize> = regex_and_dfa
-      .substrings
-      .substring_ranges
-      .iter()
-      .flat_map(|range_set| range_set.iter().next().map(|&(_, end_state)| end_state)) // Extract the second element (end state) of each tuple
-      .collect();
+    // substring_ranges contains the transitions that belong to the substring
+    let substr_ranges: &Vec<BTreeSet<(usize, usize)>> = &regex_and_dfa.substrings.substring_ranges;
     // Note: substring_boundaries is only filled if the substring info is coming from decomposed setting
     //  and will be empty in the raw setting (using json file for substr transitions). This is why substring_ranges is used here
 
@@ -106,31 +102,55 @@ comptime fn make_lookup_table() -> [Field; {table_size}] {{
     // If substrings have to be extracted, the function returns a vector of BoundedVec
     // otherwise there is no return type
     let fn_body = if gen_substrs {
+      let mut first_condition = true;
 
-        // Fill each substring when at the corresponding state
-        // Per state potentially multiple substrings should be extracted
-        // The code keeps track of whether a substring was already in the making, or a new one is started
-        let mut conditions = substr_states
-            .iter()
-            .map(|state| {
-                format!(
-                    "if ((s_next == {state}) & (consecutive_substr == 0)) {{
-  let mut substr0 = BoundedVec::new();
-  substr0.push(temp);
-  substrings.push(substr0);
-  consecutive_substr = 1;
-  substr_count += 1;
-}} else if ((s_next == {state}) & (s == {state})) {{
-  let mut current: BoundedVec<Field, N> = substrings.get(substr_count - 1);
-  current.push(temp);
-  substrings.set(substr_count - 1, current);
-}} else if (s == {state}) {{
-  consecutive_substr = 0;
-}}")
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
-        conditions = indent(&conditions, 2); // Indent twice to align with the for loop's body
+      let mut conditions = substr_ranges
+          .iter()
+          .enumerate()
+          .map(|(set_idx, range_set)| {
+              // Combine the range conditions into a single line using `|` operator
+              let range_conditions = range_set
+                  .iter()
+                  .map(|(range_start, range_end)| format!("(s == {range_start}) & (s_next == {range_end})"))
+                  .collect::<Vec<_>>()
+                  .join(" | ");
+      
+              // For the first condition, use `if`, for others, use `else if`
+              let start_part = if first_condition {
+                  first_condition = false;
+                  "if"
+              } else {
+                  "else if"
+              };
+      
+              // The body of the condition handling substring creation/updating
+              format!(
+                  "{start_part} ({range_conditions}) {{
+    if (consecutive_substr == 0) {{
+      let mut substr{set_idx} = BoundedVec::new();
+      substr{set_idx}.push(temp);
+      substrings.push(substr{set_idx});
+      consecutive_substr = 1;
+      substr_count += 1;
+    }} else if (consecutive_substr == 1) {{
+      let mut current: BoundedVec<Field, N> = substrings.get(substr_count - 1);
+      current.push(temp);
+      substrings.set(substr_count - 1, current);
+    }}
+}}"
+              )
+          })
+          .collect::<Vec<_>>()
+          .join("\n");
+      
+      // Add the final else if for resetting the consecutive_substr
+      let final_conditions = format!(
+    "{conditions} else if (consecutive_substr == 1) {{
+    consecutive_substr = 0;
+}}"
+      );
+
+        conditions = indent(&final_conditions, 2); // Indent twice to align with the for loop's body
 
         format!(
             r#"
