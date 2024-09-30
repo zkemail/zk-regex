@@ -1,10 +1,11 @@
-use std::{collections::BTreeSet, fs::File, io::Write, path::Path};
+use std::{
+    collections::BTreeSet, collections::HashSet, fs::File, io::Write, iter::FromIterator,
+    path::Path,
+};
 
 use itertools::Itertools;
 
 use crate::structs::RegexAndDFA;
-use itertools::Itertools;
-use std::{collections::HashSet, fs::File, io::Write, iter::FromIterator, path::Path};
 
 const ACCEPT_STATE_ID: &str = "accept";
 
@@ -25,13 +26,16 @@ pub fn gen_noir_fn(
 /// # Arguments
 ///
 /// * `regex_and_dfa` - The `RegexAndDFA` struct containing the regex pattern and DFA.
-/// * `gen_substrs` - A boolean indicating whether to generate substrings. 
+/// * `gen_substrs` - A boolean indicating whether to generate substrings.
 ///
 /// # Returns
 ///
 /// A `String` that contains the Noir code
 fn to_noir_fn(regex_and_dfa: &RegexAndDFA, gen_substrs: bool) -> String {
-    let accept_state_ids = {
+    // Multiple accepting states are not supported
+    // This is a vector nonetheless, to support an extra accepting state we'll use
+    // to allow any character occurrences after the original accepting state
+    let mut accept_state_ids: Vec<usize> = {
         let accept_states = regex_and_dfa
             .dfa
             .states
@@ -39,7 +43,10 @@ fn to_noir_fn(regex_and_dfa: &RegexAndDFA, gen_substrs: bool) -> String {
             .filter(|s| s.state_type == ACCEPT_STATE_ID)
             .map(|s| s.state_id)
             .collect_vec();
-        assert!(accept_states.len() > 0, "no accept states");
+        assert!(
+            accept_states.len() == 1,
+            "there should be exactly 1 accept state"
+        );
         accept_states
     };
 
@@ -49,23 +56,31 @@ fn to_noir_fn(regex_and_dfa: &RegexAndDFA, gen_substrs: bool) -> String {
     // curr_state + char_code -> next_state
     let mut rows: Vec<(usize, u8, usize)> = vec![];
 
+    // $ support
+    // In case that there is no end_anchor, we add an additional accepting state to which any
+    // character occurence after the accepting state will go.
+    // This needs to be a new state, otherwise substring extraction won't work correctly
+    if !regex_and_dfa.has_end_anchor {
+        let original_accept_id = accept_state_ids.get(0).unwrap().clone();
+        // Create a new highest state
+        let extra_accept_id = regex_and_dfa
+            .dfa
+            .states
+            .iter()
+            .max_by_key(|state| state.state_id)
+            .map(|state| state.state_id)
+            .unwrap()
+            + 1;
+        accept_state_ids.push(extra_accept_id);
+        for char_code in 0..=254 {
+            rows.push((original_accept_id, char_code, extra_accept_id));
+            rows.push((extra_accept_id, char_code, extra_accept_id));
+        }
+    }
     for state in regex_and_dfa.dfa.states.iter() {
         for (&tran_next_state_id, tran) in &state.transitions {
             for &char_code in tran {
                 rows.push((state.state_id, char_code, tran_next_state_id));
-            }
-        }
-        if state.state_type == ACCEPT_STATE_ID {
-            let existing_char_codes = &state
-                .transitions
-                .iter()
-                .flat_map(|(_, tran)| tran.iter().copied().collect_vec())
-                .collect::<HashSet<_>>();
-            let all_char_codes = HashSet::from_iter(0..=255);
-            let mut char_codes = all_char_codes.difference(existing_char_codes).collect_vec();
-            char_codes.sort(); // to be deterministic
-            for &char_code in char_codes {
-                rows.push((state.state_id, char_code, state.state_id));
             }
         }
     }
@@ -76,7 +91,10 @@ fn to_noir_fn(regex_and_dfa: &RegexAndDFA, gen_substrs: bool) -> String {
     }
 
     lookup_table_body = indent(&lookup_table_body, 1);
-    let table_size = BYTE_SIZE as usize * regex_and_dfa.dfa.states.len();
+    let mut table_size = BYTE_SIZE as usize * regex_and_dfa.dfa.states.len();
+    if !regex_and_dfa.has_end_anchor {
+        table_size += BYTE_SIZE as usize;
+    }
     let lookup_table = format!(
         r#"
 comptime fn make_lookup_table() -> [Field; {table_size}] {{
@@ -102,30 +120,32 @@ comptime fn make_lookup_table() -> [Field; {table_size}] {{
     // If substrings have to be extracted, the function returns a vector of BoundedVec
     // otherwise there is no return type
     let fn_body = if gen_substrs {
-      let mut first_condition = true;
+        let mut first_condition = true;
 
-      let mut conditions = substr_ranges
-          .iter()
-          .enumerate()
-          .map(|(set_idx, range_set)| {
-              // Combine the range conditions into a single line using `|` operator
-              let range_conditions = range_set
-                  .iter()
-                  .map(|(range_start, range_end)| format!("(s == {range_start}) & (s_next == {range_end})"))
-                  .collect::<Vec<_>>()
-                  .join(" | ");
-      
-              // For the first condition, use `if`, for others, use `else if`
-              let start_part = if first_condition {
-                  first_condition = false;
-                  "if"
-              } else {
-                  "else if"
-              };
-      
-              // The body of the condition handling substring creation/updating
-              format!(
-                  "{start_part} ({range_conditions}) {{
+        let mut conditions = substr_ranges
+            .iter()
+            .enumerate()
+            .map(|(set_idx, range_set)| {
+                // Combine the range conditions into a single line using `|` operator
+                let range_conditions = range_set
+                    .iter()
+                    .map(|(range_start, range_end)| {
+                        format!("(s == {range_start}) & (s_next == {range_end})")
+                    })
+                    .collect::<Vec<_>>()
+                    .join(" | ");
+
+                // For the first condition, use `if`, for others, use `else if`
+                let start_part = if first_condition {
+                    first_condition = false;
+                    "if"
+                } else {
+                    "else if"
+                };
+
+                // The body of the condition handling substring creation/updating
+                format!(
+                    "{start_part} ({range_conditions}) {{
     if (consecutive_substr == 0) {{
       let mut substr{set_idx} = BoundedVec::new();
       substr{set_idx}.push(temp);
@@ -138,17 +158,17 @@ comptime fn make_lookup_table() -> [Field; {table_size}] {{
       substrings.set(substr_count - 1, current);
     }}
 }}"
-              )
-          })
-          .collect::<Vec<_>>()
-          .join("\n");
-      
-      // Add the final else if for resetting the consecutive_substr
-      let final_conditions = format!(
-    "{conditions} else if (consecutive_substr == 1) {{
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        // Add the final else if for resetting the consecutive_substr
+        let final_conditions = format!(
+            "{conditions} else if (consecutive_substr == 1) {{
     consecutive_substr = 0;
 }}"
-      );
+        );
 
         conditions = indent(&final_conditions, 2); // Indent twice to align with the for loop's body
 
@@ -163,6 +183,7 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {{
 
     // "Previous" state
     let mut s: Field = 0;
+    s = table[255];
     // "Next"/upcoming state
     let mut s_next: Field = 0;
 
@@ -187,6 +208,7 @@ global table = comptime {{ make_lookup_table() }};
 pub fn regex_match<let N: u32>(input: [u8; N]) {{
     // regex: {regex_pattern}
     let mut s = 0;
+    s = table[255];
     for i in 0..input.len() {{
         s = table[s * {BYTE_SIZE} + input[i] as Field];
     }}
