@@ -218,7 +218,7 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {{
     }}
     substrings
 }}"#,
-            regex_pattern = regex_and_dfa.regex_pattern
+            regex_pattern = regex_and_dfa.regex_pattern.replace('\n', "\\n").replace('\r', "\\r")
         )
     } else {
         format!(
@@ -233,7 +233,7 @@ pub fn regex_match<let N: u32>(input: [u8; N]) {{
     }}
     assert({final_states_condition_body}, f"no match: {{s}}");
 }}"#,
-            regex_pattern = regex_and_dfa.regex_pattern,
+            regex_pattern = regex_and_dfa.regex_pattern.replace('\n', "\\n").replace('\r', "\\r"),
         )
     };
 
