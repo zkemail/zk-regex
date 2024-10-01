@@ -124,8 +124,7 @@ comptime fn make_lookup_table() -> [Field; {table_size}] {{
 
         let mut conditions = substr_ranges
             .iter()
-            .enumerate()
-            .map(|(set_idx, range_set)| {
+            .map(|range_set| {
                 // Combine the range conditions into a single line using `|` operator
                 let range_conditions = range_set
                     .iter()
@@ -147,16 +146,11 @@ comptime fn make_lookup_table() -> [Field; {table_size}] {{
                 format!(
                     "{start_part} ({range_conditions}) {{
     if (consecutive_substr == 0) {{
-      let mut substr{set_idx} = BoundedVec::new();
-      substr{set_idx}.push(temp);
-      substrings.push(substr{set_idx});
+      current_substring.push(temp);
       consecutive_substr = 1;
-      substr_count += 1;
     }} else if (consecutive_substr == 1) {{
-      let mut current: BoundedVec<Field, N> = substrings.get(substr_count - 1);
-      current.push(temp);
-      substrings.set(substr_count - 1, current);
-    }}
+      current_substring.push(temp);
+    }}   
 }}"
                 )
             })
@@ -165,7 +159,14 @@ comptime fn make_lookup_table() -> [Field; {table_size}] {{
 
         // Add the final else if for resetting the consecutive_substr
         let final_conditions = format!(
-            "{conditions} else if (consecutive_substr == 1) {{
+            "{conditions} else if ((consecutive_substr == 1) & (s_next == 0)) {{
+    current_substring = BoundedVec::new();
+    consecutive_substr = 0;
+}} else if (consecutive_substr == 1) {{
+    // The substring is done so \"save\" it
+    substrings.push(current_substring);
+    // reset the substring holder for next use
+    current_substring = BoundedVec::new();
     consecutive_substr = 0;
 }}"
         );
@@ -188,15 +189,35 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {{
     let mut s_next: Field = 0;
 
     let mut consecutive_substr = 0;
+    let mut current_substring = BoundedVec::new();
 
     for i in 0..input.len() {{
         let temp = input[i] as Field;
+        let mut reset = false;
         s_next = table[s * 256 + temp];
+        if s_next == 0 {{
+          // Check if there is any transition that could be done from a "restart"
+          s_next = table[temp];
+          // whether the next state changes or not, we mark this as a reset.
+          reset = true;
+          s = 0;
+        }}
+
+        // If a substring was in the making, but the state was reset
+        // we disregard previous progress because apparently it is invalid
+        if (reset & (consecutive_substr == 1)) {{
+            current_substring = BoundedVec::new();
+            consecutive_substr = 0;
+        }}
         // Fill up substrings
 {conditions}
         s = s_next;
     }}
     assert({final_states_condition_body}, f"no match: {{s}}");
+    // Add pending substring that hasn't been added
+    if consecutive_substr == 1 {{
+        substrings.push(current_substring);
+    }}
     substrings
 }}"#,
             regex_pattern = regex_and_dfa.regex_pattern
