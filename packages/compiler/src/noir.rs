@@ -179,8 +179,6 @@ global table = comptime {{ make_lookup_table() }};
 pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {{
     // regex: {regex_pattern}
     let mut substrings: Vec<BoundedVec<Field, N>> = Vec::new();
-    // Workaround for pop bug with Vec
-    let mut substr_count = 0;
 
     // "Previous" state
     let mut s: Field = 0;
