@@ -28,17 +28,17 @@ describe("To Addr Regex", () => {
     }
     {
       const email_addr_json = readFileSync(
-        path.join(__dirname, "../circuits/common/email_addr_with_name.json"),
+        path.join(__dirname, "../circuits/common/reversed_email_addr_with_name.json"),
         "utf8"
       );
       const circom = compiler.genFromDecomposed(
         email_addr_json,
-        "EmailAddrWithNameRegex"
+        "ReversedEmailAddrWithNameRegex"
       );
       writeFileSync(
         path.join(
           __dirname,
-          "../circuits/common/email_addr_with_name_regex.circom"
+          "../circuits/common/reversed_email_addr_with_name_regex.circom"
         ),
         circom
       );
@@ -258,6 +258,96 @@ describe("To Addr Regex", () => {
     expect(1n).toEqual(witness[1]);
     const prefixIdxes = apis.extractToAddrIdxes(toStr)[0];
     expect("@gmail.com@dummy.com").toEqual(toStr.slice(prefixIdxes[0], prefixIdxes[1]));
+    for (let idx = 0; idx < 1024; ++idx) {
+      if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+        expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+      } else {
+        expect(0n).toEqual(witness[2 + idx]);
+      }
+    }
+  });
+
+  it("to field with double <> 1", async () => {
+    const toStr = "to:\"Some name <victim@any-domain>\" <attacker@outlook.com>\r\n";
+    const paddedStr = apis.padString(toStr, 1024);
+    const circuitInputs = {
+      msg: paddedStr,
+    };
+    const witness = await circuit.calculateWitness(circuitInputs);
+    await circuit.checkConstraints(witness);
+    expect(1n).toEqual(witness[1]);
+    const prefixIdxes = apis.extractToAddrIdxes(toStr)[0];
+    expect("attacker@outlook.com").toEqual(toStr.slice(prefixIdxes[0], prefixIdxes[1]));
+    for (let idx = 0; idx < 1024; ++idx) {
+      if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+        expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+      } else {
+        expect(0n).toEqual(witness[2 + idx]);
+      }
+    }
+  });
+
+
+  it("to field with double <> 2", async () => {
+    const toStr = "to:\"Some name <victim@any-domain>\" < attacker@outlook.com>\r\n";
+    const paddedStr = apis.padString(toStr, 1024);
+    const circuitInputs = {
+      msg: paddedStr,
+    };
+    const witness = await circuit.calculateWitness(circuitInputs);
+    await circuit.checkConstraints(witness);
+    console.log((witness[1]));
+    expect(1n).toEqual(witness[1]);
+    const prefixIdxes = apis.extractToAddrIdxes(toStr)[0];
+    expect(" attacker@outlook.com").toEqual(toStr.slice(prefixIdxes[0], prefixIdxes[1]));
+    for (let idx = 0; idx < 1024; ++idx) {
+      if (witness[2 + idx] !== 0n) {
+        console.log('idx:', idx, 'witness:', witness[2 + idx]);
+      }
+      // if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+      //   expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+      // } else {
+      //   expect(0n).toEqual(witness[2 + idx]);
+      // }
+    }
+  });
+
+
+  it("to field with double <> 3", async () => {
+    const toStr = "to:\"Some name <victim@any-domain>\" <attacker@outlook.com >\r\n";
+    const paddedStr = apis.padString(toStr, 1024);
+    const circuitInputs = {
+      msg: paddedStr,
+    };
+    const witness = await circuit.calculateWitness(circuitInputs);
+    await circuit.checkConstraints(witness);
+    console.log((witness[1]));
+    expect(1n).toEqual(witness[1]);
+    const prefixIdxes = apis.extractToAddrIdxes(toStr)[0];
+    expect("attacker@outlook.com ").toEqual(toStr.slice(prefixIdxes[0], prefixIdxes[1]));
+    for (let idx = 0; idx < 1024; ++idx) {
+      if (witness[2 + idx] !== 0n) {
+        console.log('idx:', idx, 'witness:', witness[2 + idx]);
+      }
+      // if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+      //   expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+      // } else {
+      //   expect(0n).toEqual(witness[2 + idx]);
+      // }
+    }
+  });
+
+  it("to field with triple <>", async () => {
+    const toStr = "to:\"Some name <victim1@any-domain<victim1@any-domain>>\" <attacker@outlook.com>\r\n";
+    const paddedStr = apis.padString(toStr, 1024);
+    const circuitInputs = {
+      msg: paddedStr,
+    };
+    const witness = await circuit.calculateWitness(circuitInputs);
+    await circuit.checkConstraints(witness);
+    expect(1n).toEqual(witness[1]);
+    const prefixIdxes = apis.extractToAddrIdxes(toStr)[0];
+    expect("attacker@outlook.com").toEqual(toStr.slice(prefixIdxes[0], prefixIdxes[1]));
     for (let idx = 0; idx < 1024; ++idx) {
       if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
         expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
