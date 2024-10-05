@@ -6,7 +6,7 @@
         },
         {
             "is_public": true,
-            "regex_def": "[a-zA-Z0-9.\\-]+@[A-Za-z0-9!#$%&'*+=?\\-\\^_`{|}~./@]+"
+            "regex_def": "[^<>]+"
         },
         {
             "is_public": false,

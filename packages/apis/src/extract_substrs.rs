@@ -89,12 +89,12 @@ pub fn extract_email_domain_idxes(
     extract_substr_idxes(input_str, &serde_json::from_str(regex_config).unwrap())
 }
 
-pub fn extract_email_addr_with_name_idxes(
-    input_str: &str,
-) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
-    let regex_config = include_str!("./decomposed_defs/email_addr_with_name.json");
-    extract_substr_idxes(input_str, &serde_json::from_str(regex_config).unwrap())
-}
+// pub fn extract_email_addr_with_name_idxes(
+//     input_str: &str,
+// ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
+//     let regex_config = include_str!("./decomposed_defs/email_addr_with_name.json");
+//     extract_substr_idxes(input_str, &serde_json::from_str(regex_config).unwrap())
+// }
 
 pub fn extract_from_all_idxes(
     input_str: &str,
@@ -166,20 +166,20 @@ mod test {
         assert_eq!(idxes, vec![(17, 38)]);
     }
 
-    #[test]
-    fn test_email_addr_with_name_valid1() {
-        let input_str = "from:dummy@a.com <suegamisora@gmail.com>";
-        let idxes = extract_email_addr_with_name_idxes(input_str).unwrap();
-        assert_eq!(idxes, vec![(18, 39)]);
-    }
+    // #[test]
+    // fn test_email_addr_with_name_valid1() {
+    //     let input_str = "from:dummy@a.com <suegamisora@gmail.com>";
+    //     let idxes = extract_email_addr_with_name_idxes(input_str).unwrap();
+    //     assert_eq!(idxes, vec![(18, 39)]);
+    // }
 
-    #[test]
-    fn test_email_addr_with_name_valid2() {
-        // "末神 奏宙" has 13 bytes.
-        let input_str = "from:\"末神 奏宙\" <suegamisora@gmail.com>";
-        let idxes = extract_email_addr_with_name_idxes(input_str).unwrap();
-        assert_eq!(idxes, vec![(22, 43)]);
-    }
+    // #[test]
+    // fn test_email_addr_with_name_valid2() {
+    //     // "末神 奏宙" has 13 bytes.
+    //     let input_str = "from:\"末神 奏宙\" <suegamisora@gmail.com>";
+    //     let idxes = extract_email_addr_with_name_idxes(input_str).unwrap();
+    //     assert_eq!(idxes, vec![(22, 43)]);
+    // }
 
     #[test]
     fn test_email_from_all_valid() {

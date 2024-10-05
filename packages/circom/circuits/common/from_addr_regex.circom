@@ -1,9 +1,9 @@
 pragma circom 2.1.5;
 
-include "@zk-email/zk-regex-circom/circuits/regex_helpers.circom";
-include "@zk-email/zk-regex-circom/circuits/common/from_all_regex.circom";
-include "@zk-email/zk-regex-circom/circuits/common/email_addr_regex.circom";
-include "@zk-email/zk-regex-circom/circuits/common/email_addr_with_name_regex.circom";
+include "../regex_helpers.circom";
+include "./from_all_regex.circom";
+include "./email_addr_regex.circom";
+include "./email_addr_with_name_regex.circom";
 
 
 template FromAddrRegex(msg_bytes) {

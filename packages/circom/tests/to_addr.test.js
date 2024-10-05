@@ -28,17 +28,17 @@ describe("To Addr Regex", () => {
     }
     {
       const email_addr_json = readFileSync(
-        path.join(__dirname, "../circuits/common/reversed_email_addr_with_name.json"),
+        path.join(__dirname, "../circuits/common/reversed_bracket.json"),
         "utf8"
       );
       const circom = compiler.genFromDecomposed(
         email_addr_json,
-        "ReversedEmailAddrWithNameRegex"
+        "ReversedBracketRegex"
       );
       writeFileSync(
         path.join(
           __dirname,
-          "../circuits/common/reversed_email_addr_with_name_regex.circom"
+          "../circuits/common/reversed_bracket_regex.circom"
         ),
         circom
       );
@@ -296,19 +296,19 @@ describe("To Addr Regex", () => {
     };
     const witness = await circuit.calculateWitness(circuitInputs);
     await circuit.checkConstraints(witness);
-    console.log((witness[1]));
+    // console.log((witness[1]));
     expect(1n).toEqual(witness[1]);
     const prefixIdxes = apis.extractToAddrIdxes(toStr)[0];
     expect(" attacker@outlook.com").toEqual(toStr.slice(prefixIdxes[0], prefixIdxes[1]));
     for (let idx = 0; idx < 1024; ++idx) {
-      if (witness[2 + idx] !== 0n) {
-        console.log('idx:', idx, 'witness:', witness[2 + idx]);
-      }
-      // if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-      //   expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-      // } else {
-      //   expect(0n).toEqual(witness[2 + idx]);
+      // if (witness[2 + idx] !== 0n) {
+      //   console.log('idx:', idx, 'witness:', witness[2 + idx]);
       // }
+      if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+        expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+      } else {
+        expect(0n).toEqual(witness[2 + idx]);
+      }
     }
   });
 
@@ -321,19 +321,19 @@ describe("To Addr Regex", () => {
     };
     const witness = await circuit.calculateWitness(circuitInputs);
     await circuit.checkConstraints(witness);
-    console.log((witness[1]));
+    // console.log((witness[1]));
     expect(1n).toEqual(witness[1]);
     const prefixIdxes = apis.extractToAddrIdxes(toStr)[0];
     expect("attacker@outlook.com ").toEqual(toStr.slice(prefixIdxes[0], prefixIdxes[1]));
     for (let idx = 0; idx < 1024; ++idx) {
-      if (witness[2 + idx] !== 0n) {
-        console.log('idx:', idx, 'witness:', witness[2 + idx]);
-      }
-      // if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
-      //   expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
-      // } else {
-      //   expect(0n).toEqual(witness[2 + idx]);
+      // if (witness[2 + idx] !== 0n) {
+      //   console.log('idx:', idx, 'witness:', witness[2 + idx]);
       // }
+      if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
+        expect(BigInt(paddedStr[idx])).toEqual(witness[2 + idx]);
+      } else {
+        expect(0n).toEqual(witness[2 + idx]);
+      }
     }
   });
 

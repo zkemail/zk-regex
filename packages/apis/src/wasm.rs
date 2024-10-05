@@ -47,12 +47,12 @@ pub fn extractEmailDomainIdxes(inputStr: &str) -> Array {
     extractSubstrIdxes(inputStr, JsValue::from_str(regex_config))
 }
 
-#[wasm_bindgen]
-#[allow(non_snake_case)]
-pub fn extractEmailAddrWithNameIdxes(inputStr: &str) -> Array {
-    let regex_config = include_str!("./decomposed_defs/email_addr_with_name.json");
-    extractSubstrIdxes(inputStr, JsValue::from_str(regex_config))
-}
+// #[wasm_bindgen]
+// #[allow(non_snake_case)]
+// pub fn extractEmailAddrWithNameIdxes(inputStr: &str) -> Array {
+//     let regex_config = include_str!("./decomposed_defs/email_addr_with_name.json");
+//     extractSubstrIdxes(inputStr, JsValue::from_str(regex_config))
+// }
 
 #[wasm_bindgen]
 #[allow(non_snake_case)]
