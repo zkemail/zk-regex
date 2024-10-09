@@ -11,6 +11,7 @@ template InvitationCodeWithPrefixRegex(msg_bytes) {
 	signal in[num_bytes];
 	in[0]<==255;
 	for (var i = 0; i < msg_bytes; i++) {
+		_ <== LessThan(8)([msg[i], 255]);
 		in[i+1] <== msg[i];
 	}
 

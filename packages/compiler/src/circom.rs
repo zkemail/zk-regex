@@ -584,6 +584,7 @@ fn generate_declarations(
         "\tsignal in[num_bytes];".to_string(),
         "\tin[0]<==255;".to_string(),
         "\tfor (var i = 0; i < msg_bytes; i++) {".to_string(),
+        "\t\t_ <== LessThan(8)([msg[i], 255]);".to_string(),
         "\t\tin[i+1] <== msg[i];".to_string(),
         "\t}".to_string(),
         "".to_string(),
