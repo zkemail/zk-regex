@@ -20,8 +20,8 @@ jobs:
           components: rustfmt, clippy
       - name: Install wasm-pack
         run: cargo install wasm-pack
-      - name: Download circom (Linux)
-        run: wget https://github.com/iden3/circom/releases/latest/download/circom-linux-amd64 -O /usr/local/bin/circom && chmod +x /usr/local/bin/circom
+      - name: Download circom v2.1.8 (Linux)
+        run: wget https://github.com/iden3/circom/releases/download/v2.1.8/circom-linux-amd64 -O /usr/local/bin/circom && chmod +x /usr/local/bin/circom
       - name: Install yarn
         run: npm install -g yarn
       - name: Install dependencies
