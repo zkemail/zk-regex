@@ -26,9 +26,5 @@ jobs:
         run: npm install -g yarn
       - name: Install dependencies
         run: yarn install  --immutable
-      # - name: Create build folder
-      #   run: mkdir build
-      # - name: Run Linters
-      #   run: yarn lint
       - name: Run tests
         run: yarn test
