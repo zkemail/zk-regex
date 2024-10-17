@@ -173,3 +173,8 @@ Use this bibtex citation.
 
 - [ ] support character class regex grammar (so as to simplify the regular expressions)
 - [ ] better compatibility with regex grammar (will need a set of different tests to assert the compatibility between circuit and regex in languages) -->
+
+## Assumptions
+Some email providers put not only the sender's email address but also their username to the From field.
+ALthough its concrete formats differ among email providers, our FromAddrRegex template assumes that the email address appears at the end of the From field.
+If this assumption does not hold, i.e., the username appears after the email address, an adversary can output an arbitrary email address from that template by including a dummy email address in the username.

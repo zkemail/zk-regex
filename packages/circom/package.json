@@ -1,6 +1,6 @@
 {
   "name": "@zk-email/zk-regex-circom",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "license": "MIT",
   "description": "regex verification circuits in circom for common regexes, generated with the compiler in [zk-regex](https://github.com/zkemail/zk-regex/tree/main).",
   "contributors": [
@@ -23,7 +23,7 @@
   "devDependencies": {
     "@types/jest": "^29.5.4",
     "chai": "^4.3.7",
-    "circom_tester": "^0.0.19",
+    "circom_tester": "^0.0.20",
     "circomlib": "^2.0.5",
     "circomlibjs": "^0.1.2",
     "ffjavascript": "^0.2.59",
