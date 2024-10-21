@@ -22,9 +22,9 @@ pub struct RegexPartConfig {
 pub enum ExtractSubstrssError {
     // #[error("The max length is {} but the input length is {}",.0,.1)]
     // InvalidInputLen(usize, usize),
-    #[error("Substring of the entire regex {} is not found in {}",.0,.1)]
-    SubstringOfEntireNotFound(Regex, String),
-    #[error("Substring of {} is not found in {}",.0,.1)]
+    #[error("Substring of the entire regex {} is not found given input_str",.0)]
+    SubstringOfEntireNotFound(Regex),
+    #[error("Substring of {} is not found in given input_str",.0)]
     SubstringNotFound(Regex, String),
     #[error(transparent)]
     RegexError(#[from] fancy_regex::Error),
@@ -33,6 +33,7 @@ pub enum ExtractSubstrssError {
 pub fn extract_substr_idxes(
     input_str: &str,
     regex_config: &DecomposedRegexConfig,
+    reveal_private: bool,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     // Construct the full regex pattern with groups for each part
     let mut entire_regex_str = String::new();
@@ -47,24 +48,14 @@ pub fn extract_substr_idxes(
     // Find the match for the entire regex
     let entire_captures = entire_regex
         .captures(input_str)
-        .map_err(|_| {
-            ExtractSubstrssError::SubstringOfEntireNotFound(
-                entire_regex.clone(),
-                input_str.to_string(),
-            )
-        })?
-        .ok_or_else(|| {
-            ExtractSubstrssError::SubstringOfEntireNotFound(
-                entire_regex.clone(),
-                input_str.to_string(),
-            )
-        })?;
+        .map_err(|_| ExtractSubstrssError::SubstringOfEntireNotFound(entire_regex.clone()))?
+        .ok_or_else(|| ExtractSubstrssError::SubstringOfEntireNotFound(entire_regex.clone()))?;
 
     let mut public_idxes = vec![];
 
     // Iterate over each part to extract the relevant indices
     for (i, part) in regex_config.parts.iter().enumerate() {
-        if part.is_public {
+        if part.is_public || reveal_private {
             if let Some(matched) = entire_captures.get(i + 1) {
                 // Capture group indices are 1-based
                 public_idxes.push((matched.start(), matched.end()));
@@ -75,18 +66,41 @@ pub fn extract_substr_idxes(
     Ok(public_idxes)
 }
 
+pub fn extract_substr(
+    input_str: &str,
+    regex_config: &DecomposedRegexConfig,
+    reveal_private: bool,
+) -> Result<Vec<String>, ExtractSubstrssError> {
+    let substr_idxes = extract_substr_idxes(input_str, regex_config, reveal_private)?;
+
+    let result: Vec<String> = substr_idxes
+        .iter()
+        .map(|&(start, end)| input_str[start..end].to_string())
+        .collect();
+
+    Ok(result)
+}
+
 pub fn extract_email_addr_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config = include_str!("./decomposed_defs/email_addr.json");
-    extract_substr_idxes(input_str, &serde_json::from_str(regex_config).unwrap())
+    extract_substr_idxes(
+        input_str,
+        &serde_json::from_str(regex_config).unwrap(),
+        false,
+    )
 }
 
 pub fn extract_email_domain_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config = include_str!("./decomposed_defs/email_domain.json");
-    extract_substr_idxes(input_str, &serde_json::from_str(regex_config).unwrap())
+    extract_substr_idxes(
+        input_str,
+        &serde_json::from_str(regex_config).unwrap(),
+        false,
+    )
 }
 
 // pub fn extract_email_addr_with_name_idxes(
@@ -100,52 +114,84 @@ pub fn extract_from_all_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config = include_str!("./decomposed_defs/from_all.json");
-    extract_substr_idxes(input_str, &serde_json::from_str(regex_config).unwrap())
+    extract_substr_idxes(
+        input_str,
+        &serde_json::from_str(regex_config).unwrap(),
+        false,
+    )
 }
 
 pub fn extract_from_addr_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config = include_str!("./decomposed_defs/from_addr.json");
-    extract_substr_idxes(input_str, &serde_json::from_str(regex_config).unwrap())
+    extract_substr_idxes(
+        input_str,
+        &serde_json::from_str(regex_config).unwrap(),
+        false,
+    )
 }
 
 pub fn extract_to_all_idxes(input_str: &str) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config = include_str!("./decomposed_defs/to_all.json");
-    extract_substr_idxes(input_str, &serde_json::from_str(regex_config).unwrap())
+    extract_substr_idxes(
+        input_str,
+        &serde_json::from_str(regex_config).unwrap(),
+        false,
+    )
 }
 
 pub fn extract_to_addr_idxes(input_str: &str) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config = include_str!("./decomposed_defs/to_addr.json");
-    extract_substr_idxes(input_str, &serde_json::from_str(regex_config).unwrap())
+    extract_substr_idxes(
+        input_str,
+        &serde_json::from_str(regex_config).unwrap(),
+        false,
+    )
 }
 
 pub fn extract_subject_all_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config = include_str!("./decomposed_defs/subject_all.json");
-    extract_substr_idxes(input_str, &serde_json::from_str(regex_config).unwrap())
+    extract_substr_idxes(
+        input_str,
+        &serde_json::from_str(regex_config).unwrap(),
+        false,
+    )
 }
 
 pub fn extract_body_hash_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config = include_str!("./decomposed_defs/body_hash.json");
-    extract_substr_idxes(input_str, &serde_json::from_str(regex_config).unwrap())
+    extract_substr_idxes(
+        input_str,
+        &serde_json::from_str(regex_config).unwrap(),
+        false,
+    )
 }
 
 pub fn extract_timestamp_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config = include_str!("./decomposed_defs/timestamp.json");
-    extract_substr_idxes(input_str, &serde_json::from_str(regex_config).unwrap())
+    extract_substr_idxes(
+        input_str,
+        &serde_json::from_str(regex_config).unwrap(),
+        false,
+    )
 }
 
 pub fn extract_message_id_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config = include_str!("./decomposed_defs/message_id.json");
-    extract_substr_idxes(input_str, &serde_json::from_str(regex_config).unwrap())
+    extract_substr_idxes(
+        input_str,
+        &serde_json::from_str(regex_config).unwrap(),
+        false,
+    )
 }
 
 #[cfg(test)]
@@ -215,7 +261,7 @@ mod test {
             ],
         };
         let input_str = "sepolia+ACCOUNTKEY.0xabc123@sendeth.org";
-        let idxes = extract_substr_idxes(input_str, &code_regex).unwrap();
+        let idxes = extract_substr_idxes(input_str, &code_regex, false).unwrap();
         assert_eq!(idxes, vec![(21, 27)]);
     }
 
@@ -260,7 +306,7 @@ mod test {
             ],
         };
         let input_str = "azb";
-        let idxes = extract_substr_idxes(input_str, &code_regex).unwrap();
+        let idxes = extract_substr_idxes(input_str, &code_regex, false).unwrap();
         assert_eq!(idxes, vec![(1, 2)]);
     }
 
@@ -279,7 +325,65 @@ mod test {
             ],
         };
         let input_str = "b";
-        let idxes = extract_substr_idxes(input_str, &code_regex).unwrap();
+        let idxes = extract_substr_idxes(input_str, &code_regex, false).unwrap();
         assert_eq!(idxes, vec![(0, 0)]);
+    }
+
+    #[test]
+    fn extract_str_hide_private() {
+        let code_regex = DecomposedRegexConfig {
+            parts: vec![
+                RegexPartConfig {
+                    is_public: true,
+                    regex_def: "Hello ".to_string(),
+                },
+                RegexPartConfig {
+                    is_public: false,
+                    regex_def: "guys!".to_string(),
+                },
+            ],
+        };
+        let input_str = "some email: Hello guys! Best, ZK Email";
+        let strs = extract_substr(input_str, &code_regex, false).unwrap();
+        assert_eq!(strs, vec!["Hello ".to_string()]);
+    }
+
+    #[test]
+    fn extract_str_show_private() {
+        let code_regex = DecomposedRegexConfig {
+            parts: vec![
+                RegexPartConfig {
+                    is_public: true,
+                    regex_def: "Hello ".to_string(),
+                },
+                RegexPartConfig {
+                    is_public: false,
+                    regex_def: "guys!".to_string(),
+                },
+            ],
+        };
+        let input_str = "some email: Hello guys! Best, ZK Email";
+        let strs = extract_substr(input_str, &code_regex, true).unwrap();
+        assert_eq!(strs, vec!["Hello ".to_string(), "guys!".to_string()]);
+    }
+
+    #[test]
+    fn extract_str_empty_vec_all_private() {
+        let code_regex = DecomposedRegexConfig {
+            parts: vec![
+                RegexPartConfig {
+                    is_public: false,
+                    regex_def: "Hello ".to_string(),
+                },
+                RegexPartConfig {
+                    is_public: false,
+                    regex_def: "guys!".to_string(),
+                },
+            ],
+        };
+        let input_str = "some email: Hello guys! Best, ZK Email";
+        let strs = extract_substr(input_str, &code_regex, false).unwrap();
+        let empty_vec: Vec<String> = Vec::new();
+        assert_eq!(strs, empty_vec);
     }
 }
