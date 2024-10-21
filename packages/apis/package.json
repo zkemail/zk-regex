@@ -19,7 +19,7 @@
         "build-release": "npm run build --",
         "install": "npm run build-debug",
         "install-release": "npm run build-release",
-        "test": "cargo test && wasm-pack test --node",
+        "test": "cargo test && wasm-pack test --node && bun test",
         "test-js": "jest",
         "upload-binary": "wasm-pack publish -t nodejs"
     },

@@ -11,7 +11,7 @@
         "Aditya Bisht <adityabisht64@gmail.com>"
     ],
     "scripts": {
-        "test": "jest tests/email_domain.test.js",
+        "test": "jest",
         "install": "echo",
         "build": "echo",
         "upload-binary": "echo"

@@ -1,4 +1,4 @@
-name: Test
+name: Build and Test
 
 on: [push]
 
@@ -8,10 +8,10 @@ jobs:
         steps:
             - name: Checkout code
               uses: actions/checkout@v2
-            - name: Setup Bun
-              uses: oven-sh/setup-bun@v1
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
               with:
-                  bun-version: latest
+                  node-version: 18
             - name: Setup Rust
               uses: actions-rs/toolchain@v1
               with:
@@ -22,7 +22,36 @@ jobs:
               run: cargo install wasm-pack
             - name: Download circom v2.1.9 (Linux)
               run: wget https://github.com/iden3/circom/releases/download/v2.1.9/circom-linux-amd64 -O /usr/local/bin/circom && chmod +x /usr/local/bin/circom
+            - name: Install yarn
+              run: npm install -g yarn
             - name: Install dependencies
-              run: bun install
+              run: yarn install --immutable
+            - name: Install bun
+              uses: oven-sh/setup-bun@v1
+              with:
+                  bun-version: latest
+            - name: Cache build artifacts
+              uses: actions/cache@v2
+              with:
+                  path: |
+                      ./*
+                  key: ${{ runner.os }}-build-${{ github.sha }}
+
+    test:
+        needs: build
+        runs-on: ubuntu-latest
+        steps:
+            - name: Restore cached build artifacts
+              uses: actions/cache@v2
+              with:
+                  path: |
+                      ./*
+                  key: ${{ runner.os }}-build-${{ github.sha }}
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 18
+            - name: Install yarn
+              run: npm install -g yarn
             - name: Run tests
-              run: bun test
+              run: yarn test
