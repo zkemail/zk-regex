@@ -25,33 +25,10 @@ jobs:
             - name: Install yarn
               run: npm install -g yarn
             - name: Install dependencies
-              run: yarn install --immutable
+              run: yarn install  --immutable
+            - name: Run tests
+              run: yarn test
             - name: Install bun
               uses: oven-sh/setup-bun@v1
               with:
                   bun-version: latest
-            - name: Cache build artifacts
-              uses: actions/cache@v2
-              with:
-                  path: |
-                      ./*
-                  key: ${{ runner.os }}-build-${{ github.sha }}
-
-    test:
-        needs: build
-        runs-on: ubuntu-latest
-        steps:
-            - name: Restore cached build artifacts
-              uses: actions/cache@v2
-              with:
-                  path: |
-                      ./*
-                  key: ${{ runner.os }}-build-${{ github.sha }}
-            - name: Setup Node.js
-              uses: actions/setup-node@v3
-              with:
-                  node-version: 18
-            - name: Install yarn
-              run: npm install -g yarn
-            - name: Run tests
-              run: yarn test
