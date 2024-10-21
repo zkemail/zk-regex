@@ -2,6 +2,8 @@ import { extractSubstrIdxes, extractSubstr } from '../pkg/zk_regex_apis';
 import airbnbEml from './airbnb_eml';
 
 describe('Extract substr test suite', async () => {
+    // Wait for wasm to initialize
+    await new Promise(r => setTimeout(r, 300));
     test('Should extract indicies from object input', () => {
         const parts = {
             parts: [
