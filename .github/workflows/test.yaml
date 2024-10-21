@@ -26,9 +26,9 @@ jobs:
               run: npm install -g yarn
             - name: Install dependencies
               run: yarn install  --immutable
-            - name: Run tests
-              run: yarn test
             - name: Install bun
               uses: oven-sh/setup-bun@v1
               with:
                   bun-version: latest
+            - name: Run tests
+              run: yarn test
