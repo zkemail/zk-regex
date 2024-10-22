@@ -1,15 +1,15 @@
-import circom_tester from "circom_tester";
-import * as path from "path";
-import { readFileSync, writeFileSync } from "fs";
-import apis from "../../apis/pkg";
-import compiler from "../../compiler/pkg";
+import circom_tester from 'circom_tester';
+import * as path from 'path';
+import { readFileSync, writeFileSync } from 'fs';
+import apis from '../../apis/pkg';
+import compiler from '../../compiler/pkg';
 const option = {
-  include: path.join(__dirname, "../../../node_modules"),
+    include: path.join(__dirname, '../../../node_modules')
 };
 const wasm_tester = circom_tester.wasm;
 
 jest.setTimeout(600000);
-describe("Asterisk Regex", () => {
+describe('Asterisk Regex', () => {
     let circuit1;
     let circuit2;
     let circuit3;
@@ -18,47 +18,47 @@ describe("Asterisk Regex", () => {
     // let circuit6;
     beforeAll(async () => {
         writeFileSync(
-            path.join(__dirname, "./circuits/asterisk1_regex.circom"),
+            path.join(__dirname, './circuits/asterisk1_regex.circom'),
             compiler.genFromDecomposed(
                 readFileSync(
-                    path.join(__dirname, "./circuits/asterisk1.json"),
-                    "utf8"
+                    path.join(__dirname, './circuits/asterisk1.json'),
+                    'utf8'
                 ),
-                "Asterisk1Regex"
+                'Asterisk1Regex'
             )
         );
         circuit1 = await wasm_tester(
-            path.join(__dirname, "./circuits/test_asterisk1_regex.circom"),
+            path.join(__dirname, './circuits/test_asterisk1_regex.circom'),
             option
         );
 
         writeFileSync(
-            path.join(__dirname, "./circuits/asterisk2_regex.circom"),
+            path.join(__dirname, './circuits/asterisk2_regex.circom'),
             compiler.genFromDecomposed(
                 readFileSync(
-                    path.join(__dirname, "./circuits/asterisk2.json"),
-                    "utf8"
+                    path.join(__dirname, './circuits/asterisk2.json'),
+                    'utf8'
                 ),
-                "Asterisk2Regex"
+                'Asterisk2Regex'
             )
         );
         circuit2 = await wasm_tester(
-            path.join(__dirname, "./circuits/test_asterisk2_regex.circom"),
+            path.join(__dirname, './circuits/test_asterisk2_regex.circom'),
             option
         );
 
         writeFileSync(
-            path.join(__dirname, "./circuits/asterisk3_regex.circom"),
+            path.join(__dirname, './circuits/asterisk3_regex.circom'),
             compiler.genFromDecomposed(
                 readFileSync(
-                    path.join(__dirname, "./circuits/asterisk3.json"),
-                    "utf8"
+                    path.join(__dirname, './circuits/asterisk3.json'),
+                    'utf8'
                 ),
-                "Asterisk3Regex"
+                'Asterisk3Regex'
             )
         );
         circuit3 = await wasm_tester(
-            path.join(__dirname, "./circuits/test_asterisk3_regex.circom"),
+            path.join(__dirname, './circuits/test_asterisk3_regex.circom'),
             option
         );
 
@@ -108,11 +108,11 @@ describe("Asterisk Regex", () => {
         // );
     });
 
-    it("asterisk1 valid case 1", async () => {
+    it('asterisk1 valid case 1', async () => {
         const inputStr = `xb`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
-            msg: paddedStr,
+            msg: paddedStr
         };
         const witness = await circuit1.calculateWitness(circuitInputs);
         await circuit1.checkConstraints(witness);
@@ -120,9 +120,10 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "./circuits/asterisk1.json"),
-                "utf8"
-            )
+                path.join(__dirname, './circuits/asterisk1.json'),
+                'utf8'
+            ),
+            false
         )[0];
         for (let idx = 0; idx < 8; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
@@ -133,11 +134,11 @@ describe("Asterisk Regex", () => {
         }
     });
 
-    it("asterisk1 valid case 2", async () => {
+    it('asterisk1 valid case 2', async () => {
         const inputStr = `xab`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
-            msg: paddedStr,
+            msg: paddedStr
         };
         const witness = await circuit1.calculateWitness(circuitInputs);
         await circuit1.checkConstraints(witness);
@@ -145,9 +146,10 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "./circuits/asterisk1.json"),
-                "utf8"
-            )
+                path.join(__dirname, './circuits/asterisk1.json'),
+                'utf8'
+            ),
+            false
         )[0];
         for (let idx = 0; idx < 8; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
@@ -158,11 +160,11 @@ describe("Asterisk Regex", () => {
         }
     });
 
-    it("asterisk1 valid case 3", async () => {
+    it('asterisk1 valid case 3', async () => {
         const inputStr = `xaab`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
-            msg: paddedStr,
+            msg: paddedStr
         };
         const witness = await circuit1.calculateWitness(circuitInputs);
         await circuit1.checkConstraints(witness);
@@ -170,9 +172,10 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "./circuits/asterisk1.json"),
-                "utf8"
-            )
+                path.join(__dirname, './circuits/asterisk1.json'),
+                'utf8'
+            ),
+            false
         )[0];
         for (let idx = 0; idx < 8; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
@@ -183,11 +186,11 @@ describe("Asterisk Regex", () => {
         }
     });
 
-    it("asterisk1 valid case 4", async () => {
+    it('asterisk1 valid case 4', async () => {
         const inputStr = `710xab98`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
-            msg: paddedStr,
+            msg: paddedStr
         };
         const witness = await circuit1.calculateWitness(circuitInputs);
         await circuit1.checkConstraints(witness);
@@ -195,9 +198,10 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "./circuits/asterisk1.json"),
-                "utf8"
-            )
+                path.join(__dirname, './circuits/asterisk1.json'),
+                'utf8'
+            ),
+            false
         )[0];
         for (let idx = 0; idx < 8; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
@@ -208,12 +212,11 @@ describe("Asterisk Regex", () => {
         }
     });
 
-
-    it("asterisk1 invalid case 1", async () => {
+    it('asterisk1 invalid case 1', async () => {
         const inputStr = `xaaa`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
-            msg: paddedStr,
+            msg: paddedStr
         };
         const witness = await circuit1.calculateWitness(circuitInputs);
         await circuit1.checkConstraints(witness);
@@ -223,11 +226,11 @@ describe("Asterisk Regex", () => {
         }
     });
 
-    it("asterisk1 invalid case 2", async () => {
+    it('asterisk1 invalid case 2', async () => {
         const inputStr = `aaabx`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
-            msg: paddedStr,
+            msg: paddedStr
         };
         const witness = await circuit1.calculateWitness(circuitInputs);
         await circuit1.checkConstraints(witness);
@@ -237,12 +240,11 @@ describe("Asterisk Regex", () => {
         }
     });
 
-
-    it("asterisk2 valid case 1", async () => {
+    it('asterisk2 valid case 1', async () => {
         const inputStr = `aaa`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
-            msg: paddedStr,
+            msg: paddedStr
         };
         const witness = await circuit2.calculateWitness(circuitInputs);
         await circuit2.checkConstraints(witness);
@@ -250,9 +252,10 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "./circuits/asterisk2.json"),
-                "utf8"
-            )
+                path.join(__dirname, './circuits/asterisk2.json'),
+                'utf8'
+            ),
+            false
         )[0];
         for (let idx = 0; idx < 8; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
@@ -263,11 +266,11 @@ describe("Asterisk Regex", () => {
         }
     });
 
-    it("asterisk2 valid case 2", async () => {
+    it('asterisk2 valid case 2', async () => {
         const inputStr = `ab`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
-            msg: paddedStr,
+            msg: paddedStr
         };
         const witness = await circuit2.calculateWitness(circuitInputs);
         await circuit2.checkConstraints(witness);
@@ -275,9 +278,10 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "./circuits/asterisk2.json"),
-                "utf8"
-            )
+                path.join(__dirname, './circuits/asterisk2.json'),
+                'utf8'
+            ),
+            false
         )[0];
         for (let idx = 0; idx < 8; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
@@ -288,11 +292,11 @@ describe("Asterisk Regex", () => {
         }
     });
 
-    it("asterisk2 valid case 3", async () => {
+    it('asterisk2 valid case 3', async () => {
         const inputStr = `abbba`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
-            msg: paddedStr,
+            msg: paddedStr
         };
         const witness = await circuit2.calculateWitness(circuitInputs);
         await circuit2.checkConstraints(witness);
@@ -300,9 +304,10 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "./circuits/asterisk2.json"),
-                "utf8"
-            )
+                path.join(__dirname, './circuits/asterisk2.json'),
+                'utf8'
+            ),
+            false
         )[0];
         for (let idx = 0; idx < 8; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
@@ -313,12 +318,11 @@ describe("Asterisk Regex", () => {
         }
     });
 
-
-    it("asterisk2 valid case 4", async () => {
+    it('asterisk2 valid case 4', async () => {
         const inputStr = `717abb9`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
-            msg: paddedStr,
+            msg: paddedStr
         };
         const witness = await circuit2.calculateWitness(circuitInputs);
         await circuit2.checkConstraints(witness);
@@ -326,9 +330,10 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "./circuits/asterisk2.json"),
-                "utf8"
-            )
+                path.join(__dirname, './circuits/asterisk2.json'),
+                'utf8'
+            ),
+            false
         )[0];
         for (let idx = 0; idx < 8; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
@@ -339,11 +344,11 @@ describe("Asterisk Regex", () => {
         }
     });
 
-    it("asterisk2 invalid case 1", async () => {
+    it('asterisk2 invalid case 1', async () => {
         const inputStr = `bbb`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
-            msg: paddedStr,
+            msg: paddedStr
         };
         const witness = await circuit2.calculateWitness(circuitInputs);
         await circuit2.checkConstraints(witness);
@@ -353,11 +358,11 @@ describe("Asterisk Regex", () => {
         }
     });
 
-    it("asterisk2 invalid case 2", async () => {
+    it('asterisk2 invalid case 2', async () => {
         const inputStr = `19bd7`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
-            msg: paddedStr,
+            msg: paddedStr
         };
         const witness = await circuit2.calculateWitness(circuitInputs);
         await circuit2.checkConstraints(witness);
@@ -367,11 +372,11 @@ describe("Asterisk Regex", () => {
         }
     });
 
-    it("asterisk3 valid case 1", async () => {
+    it('asterisk3 valid case 1', async () => {
         const inputStr = `ab`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
-            msg: paddedStr,
+            msg: paddedStr
         };
         const witness = await circuit3.calculateWitness(circuitInputs);
         await circuit3.checkConstraints(witness);
@@ -379,9 +384,10 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "./circuits/asterisk3.json"),
-                "utf8"
-            )
+                path.join(__dirname, './circuits/asterisk3.json'),
+                'utf8'
+            ),
+            false
         )[0];
         for (let idx = 0; idx < 8; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
@@ -392,11 +398,11 @@ describe("Asterisk Regex", () => {
         }
     });
 
-    it("asterisk3 valid case 2", async () => {
+    it('asterisk3 valid case 2', async () => {
         const inputStr = `xaxxyxby`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
-            msg: paddedStr,
+            msg: paddedStr
         };
         const witness = await circuit3.calculateWitness(circuitInputs);
         await circuit3.checkConstraints(witness);
@@ -404,9 +410,10 @@ describe("Asterisk Regex", () => {
         const prefixIdxes = apis.extractSubstrIdxes(
             inputStr,
             readFileSync(
-                path.join(__dirname, "./circuits/asterisk3.json"),
-                "utf8"
-            )
+                path.join(__dirname, './circuits/asterisk3.json'),
+                'utf8'
+            ),
+            false
         )[0];
         for (let idx = 0; idx < 8; ++idx) {
             if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
@@ -417,11 +424,11 @@ describe("Asterisk Regex", () => {
         }
     });
 
-    it("asterisk3 invalid case 1", async () => {
+    it('asterisk3 invalid case 1', async () => {
         const inputStr = `axyxyyyx`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
-            msg: paddedStr,
+            msg: paddedStr
         };
         const witness = await circuit3.calculateWitness(circuitInputs);
         await circuit3.checkConstraints(witness);
@@ -431,11 +438,11 @@ describe("Asterisk Regex", () => {
         }
     });
 
-    it("asterisk3 invalid case 2", async () => {
+    it('asterisk3 invalid case 2', async () => {
         const inputStr = `xyyxxyba`;
         const paddedStr = apis.padString(inputStr, 8);
         const circuitInputs = {
-            msg: paddedStr,
+            msg: paddedStr
         };
         const witness = await circuit3.calculateWitness(circuitInputs);
         await circuit3.checkConstraints(witness);
@@ -459,7 +466,7 @@ describe("Asterisk Regex", () => {
     //         readFileSync(
     //             path.join(__dirname, "./circuits/asterisk4.json"),
     //             "utf8"
-    //         )
+    //         ),false
     //     )[0];
     //     for (let idx = 0; idx < 8; ++idx) {
     //         if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
@@ -498,7 +505,7 @@ describe("Asterisk Regex", () => {
     //         readFileSync(
     //             path.join(__dirname, "./circuits/asterisk5.json"),
     //             "utf8"
-    //         )
+    //         ),false
     //     )[0];
     //     for (let idx = 0; idx < 8; ++idx) {
     //         if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
@@ -523,7 +530,7 @@ describe("Asterisk Regex", () => {
     //         readFileSync(
     //             path.join(__dirname, "./circuits/asterisk5.json"),
     //             "utf8"
-    //         )
+    //         ),false
     //     )[0];
     //     for (let idx = 0; idx < 8; ++idx) {
     //         if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
@@ -562,7 +569,7 @@ describe("Asterisk Regex", () => {
     //         readFileSync(
     //             path.join(__dirname, "./circuits/asterisk6.json"),
     //             "utf8"
-    //         )
+    //         ),false
     //     )[0];
     //     for (let idx = 0; idx < 8; ++idx) {
     //         if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
@@ -587,7 +594,7 @@ describe("Asterisk Regex", () => {
     //         readFileSync(
     //             path.join(__dirname, "./circuits/asterisk6.json"),
     //             "utf8"
-    //         )
+    //         ),false
     //     )[0];
     //     for (let idx = 0; idx < 8; ++idx) {
     //         if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
@@ -612,7 +619,7 @@ describe("Asterisk Regex", () => {
     //         readFileSync(
     //             path.join(__dirname, "./circuits/asterisk6.json"),
     //             "utf8"
-    //         )
+    //         ),false
     //     )[0];
     //     for (let idx = 0; idx < 8; ++idx) {
     //         if (idx >= prefixIdxes[0] && idx < prefixIdxes[1]) {
@@ -622,6 +629,4 @@ describe("Asterisk Regex", () => {
     //         }
     //     }
     // });
-
-    
 });
