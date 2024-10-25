@@ -38,7 +38,7 @@ The regular expressions supported by our compiler version 2.1.1 are **audited by
 5. Regular expressions that, when converted to DFA, have multiple accepting states are not supported.
 6. Decomposed regex defintions must alternate public and private states.
 
-Note that all international characters are supported. 
+Note that all international characters are supported.
 
 If you want to use this circuit in practice, we strongly recommend using [AssertZero](https://github.com/zkemail/zk-email-verify/blob/29d5c873161c30ebb98a00efb3a145275d0f0833/packages/circuits/utils/array.circom#L144) on the bytes before and after your match. This is because you likely have shift viaan unconstrained index passed in as the witnesss to represent the start of the regex match. Since that value can be arbitrarily manipulated, you need to manually constrain that there are no extra matches that can be used to exploit the circuit. You can see how we do this in [zk-email here](https://github.com/zkemail/zk-email-verify/blob/29d5c873161c30ebb98a00efb3a145275d0f0833/packages/circuits/email-verifier.circom#L99).
 
@@ -90,7 +90,7 @@ You can generate its regex circom as follows.
 This command generates a regex circom from a raw string of the regex definition and a json file that defines state transitions in DFA to be revealed.
 For example, to verify the regex `1=(a|b) (2=(b|c)+ )+d` and reveal its alphabets,
 1. Visualize DFA of the regex using [this website](https://zkregex.com).
-2. Find state transitions matching with the substrings to be revealed. In this case, they are `2->3` for the alphabets after `1=`, `6->7` and `7->7` for those after `2=`, and `8->9` for `d`. 
+2. Find state transitions matching with the substrings to be revealed. In this case, they are `2->3` for the alphabets after `1=`, `6->7` and `7->7` for those after `2=`, and `8->9` for `d`.
 3. Make a json file at `./simple_regex_substrs.json` that defines the state transitions. For example,
     ```
     {
@@ -122,7 +122,7 @@ For example, to verify the regex `1=(a|b) (2=(b|c)+ )+d` and reveal its alphabet
     ```
 4. Run `zk-regex raw -r "1=(a|b) (2=(b|c)+ )+d" -s ./simple_regex_substrs.json -c ./simple_regex.circom -t SimpleRegex -g true`. It outputs a circom file at `./simple_regex.circom` that has a `SimpleRegex` template.
 
-<!-- 
+<!--
 The CLI will generate the circuit file in the folder `./build`. For example, the following command
 
 ```
@@ -150,6 +150,12 @@ A package in `./packages/apis` provides nodejs/rust apis helpful to generate inp
 Welcome any questions, suggestions or PRs!
 
 ### Testing
+
+You will need to have bun installed:
+
+```bash
+curl -fsSL https://bun.sh/install | bash
+```
 
 ```bash
 yarn test
