@@ -87,7 +87,7 @@ describe("Subject All Regex", () => {
     }
   });
 
-  it("invalid subject", async () => {
+  it("subject in the invalid field", async () => {
     const subjectStr = "\r\nto:subject:This is a subject in To field.\r\n";
     const paddedStr = apis.padString(subjectStr, 256);
     const circuitInputs = {
@@ -99,5 +99,20 @@ describe("Subject All Regex", () => {
     for (let idx = 0; idx < 256; ++idx) {
       expect(0n).toEqual(witness[2 + idx]);
     }
+  });
+
+  it('invalid subject field with 255', async () => {
+    const subjectStr = `subject:This is a subject in To field.\r\n`;
+    let paddedStr = apis.padString(subjectStr, 1022);
+    paddedStr.unshift(49);
+    paddedStr.unshift(255);
+    const circuitInputs = {
+      msg: paddedStr
+    };
+    async function failFn() {
+      const witness = await circuit.calculateWitness(circuitInputs);
+      await circuit.checkConstraints(witness);
+    }
+    await expect(failFn).rejects.toThrow();
   });
 });

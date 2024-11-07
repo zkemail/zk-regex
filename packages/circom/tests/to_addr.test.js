@@ -215,7 +215,7 @@ describe("To Addr Regex", () => {
     }
   });
 
-  it("invalid to field", async () => {
+  it("to field in the invalid field", async () => {
     const toStr = "subject:to:adityabisht@gmail.com\r\n";
     const paddedStr = apis.padString(toStr, 1024);
     const circuitInputs = {
@@ -223,6 +223,21 @@ describe("To Addr Regex", () => {
     };
     async function failFn() {
       await circuit.calculateWitness(circuitInputs);
+    }
+    await expect(failFn).rejects.toThrow();
+  });
+
+  it('invalid to field with 255', async () => {
+    const toStr = `to:adityabisht@gmail.com\r\n`;
+    let paddedStr = apis.padString(toStr, 1022);
+    paddedStr.unshift(49);
+    paddedStr.unshift(255);
+    const circuitInputs = {
+      msg: paddedStr
+    };
+    async function failFn() {
+      const witness = await circuit.calculateWitness(circuitInputs);
+      await circuit.checkConstraints(witness);
     }
     await expect(failFn).rejects.toThrow();
   });

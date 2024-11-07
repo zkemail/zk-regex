@@ -9,9 +9,11 @@ template InvitationCodeWithPrefixRegex(msg_bytes) {
 
 	var num_bytes = msg_bytes+1;
 	signal in[num_bytes];
+	signal in_range_checks[msg_bytes];
 	in[0]<==255;
 	for (var i = 0; i < msg_bytes; i++) {
-		_ <== LessThan(8)([msg[i], 255]);
+		in_range_checks[i] <== LessThan(8)([msg[i], 255]);
+		in_range_checks[i] === 1;
 		in[i+1] <== msg[i];
 	}
 
