@@ -11,7 +11,9 @@ use halo2::gen_halo2_tables;
 use itertools::Itertools;
 use regex::{create_regex_and_dfa_from_str_and_defs, get_regex_and_dfa};
 use std::{fs::File, path::PathBuf};
-use structs::{DecomposedRegexConfig, RegexAndDFA, SubstringDefinitionsJson};
+use structs::{RegexAndDFA, SubstringDefinitionsJson};
+
+pub use structs::{DecomposedRegexConfig, RegexPartConfig};
 
 /// Loads substring definitions from a JSON file or creates a default one.
 ///
@@ -167,6 +169,46 @@ pub fn gen_from_raw(
         halo2_dir_path,
         circom_file_path,
         template_name,
+        num_public_parts,
+        gen_substrs,
+    )?;
+
+    Ok(())
+}
+
+/// Generates Circom output from a decomposed regex configuration.
+///
+/// # Arguments
+///
+/// * `decomposed_regex` - A mutable reference to the `DecomposedRegexConfig` containing the regex parts.
+/// * `circom_file_path` - An optional path to the Circom output file.
+/// * `circom_template_name` - An optional name for the Circom template.
+/// * `gen_substrs` - An optional boolean indicating whether to generate substrings.
+///
+/// # Returns
+///
+/// A `Result` indicating success or a `CompilerError`.
+pub fn gen_circom_from_decomposed_regex(
+    decomposed_regex: &mut DecomposedRegexConfig,
+    circom_file_path: Option<&str>,
+    circom_template_name: Option<&str>,
+    gen_substrs: Option<bool>,
+) -> Result<(), CompilerError> {
+    let gen_substrs = gen_substrs.unwrap_or(false);
+
+    let regex_and_dfa = get_regex_and_dfa(decomposed_regex)?;
+
+    let num_public_parts = decomposed_regex
+        .parts
+        .iter()
+        .filter(|part| part.is_public)
+        .count();
+
+    generate_outputs(
+        &regex_and_dfa,
+        None,
+        circom_file_path,
+        circom_template_name,
         num_public_parts,
         gen_substrs,
     )?;
