@@ -60,12 +60,14 @@ enum Commands {
     Decomposed {
         #[arg(short, long)]
         decomposed_regex_path: String,
-        #[arg(short, long)]
+        #[arg(long)]
         halo2_dir_path: Option<String>,
         #[arg(short, long)]
         circom_file_path: Option<String>,
         #[arg(short, long)]
         template_name: Option<String>,
+        #[arg(long)]
+        noir_file_path: Option<String>,
         #[arg(short, long)]
         gen_substrs: Option<bool>,
     },
@@ -74,12 +76,14 @@ enum Commands {
         raw_regex: String,
         #[arg(short, long)]
         substrs_json_path: Option<String>,
-        #[arg(short, long)]
+        #[arg(long)]
         halo2_dir_path: Option<String>,
         #[arg(short, long)]
         circom_file_path: Option<String>,
         #[arg(short, long)]
         template_name: Option<String>,
+        #[arg(long)]
+        noir_file_path: Option<String>,
         #[arg(short, long)]
         gen_substrs: Option<bool>,
     },
@@ -99,6 +103,7 @@ fn process_decomposed(cli: Cli) {
         halo2_dir_path,
         circom_file_path,
         template_name,
+        noir_file_path,
         gen_substrs,
     } = cli.command
     {
@@ -107,6 +112,7 @@ fn process_decomposed(cli: Cli) {
             halo2_dir_path.as_deref(),
             circom_file_path.as_deref(),
             template_name.as_deref(),
+            noir_file_path.as_deref(),
             gen_substrs,
         ) {
             eprintln!("Error: {}", e);
@@ -122,6 +128,7 @@ fn process_raw(cli: Cli) {
         halo2_dir_path,
         circom_file_path,
         template_name,
+        noir_file_path,
         gen_substrs,
     } = cli.command
     {
@@ -131,6 +138,7 @@ fn process_raw(cli: Cli) {
             halo2_dir_path.as_deref(),
             circom_file_path.as_deref(),
             template_name.as_deref(),
+            noir_file_path.as_deref(),
             gen_substrs,
         ) {
             eprintln!("Error: {}", e);
