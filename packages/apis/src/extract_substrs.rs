@@ -12,8 +12,10 @@ pub struct DecomposedRegexConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegexPartConfig {
     /// A flag indicating whether the substring matching with `regex_def` should be exposed.
+    #[serde(alias = "isPublic")]
     pub is_public: bool,
     /// A regex string.
+    #[serde(alias = "regexDef")]
     pub regex_def: String,
 }
 
