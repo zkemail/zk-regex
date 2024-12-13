@@ -327,7 +327,7 @@ fn create_special_char_mappings() -> BTreeMap<&'static str, u8> {
         ("\\0", 0),
         ("\\\"", 34),
         ("\\'", 39),
-        ("\\", 92),
+        ("\\\\", 92),
         ("' '", 32),
     ]
     .iter()
