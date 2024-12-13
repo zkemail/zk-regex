@@ -8,8 +8,8 @@ describe('Extract substr test suite', async () => {
         const parts = {
             parts: [
                 {
-                    is_public: true,
-                    regex_def: 'Hello'
+                    isPublic: true,
+                    regexDef: 'Hello'
                 }
             ]
         };
@@ -22,12 +22,12 @@ describe('Extract substr test suite', async () => {
         const parts = {
             parts: [
                 {
-                    is_public: true,
-                    regex_def: 'Hello '
+                    isPublic: true,
+                    regexDef: 'Hello '
                 },
                 {
-                    is_public: false,
-                    regex_def: 'guys!'
+                    isPublic: false,
+                    regexDef: 'guys!'
                 }
             ]
         };
@@ -40,12 +40,12 @@ describe('Extract substr test suite', async () => {
         const parts = {
             parts: [
                 {
-                    is_public: true,
-                    regex_def: 'Hello '
+                    isPublic: true,
+                    regexDef: 'Hello '
                 },
                 {
-                    is_public: false,
-                    regex_def: 'guys!'
+                    isPublic: false,
+                    regexDef: 'guys!'
                 }
             ]
         };
@@ -59,8 +59,8 @@ describe('Extract substr test suite', async () => {
         const parts = {
             parts: [
                 {
-                    is_public: false,
-                    regex_def: 'Hello'
+                    isPublic: false,
+                    regexDef: 'Hello'
                 }
             ]
         };
@@ -106,7 +106,7 @@ describe('Extract substr test suite', async () => {
         const parts = {
             parts: [
                 {
-                    is_public: false
+                    isPublic: false
                 }
             ]
         };
@@ -123,12 +123,12 @@ describe('Extract substr test suite', async () => {
         const parts = {
             parts: [
                 {
-                    is_public: true,
-                    regex_def: 'Hello'
+                    isPublic: true,
+                    regexDef: 'Hello'
                 },
                 {
-                    is_public: false,
-                    regex_def: 'yall!'
+                    isPublic: false,
+                    regexDef: 'yall!'
                 }
             ]
         };
@@ -148,8 +148,8 @@ describe('Extract substr test suite', async () => {
         const parts = {
             parts: [
                 {
-                    is_public: true,
-                    regex_def: 'Hello'
+                    isPublic: true,
+                    regexDef: 'Hello'
                 }
             ]
         };
@@ -161,8 +161,8 @@ describe('Extract substr test suite', async () => {
         const parts = {
             parts: [
                 {
-                    is_public: false,
-                    regex_def: 'Hello'
+                    isPublic: false,
+                    regexDef: 'Hello'
                 }
             ]
         };
