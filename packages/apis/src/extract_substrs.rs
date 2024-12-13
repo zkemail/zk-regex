@@ -4,14 +4,12 @@ use thiserror::Error;
 
 /// A configuration of decomposed regexes.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct DecomposedRegexConfig {
     pub parts: Vec<RegexPartConfig>,
 }
 
 /// Decomposed regex part.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct RegexPartConfig {
     /// A flag indicating whether the substring matching with `regex_def` should be exposed.
     pub is_public: bool,
