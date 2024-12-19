@@ -1,6 +1,6 @@
 # zk-regex
 
-A library to compile regex verification in circom. Explained on [our blog post](https://prove.email/blog/zkregex).  You can use regex to specify how to parse an email in a ZK Email proof when defining a new patterm on [the ZK Email SDK registry](https://sdk.prove.email/). Noir coming soon.
+A library to compile regex verification in circom. Explained on [our blog post](https://prove.email/blog/zkregex).  You can use regex to specify how to parse an email in a ZK Email proof when defining a new patterm on [the ZK Email SDK registry](https://sdk.prove.email/). Noir support is also available. 
 
 <!-- We've forked [min-dfa into a UI here](https://mindfa.onrender.com/min_dfa) to create a UI that converts existing regexes with [] support, as well as escapes \_, and the character classes a-z, A-Z, and 0-9. It also shows the DFA states very clearly so you can choose accept states easily. This should make converting regexes into DFA form way cleaner. -->
 
