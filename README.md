@@ -1,6 +1,6 @@
 # zk-regex
 
-A library to compile regex verification in circom. Explained on [our blog post](https://prove.email/blog/zkregex).  You can use regex to specify how to parse an email in a ZK Email proof when defining a new patterm on [the ZK Email SDK registry](https://sdk.prove.email/). Noir coming soon.
+A library to compile regex verification in circom. Explained on [our blog post](https://zk.email/blog/zkregex).  You can use regex to specify how to parse an email in a ZK Email proof when defining a new patterm on [the ZK Email SDK registry](https://registry.zk.email/). Noir coming soon.
 
 <!-- We've forked [min-dfa into a UI here](https://mindfa.onrender.com/min_dfa) to create a UI that converts existing regexes with [] support, as well as escapes \_, and the character classes a-z, A-Z, and 0-9. It also shows the DFA states very clearly so you can choose accept states easily. This should make converting regexes into DFA form way cleaner. -->
 
@@ -27,7 +27,7 @@ While the manual way supports more kinds of regexes than the automatic way, the 
 
 ### Theory
 
-To understand the theory behind the regex circuit compiler, please checkout [our main explanation post](https://prove.email/blog/zkregex), or [this older blog post](https://katat.me/blog/ZK+Regex). To understand how it ties into the original zk email work, you can also read the brief [original zk-email blog post regex overview](https://blog.aayushg.com/posts/zkemail#regex-deterministic-finite-automata-in-zk).
+To understand the theory behind the regex circuit compiler, please checkout [our main explanation post](https://zk.email/blog/zkregex), or [this older blog post](https://katat.me/blog/ZK+Regex). To understand how it ties into the original zk email work, you can also read the brief [original zk-email blog post regex overview](https://blog.aayushg.com/posts/zkemail#regex-deterministic-finite-automata-in-zk).
 
 The regular expressions supported by our compiler version 2.1.1 are **audited by zksecurity**, and have the following limitations:
 
