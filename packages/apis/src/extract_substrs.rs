@@ -30,6 +30,12 @@ pub enum ExtractSubstrssError {
     SubstringNotFound(Regex, String),
     #[error(transparent)]
     RegexError(#[from] fancy_regex::Error),
+    #[error("Invalid regex in parts, index {part_index}: '{regex_def}' - {error}")]
+    InvalidRegexPart {
+        part_index: usize,
+        regex_def: String,
+        error: fancy_regex::Error,
+    },
 }
 
 pub fn extract_substr_idxes(
@@ -37,15 +43,25 @@ pub fn extract_substr_idxes(
     regex_config: &DecomposedRegexConfig,
     reveal_private: bool,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
+    // Validate each regex part individually, to throw better errors
+    for (i, part) in regex_config.parts.iter().enumerate() {
+        Regex::new(&part.regex_def).map_err(|e| ExtractSubstrssError::InvalidRegexPart {
+            part_index: i,
+            regex_def: part.regex_def.clone(),
+            error: e,
+        })?;
+    }
+
     // Construct the full regex pattern with groups for each part
     let mut entire_regex_str = String::new();
     for (_, part) in regex_config.parts.iter().enumerate() {
         let adjusted_regex_def = part.regex_def.replace("(", "(?:");
-        entire_regex_str += &format!("({})", adjusted_regex_def); // Wrap each part in a group
+        entire_regex_str += &format!("({})", adjusted_regex_def);
     }
 
     // Compile the entire regex
-    let entire_regex = Regex::new(&entire_regex_str)?;
+    // This should be impossible to fail, since we tested the seperate regex parts before.
+    let entire_regex = Regex::new(&entire_regex_str).unwrap();
 
     // Find the match for the entire regex
     let entire_captures = entire_regex
@@ -265,6 +281,34 @@ mod test {
         let input_str = "sepolia+ACCOUNTKEY.0xabc123@sendeth.org";
         let idxes = extract_substr_idxes(input_str, &code_regex, false).unwrap();
         assert_eq!(idxes, vec![(21, 27)]);
+    }
+
+    #[test]
+    fn test_error_handling() {
+        let code_regex = DecomposedRegexConfig {
+            // max_byte_size: 1024,
+            parts: vec![
+                RegexPartConfig {
+                    is_public: false,
+                    regex_def: "Hello ".to_string(),
+                },
+                RegexPartConfig {
+                    is_public: true,
+                    regex_def: "[^,+".to_string(),
+                },
+                RegexPartConfig {
+                    is_public: false,
+                    regex_def: "!".to_string(),
+                },
+            ],
+        };
+        let input_str = "Hello Mamba!";
+        let result = extract_substr_idxes(input_str, &code_regex, false);
+        assert!(result.is_err());
+        assert_eq!(
+            "Invalid regex in parts, index 1: '[^,+' - Parsing error at position 4: Invalid character class",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[test]
