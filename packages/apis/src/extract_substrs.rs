@@ -49,9 +49,9 @@ pub fn extract_substr_idxes(
 
     // Find the match for the entire regex
     let entire_captures = entire_regex
-        .captures(input_str)
-        .map_err(|_| ExtractSubstrssError::SubstringOfEntireNotFound(entire_regex.clone()))?
-        .ok_or_else(|| ExtractSubstrssError::SubstringOfEntireNotFound(entire_regex.clone()))?;
+        .captures_iter(input_str)
+        .last()
+        .ok_or_else(|| ExtractSubstrssError::SubstringOfEntireNotFound(entire_regex.clone()))??;
 
     let mut public_idxes = vec![];
 
