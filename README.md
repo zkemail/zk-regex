@@ -36,11 +36,11 @@ The regular expressions supported by our compiler version 2.1.1 are **audited by
 3. The end anchor $ must appear at the end of the regular expression.
 4. Regular expressions that, when converted to DFA (Deterministic Finite Automaton), include transitions to the initial state are not supported (e.g., .*).
 5. Regular expressions that, when converted to DFA, have multiple accepting states are not supported.
-6. Decomposed regex defintions must alternate public and private states.
+6. Decomposed regex definitions must alternate public and private states.
 
 Note that all international characters are supported.
 
-If you want to use this circuit in practice, we strongly recommend using [AssertZero](https://github.com/zkemail/zk-email-verify/blob/29d5c873161c30ebb98a00efb3a145275d0f0833/packages/circuits/utils/array.circom#L144) on the bytes before and after your match. This is because you likely have shift viaan unconstrained index passed in as the witnesss to represent the start of the regex match. Since that value can be arbitrarily manipulated, you need to manually constrain that there are no extra matches that can be used to exploit the circuit. You can see how we do this in [zk-email here](https://github.com/zkemail/zk-email-verify/blob/29d5c873161c30ebb98a00efb3a145275d0f0833/packages/circuits/email-verifier.circom#L99).
+If you want to use this circuit in practice, we strongly recommend using [AssertZero](https://github.com/zkemail/zk-email-verify/blob/29d5c873161c30ebb98a00efb3a145275d0f0833/packages/circuits/utils/array.circom#L144) on the bytes before and after your match. This is because you likely have shift via an unconstrained index passed in as the witness to represent the start of the regex match. Since that value can be arbitrarily manipulated, you need to manually constrain that there are no extra matches that can be used to exploit the circuit. You can see how we do this in [zk-email here](https://github.com/zkemail/zk-email-verify/blob/29d5c873161c30ebb98a00efb3a145275d0f0833/packages/circuits/email-verifier.circom#L99).
 
 ## How to use
 
@@ -182,5 +182,5 @@ Use this bibtex citation.
 
 ## Assumptions
 Some email providers put not only the sender's email address but also their username to the From field.
-ALthough its concrete formats differ among email providers, our FromAddrRegex template assumes that the email address appears at the end of the From field.
+Although its concrete formats differ among email providers, our FromAddrRegex template assumes that the email address appears at the end of the From field.
 If this assumption does not hold, i.e., the username appears after the email address, an adversary can output an arbitrary email address from that template by including a dummy email address in the username.
