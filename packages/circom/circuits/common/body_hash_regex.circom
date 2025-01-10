@@ -13,9 +13,10 @@ template BodyHashRegex(msg_bytes, is_safe) {
 	in[0]<==255;
 	for (var i = 0; i < msg_bytes; i++) {
 		if is_safe {
-			Num2Bits(8)(msg[i]);
+			in_range_checks[i] <== SemiSafeLessThan(8)([msg[i], 255]);
+		} else {
+			in_range_checks[i] <== LessThan(8)([msg[i], 255]);
 		}
-		in_range_checks[i] <== LessThan(8)([msg[i], 255]);
 		in_range_checks[i] === 1;
 		in[i+1] <== msg[i];
 	}
