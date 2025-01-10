@@ -12,7 +12,7 @@ template BodyHashRegex(msg_bytes, is_safe) {
 	signal in_range_checks[msg_bytes];
 	in[0]<==255;
 	for (var i = 0; i < msg_bytes; i++) {
-		if is_safe {
+		if (is_safe) {
 			in_range_checks[i] <== SemiSafeLessThan(8)([msg[i], 255]);
 		} else {
 			in_range_checks[i] <== LessThan(8)([msg[i], 255]);
