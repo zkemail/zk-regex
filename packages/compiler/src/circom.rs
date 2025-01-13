@@ -586,7 +586,7 @@ fn generate_declarations(
         "\tin[0]<==255;".to_string(),
         "\tfor (var i = 0; i < msg_bytes; i++) {".to_string(),
         "\t\tif (is_safe) {".to_string(),
-        "\t\t\tin_range_checks[i] <== SemiLessThan(8)([msg[i], 255]);".to_string(),
+        "\t\t\tin_range_checks[i] <== SemiSafeLessThan(8)([msg[i], 255]);".to_string(),
         "\t\t} else {".to_string(),
         "\t\t\tin_range_checks[i] <== LessThan(8)([msg[i], 255]);".to_string(),
         "\t\t}".to_string(),
