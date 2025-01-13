@@ -20,10 +20,11 @@ describe("Timestamp Regex", () => {
       email_addr_json,
       "TimestampRegex"
     );
+    /*
     writeFileSync(
       path.join(__dirname, "../circuits/common/timestamp_regex.circom"),
       circom
-    );
+    );*/
     circuit = await wasm_tester(
       path.join(__dirname, "./circuits/test_timestamp_regex.circom"),
       option

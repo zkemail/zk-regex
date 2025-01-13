@@ -20,10 +20,11 @@ describe("Subject All Regex", () => {
       email_addr_json,
       "SubjectAllRegex"
     );
+    /*
     writeFileSync(
       path.join(__dirname, "../circuits/common/subject_all_regex.circom"),
       circom
-    );
+    );*/
     circuit = await wasm_tester(
       path.join(__dirname, "./circuits/test_subject_all_regex.circom"),
       option

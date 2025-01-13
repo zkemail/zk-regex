@@ -6,23 +6,23 @@ include "./email_addr_regex.circom";
 include "./email_addr_with_name_regex.circom";
 
 
-template FromAddrRegex(msg_bytes, is_safe) {
+template FromAddrRegex(msg_bytes) {
 	signal input msg[msg_bytes];
 	signal output out;
 	signal output reveal0[msg_bytes];
 
 	signal fromOut;
 	signal fromReveal[msg_bytes];
-	(fromOut, fromReveal) <== FromAllRegex(msg_bytes, is_safe)(msg);
+	(fromOut, fromReveal) <== FromAllRegex(msg_bytes)(msg);
 	fromOut === 1;
 
 	signal emailNameOut;
 	signal emailNameReveal[msg_bytes];
-	(emailNameOut, emailNameReveal) <== EmailAddrWithNameRegex(msg_bytes, is_safe)(fromReveal);
+	(emailNameOut, emailNameReveal) <== EmailAddrWithNameRegex(msg_bytes)(fromReveal);
 
 	signal emailAddrOut;
 	signal emailAddrReveal[msg_bytes];
-	(emailAddrOut, emailAddrReveal) <== EmailAddrRegex(msg_bytes, is_safe)(fromReveal);
+	(emailAddrOut, emailAddrReveal) <== EmailAddrRegex(msg_bytes)(fromReveal);
 
 	out <== MultiOR(2)([emailNameOut, emailAddrOut]);
 	for(var i=0; i<msg_bytes; i++) {

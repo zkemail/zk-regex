@@ -20,10 +20,11 @@ describe('Bodyhash Regex', () => {
             email_addr_json,
             'BodyHashRegex'
         );
+        /*
         writeFileSync(
             path.join(__dirname, '../circuits/common/body_hash_regex.circom'),
             circom
-        );
+        );*/
 
         circuit = await wasm_tester(
             path.join(__dirname, './circuits/test_body_hash_regex.circom'),

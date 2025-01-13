@@ -3,7 +3,7 @@ pragma circom 2.1.5;
 include "@zk-email/zk-regex-circom/circuits/regex_helpers.circom";
 
 // regex: (\r\n|^)to:[^\r\n]+\r\n
-template ToAllRegex(msg_bytes, is_safe) {
+template ToAllRegex(msg_bytes) {
 	signal input msg[msg_bytes];
 	signal output out;
 
@@ -12,11 +12,7 @@ template ToAllRegex(msg_bytes, is_safe) {
 	signal in_range_checks[msg_bytes];
 	in[0]<==255;
 	for (var i = 0; i < msg_bytes; i++) {
-		if (is_safe) {
-			in_range_checks[i] <== SemiSafeLessThan(8)([msg[i], 255]);
-		} else {
-			in_range_checks[i] <== LessThan(8)([msg[i], 255]);
-		}
+		in_range_checks[i] <== LessThan(8)([msg[i], 255]);
 		in_range_checks[i] === 1;
 		in[i+1] <== msg[i];
 	}

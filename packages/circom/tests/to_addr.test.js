@@ -21,10 +21,11 @@ describe("To Addr Regex", () => {
         email_addr_json,
         "ToAllRegex"
       );
+      /*
       writeFileSync(
         path.join(__dirname, "../circuits/common/to_all_regex.circom"),
         circom
-      );
+      );*/
     }
     {
       const email_addr_json = readFileSync(
@@ -35,13 +36,14 @@ describe("To Addr Regex", () => {
         email_addr_json,
         "ReversedBracketRegex"
       );
+      /*
       writeFileSync(
         path.join(
           __dirname,
           "../circuits/common/reversed_bracket_regex.circom"
         ),
         circom
-      );
+      );*/
     }
     {
       const email_addr_json = readFileSync(
@@ -52,10 +54,11 @@ describe("To Addr Regex", () => {
         email_addr_json,
         "EmailAddrRegex"
       );
+      /*
       writeFileSync(
         path.join(__dirname, "../circuits/common/email_addr_regex.circom"),
         circom
-      );
+      );*/
     }
     circuit = await wasm_tester(
       path.join(__dirname, "./circuits/test_to_addr_regex.circom"),
