@@ -3,7 +3,7 @@ pragma circom 2.1.5;
 include "@zk-email/zk-regex-circom/circuits/regex_helpers.circom";
 
 // regex: (\r\n|^)dkim-signature:([a-z]+=[^;]+; )+t=[0-9]+;
-template TimestampRegex(msg_bytes) {
+template TimestampRegex(msg_bytes, is_safe) {
 	signal input msg[msg_bytes];
 	signal output out;
 
@@ -12,7 +12,11 @@ template TimestampRegex(msg_bytes) {
 	signal in_range_checks[msg_bytes];
 	in[0]<==255;
 	for (var i = 0; i < msg_bytes; i++) {
-		in_range_checks[i] <== LessThan(8)([msg[i], 255]);
+		if (is_safe) {
+			in_range_checks[i] <== SemiSafeLessThan(8)([msg[i], 255]);
+		} else {
+			in_range_checks[i] <== LessThan(8)([msg[i], 255]);
+		}
 		in_range_checks[i] === 1;
 		in[i+1] <== msg[i];
 	}

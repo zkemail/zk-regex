@@ -6,23 +6,23 @@ include "@zk-email/zk-regex-circom/circuits/common/email_addr_regex.circom";
 include "@zk-email/zk-regex-circom/circuits/common/email_addr_with_name_regex.circom";
 
 
-template ToAddrRegex(msg_bytes) {
+template ToAddrRegex(msg_bytes, is_safe) {
 	signal input msg[msg_bytes];
 	signal output out;
 	signal output reveal0[msg_bytes];
 
 	signal toOut;
 	signal toReveal[msg_bytes];
-	(toOut, toReveal) <== ToAllRegex(msg_bytes)(msg);
+	(toOut, toReveal) <== ToAllRegex(msg_bytes, is_safe)(msg);
 	toOut === 1;
 
 	signal emailNameOut;
 	signal emailNameReveal[msg_bytes];
-	(emailNameOut, emailNameReveal) <== EmailAddrWithNameRegex(msg_bytes)(toReveal);
+	(emailNameOut, emailNameReveal) <== EmailAddrWithNameRegex(msg_bytes, is_safe)(toReveal);
 
 	signal emailAddrOut;
 	signal emailAddrReveal[msg_bytes];
-	(emailAddrOut, emailAddrReveal) <== EmailAddrRegex(msg_bytes)(toReveal);
+	(emailAddrOut, emailAddrReveal) <== EmailAddrRegex(msg_bytes, is_safe)(toReveal);
 
 	out <== MultiOR(2)([emailNameOut, emailAddrOut]);
 	for(var i=0; i<msg_bytes; i++) {
