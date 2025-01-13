@@ -135,6 +135,7 @@ will generate the circuit file at `build/circuit_name.circom` -->
 The generated circuit has
 - 1 template arguments:
   - `msg_bytes`: the number of characters for the input string.
+  - `is_safe`: when set to true (or any positive integer), performs rigorous checks on the range of each character in the input string, adding 9 additional constraints per character.
 - 1 input signals:
   - `msg[msg_bytes]`: the input message to match against
 - 1 + (the number of substring patterns) output signals:
