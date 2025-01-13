@@ -568,6 +568,7 @@ fn generate_declarations(
     and_i: usize,
     multi_or_i: usize,
     end_anchor: bool,
+    is_safe: bool,
 ) -> Vec<String> {
     let mut declarations = vec![
         "pragma circom 2.1.5;\n".to_string(),
@@ -576,7 +577,7 @@ fn generate_declarations(
             "// regex: {}",
             regex_str.replace('\n', "\\n").replace('\r', "\\r")
         ),
-        format!("template {}(msg_bytes, is_safe) {{", template_name),
+        format!("template {}(msg_bytes) {{", template_name),
         "\tsignal input msg[msg_bytes];".to_string(),
         "\tsignal output out;".to_string(),
         "".to_string(),
@@ -585,11 +586,15 @@ fn generate_declarations(
         "\tsignal in_range_checks[msg_bytes];".to_string(),
         "\tin[0]<==255;".to_string(),
         "\tfor (var i = 0; i < msg_bytes; i++) {".to_string(),
-        "\t\tif (is_safe) {".to_string(),
-        "\t\t\tin_range_checks[i] <== SemiSafeLessThan(8)([msg[i], 255]);".to_string(),
-        "\t\t} else {".to_string(),
-        "\t\t\tin_range_checks[i] <== LessThan(8)([msg[i], 255]);".to_string(),
-        "\t\t}".to_string(),
+        format!(
+            "\t\tin_range_checks[i] <== {}(8)([msg[i], 255]);",
+            if is_safe {
+                "SemiSafeLessThan"
+            } else {
+                "LessThan"
+            }
+        )
+        .to_string(),
         "\t\tin_range_checks[i] === 1;".to_string(),
         "\t\tin[i+1] <== msg[i];".to_string(),
         "\t}".to_string(),
@@ -731,6 +736,7 @@ fn gen_circom_allstr(
     template_name: &str,
     regex_str: &str,
     end_anchor: bool,
+    is_safe: bool,
 ) -> String {
     let state_len = dfa_graph.states.len();
 
@@ -748,6 +754,7 @@ fn gen_circom_allstr(
         and_i,
         multi_or_i,
         end_anchor,
+        is_safe,
     );
 
     let init_code = generate_init_code(state_len);
@@ -963,12 +970,14 @@ pub(crate) fn gen_circom_template(
     circom_path: &Path,
     template_name: &str,
     gen_substrs: bool,
+    is_safe: bool,
 ) -> Result<(), CompilerError> {
     let circom = gen_circom_allstr(
         &regex_and_dfa.dfa,
         template_name,
         &regex_and_dfa.regex_pattern,
         regex_and_dfa.has_end_anchor,
+        is_safe,
     );
 
     let mut file = File::create(circom_path)?;
@@ -998,12 +1007,14 @@ pub(crate) fn gen_circom_template(
 pub(crate) fn gen_circom_string(
     regex_and_dfa: &RegexAndDFA,
     template_name: &str,
+    is_safe: bool,
 ) -> Result<String, CompilerError> {
     let circom = gen_circom_allstr(
         &regex_and_dfa.dfa,
         template_name,
         &regex_and_dfa.regex_pattern,
         regex_and_dfa.has_end_anchor,
+        is_safe,
     );
     let substrs = add_substrs_constraints(regex_and_dfa)?;
     let result = circom + &substrs;

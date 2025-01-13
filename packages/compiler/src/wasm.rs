@@ -6,22 +6,33 @@ use self::circom::gen_circom_string;
 
 #[wasm_bindgen]
 #[allow(non_snake_case)]
-pub fn genFromDecomposed(decomposedRegexJson: &str, circomTemplateName: &str) -> String {
+pub fn genFromDecomposed(
+    decomposedRegexJson: &str,
+    circomTemplateName: &str,
+    is_safe: bool,
+) -> String {
     let mut decomposed_regex_config: DecomposedRegexConfig =
         serde_json::from_str(decomposedRegexJson).expect("failed to parse decomposed_regex json");
     let regex_and_dfa = get_regex_and_dfa(&mut decomposed_regex_config)
         .expect("failed to convert the decomposed regex to dfa");
-    gen_circom_string(&regex_and_dfa, circomTemplateName).expect("failed to generate circom")
+    gen_circom_string(&regex_and_dfa, circomTemplateName, is_safe)
+        .expect("failed to generate circom")
 }
 
 #[wasm_bindgen]
 #[allow(non_snake_case)]
-pub fn genFromRaw(rawRegex: &str, substrsJson: &str, circomTemplateName: &str) -> String {
+pub fn genFromRaw(
+    rawRegex: &str,
+    substrsJson: &str,
+    circomTemplateName: &str,
+    is_safe: bool,
+) -> String {
     let substrs_defs_json: SubstringDefinitionsJson =
         serde_json::from_str(substrsJson).expect("failed to parse substrs json");
     let regex_and_dfa = create_regex_and_dfa_from_str_and_defs(rawRegex, substrs_defs_json)
         .expect("failed to convert the raw regex and state transitions to dfa");
-    gen_circom_string(&regex_and_dfa, circomTemplateName).expect("failed to generate circom")
+    gen_circom_string(&regex_and_dfa, circomTemplateName, is_safe)
+        .expect("failed to generate circom")
 }
 
 #[wasm_bindgen]
@@ -38,10 +49,11 @@ pub fn genRegexAndDfa(decomposedRegex: JsValue) -> JsValue {
 
 #[wasm_bindgen]
 #[allow(non_snake_case)]
-pub fn genCircom(decomposedRegex: JsValue, circomTemplateName: &str) -> String {
+pub fn genCircom(decomposedRegex: JsValue, circomTemplateName: &str, is_safe: bool) -> String {
     let mut decomposed_regex_config: DecomposedRegexConfig =
         from_value(decomposedRegex).expect("failed to parse decomposed regex");
     let regex_and_dfa = get_regex_and_dfa(&mut decomposed_regex_config)
         .expect("failed to convert the decomposed regex to dfa");
-    gen_circom_string(&regex_and_dfa, circomTemplateName).expect("failed to generate circom")
+    gen_circom_string(&regex_and_dfa, circomTemplateName, is_safe)
+        .expect("failed to generate circom")
 }

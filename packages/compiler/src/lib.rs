@@ -59,6 +59,7 @@ fn generate_outputs(
     circom_template_name: Option<&str>,
     num_public_parts: usize,
     gen_substrs: bool,
+    is_safe: bool,
 ) -> Result<(), CompilerError> {
     if let Some(halo2_dir_path) = halo2_dir_path {
         let halo2_dir_path = PathBuf::from(halo2_dir_path);
@@ -85,6 +86,7 @@ fn generate_outputs(
             &circom_file_path,
             &circom_template_name,
             gen_substrs,
+            is_safe,
         )?;
     }
 
@@ -110,10 +112,12 @@ pub fn gen_from_decomposed(
     circom_file_path: Option<&str>,
     circom_template_name: Option<&str>,
     gen_substrs: Option<bool>,
+    is_safe: Option<bool>,
 ) -> Result<(), CompilerError> {
     let mut decomposed_regex_config: DecomposedRegexConfig =
         serde_json::from_reader(File::open(decomposed_regex_path)?)?;
     let gen_substrs = gen_substrs.unwrap_or(false);
+    let is_safe = is_safe.unwrap_or(false);
 
     let regex_and_dfa = get_regex_and_dfa(&mut decomposed_regex_config)?;
 
@@ -130,6 +134,7 @@ pub fn gen_from_decomposed(
         circom_template_name,
         num_public_parts,
         gen_substrs,
+        is_safe,
     )?;
 
     Ok(())
@@ -156,6 +161,7 @@ pub fn gen_from_raw(
     circom_file_path: Option<&str>,
     template_name: Option<&str>,
     gen_substrs: Option<bool>,
+    is_safe: Option<bool>,
 ) -> Result<(), CompilerError> {
     let substrs_defs_json = load_substring_definitions_json(substrs_json_path)?;
     let num_public_parts = substrs_defs_json.transitions.len();
@@ -163,6 +169,7 @@ pub fn gen_from_raw(
     let regex_and_dfa = create_regex_and_dfa_from_str_and_defs(raw_regex, substrs_defs_json)?;
 
     let gen_substrs = gen_substrs.unwrap_or(true);
+    let is_safe = is_safe.unwrap_or(false);
 
     generate_outputs(
         &regex_and_dfa,
@@ -171,6 +178,7 @@ pub fn gen_from_raw(
         template_name,
         num_public_parts,
         gen_substrs,
+        is_safe,
     )?;
 
     Ok(())
@@ -193,8 +201,10 @@ pub fn gen_circom_from_decomposed_regex(
     circom_file_path: Option<&str>,
     circom_template_name: Option<&str>,
     gen_substrs: Option<bool>,
+    is_safe: Option<bool>,
 ) -> Result<(), CompilerError> {
     let gen_substrs = gen_substrs.unwrap_or(false);
+    let is_safe = is_safe.unwrap_or(false);
 
     let regex_and_dfa = get_regex_and_dfa(decomposed_regex)?;
 
@@ -211,6 +221,7 @@ pub fn gen_circom_from_decomposed_regex(
         circom_template_name,
         num_public_parts,
         gen_substrs,
+        is_safe,
     )?;
 
     Ok(())

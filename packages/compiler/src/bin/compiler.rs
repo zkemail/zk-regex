@@ -19,6 +19,7 @@
 //! - `-c, --circom-file-path <PATH>`: File path for Circom output
 //! - `-t, --template-name <NAME>`: Template name
 //! - `-g, --gen-substrs`: Generate substrings
+//! - `-i, --is_safe``: Performs rigorous checks on the range of each character in the input string, adding 9 additional constraints per character
 //!
 //! Example:
 //! ```
@@ -39,6 +40,7 @@
 //! - `-c, --circom-file-path <PATH>`: File path for Circom output
 //! - `-t, --template-name <NAME>`: Template name
 //! - `-g, --gen-substrs`: Generate substrings
+//! - `-i, --is_safe``: Performs rigorous checks on the range of each character in the input string, adding 9 additional constraints per character
 //!
 //! Example:
 //! ```
@@ -68,6 +70,8 @@ enum Commands {
         template_name: Option<String>,
         #[arg(short, long)]
         gen_substrs: Option<bool>,
+        #[arg(short, long)]
+        is_safe: Option<bool>,
     },
     Raw {
         #[arg(short, long)]
@@ -82,6 +86,8 @@ enum Commands {
         template_name: Option<String>,
         #[arg(short, long)]
         gen_substrs: Option<bool>,
+        #[arg(short, long)]
+        is_safe: Option<bool>,
     },
 }
 
@@ -100,6 +106,7 @@ fn process_decomposed(cli: Cli) {
         circom_file_path,
         template_name,
         gen_substrs,
+        is_safe,
     } = cli.command
     {
         if let Err(e) = gen_from_decomposed(
@@ -108,6 +115,7 @@ fn process_decomposed(cli: Cli) {
             circom_file_path.as_deref(),
             template_name.as_deref(),
             gen_substrs,
+            is_safe,
         ) {
             eprintln!("Error: {}", e);
             std::process::exit(1);
@@ -123,6 +131,7 @@ fn process_raw(cli: Cli) {
         circom_file_path,
         template_name,
         gen_substrs,
+        is_safe,
     } = cli.command
     {
         if let Err(e) = gen_from_raw(
@@ -132,6 +141,7 @@ fn process_raw(cli: Cli) {
             circom_file_path.as_deref(),
             template_name.as_deref(),
             gen_substrs,
+            is_safe,
         ) {
             eprintln!("Error: {}", e);
             std::process::exit(1);
