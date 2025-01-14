@@ -20,11 +20,11 @@ describe("Message Id Regex", () => {
       email_addr_json,
       "MessageIdRegex"
     );
-    /*
+
     writeFileSync(
       path.join(__dirname, "../circuits/common/message_id_regex.circom"),
       circom
-    );*/
+    );
     circuit = await wasm_tester(
       path.join(__dirname, "./circuits/test_message_id_regex.circom"),
       option

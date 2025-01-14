@@ -20,11 +20,11 @@ describe("Email Domain Regex", () => {
       email_addr_json,
       "EmailDomainRegex"
     );
-    /*
+
     writeFileSync(
       path.join(__dirname, "../circuits/common/email_domain_regex.circom"),
       circom
-    );*/
+    );
     circuit = await wasm_tester(
       path.join(__dirname, "./circuits/test_email_domain_regex.circom"),
       option
