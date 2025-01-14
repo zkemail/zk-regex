@@ -23,7 +23,7 @@
 //!
 //! Example:
 //! ```
-//! zk-regex decomposed -d regex.json -h ./halo2_output -c ./circom_output.circom -t MyTemplate -g true
+//! zk-regex decomposed -d regex.json -h ./halo2_output -c ./circom_output.circom -t MyTemplate -g true -i false
 //! ```
 //!
 //! ## Raw Command
@@ -44,7 +44,7 @@
 //!
 //! Example:
 //! ```
-//! zk-regex raw -r "a*b+c?" -s substrings.json -h ./halo2_output -c ./circom_output.circom -t MyTemplate -g true
+//! zk-regex raw -r "a*b+c?" -s substrings.json -h ./halo2_output -c ./circom_output.circom -t MyTemplate -g true -i false
 //! ```
 
 use clap::{Parser, Subcommand};
