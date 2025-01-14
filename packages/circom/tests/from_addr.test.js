@@ -21,7 +21,6 @@ describe("From Addr Regex", () => {
         email_addr_json,
         "FromAllRegex"
       );
-
       writeFileSync(
         path.join(__dirname, "../circuits/common/from_all_regex.circom"),
         circom
@@ -36,7 +35,6 @@ describe("From Addr Regex", () => {
         email_addr_json,
         "ReversedBracketRegex"
       );
-
       writeFileSync(
         path.join(
           __dirname,
@@ -54,7 +52,6 @@ describe("From Addr Regex", () => {
         email_addr_json,
         "EmailAddrRegex"
       );
-
       writeFileSync(
         path.join(__dirname, "../circuits/common/email_addr_regex.circom"),
         circom

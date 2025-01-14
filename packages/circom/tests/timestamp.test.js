@@ -20,7 +20,6 @@ describe("Timestamp Regex", () => {
       email_addr_json,
       "TimestampRegex"
     );
-
     writeFileSync(
       path.join(__dirname, "../circuits/common/timestamp_regex.circom"),
       circom

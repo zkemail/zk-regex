@@ -20,7 +20,6 @@ describe("Message Id Regex", () => {
       email_addr_json,
       "MessageIdRegex"
     );
-
     writeFileSync(
       path.join(__dirname, "../circuits/common/message_id_regex.circom"),
       circom

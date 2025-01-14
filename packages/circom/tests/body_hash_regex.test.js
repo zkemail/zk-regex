@@ -20,7 +20,6 @@ describe('Bodyhash Regex', () => {
             email_addr_json,
             'BodyHashRegex'
         );
-
         writeFileSync(
             path.join(__dirname, '../circuits/common/body_hash_regex.circom'),
             circom
