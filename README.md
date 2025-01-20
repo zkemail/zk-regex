@@ -86,8 +86,8 @@ You can generate its regex circom as follows.
 1. Make the above json file at `./simple_regex_decomposed.json`.
 2. Run `zk-regex decomposed -d ./simple_regex_decomposed.json -c ./simple_regex.circom -t SimpleRegex -g true`. It outputs a circom file at `./simple_regex.circom` that has a `SimpleRegex` template.
 
-> [!WARNING]  
-> If the `-i (--is_safe)` option is not explicitly set to `true`, the generated Circom template performs a less rigorous range check for each character of the input string, which may inadvertently allow excessively large values. When `is_safe` is set to `true`, the output Circom template includes an additional 9 constraints per character, ensuring a strict range check for each character.
+> [!NOTE]
+> If the `-i (--is_safe)` option is not explicitly set to true, the generated Circom template performs a less rigorous range check for each character of the input string, which may inadvertently allow excessively large values. However, this issue is **not critical**, as all inputs to the regex templates are text bytes assumed to be less than 255. When `is_safe` is set to true, the output Circom template includes an additional 9 constraints per character, ensuring a strict range check for each character.
 
 #### `zk-regex raw -r <RAW_REGEX> -s <SUBSTRS_JSON_PATH> -c <CIRCOM_FILE_PATH> -t <TEMPLATE_NAME> -g <GEN_SUBSTRS (true/false)> -i <IS_SAFE (true/false)>`
 This command generates a regex circom from a raw string of the regex definition and a json file that defines state transitions in DFA to be revealed.
