@@ -23,7 +23,7 @@
 //!
 //! Example:
 //! ```
-//! zk-regex decomposed -d regex.json -h ./halo2_output -c ./circom_output.circom -t MyTemplate -g true -i false
+//! zk-regex decomposed -d regex.json -h ./halo2_output -c ./circom_output.circom -t MyTemplate -g true
 //! ```
 //!
 //! ## Raw Command
@@ -44,8 +44,14 @@
 //!
 //! Example:
 //! ```
-//! zk-regex raw -r "a*b+c?" -s substrings.json -h ./halo2_output -c ./circom_output.circom -t MyTemplate -g true -i false
+//! zk-regex raw -r "a*b+c?" -s substrings.json -h ./halo2_output -c ./circom_output.circom -t MyTemplate -g true
 //! ```
+//!
+//! ## Note
+//! The `-i (--is_safe)` option controls the rigor of range checks for input characters:
+//! - If not set to `true`, the generated Circom template uses less rigorous range checks, which may allow excessively large values.
+//! - This is usually not critical, as input text bytes are assumed to be less than 255.
+//! - When `is_safe` is `true`, the template adds 9 extra constraints per character, ensuring strict range checks.
 
 use clap::{Parser, Subcommand};
 use zk_regex_compiler::{gen_from_decomposed, gen_from_raw};
