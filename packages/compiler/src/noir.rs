@@ -175,7 +175,7 @@ comptime fn make_lookup_table() -> [Field; {table_size}] {{
 
         format!(
             r#"
-global table = comptime {{ make_lookup_table() }};
+global table: [Field; {table_size}] = comptime {{ make_lookup_table() }};
 pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {{
     // regex: {regex_pattern}
     let mut substrings: Vec<BoundedVec<Field, N>> = Vec::new();
