@@ -1,0 +1,8 @@
+[package]
+name = "from_addr"
+type = "bin"
+authors = [""]
+compiler_version = ">=1.0.0"
+
+[dependencies]
+sparse_array = { git = "https://github.com/jp4g/sparse_array/", tag = "feat/comptime-codegen"}

@@ -3,11 +3,13 @@ use std::{
     path::Path,
 };
 
+use comptime::{FieldElement, SparseArray};
 use itertools::Itertools;
 
 use crate::structs::RegexAndDFA;
 
 const ACCEPT_STATE_ID: &str = "accept";
+const BYTE_SIZE: u32 = 256; // u8 size
 
 pub fn gen_noir_fn(
     regex_and_dfa: &RegexAndDFA,
@@ -20,6 +22,8 @@ pub fn gen_noir_fn(
     file.flush()?;
     Ok(())
 }
+
+// fn gen_sparse_array
 
 /// Generates Noir code based on the DFA and whether a substring should be extracted.
 ///
@@ -50,8 +54,6 @@ fn to_noir_fn(regex_and_dfa: &RegexAndDFA, gen_substrs: bool) -> String {
         accept_states
     };
 
-    const BYTE_SIZE: u32 = 256; // u8 size
-    let mut lookup_table_body = String::new();
 
     // curr_state + char_code -> next_state
     let mut rows: Vec<(usize, u8, usize)> = vec![];
@@ -85,26 +87,28 @@ fn to_noir_fn(regex_and_dfa: &RegexAndDFA, gen_substrs: bool) -> String {
         }
     }
 
-    for (curr_state_id, char_code, next_state_id) in rows {
-        lookup_table_body +=
-            &format!("table[{curr_state_id} * {BYTE_SIZE} + {char_code}] = {next_state_id};\n",);
-    }
-
-    lookup_table_body = indent(&lookup_table_body, 1);
     let mut table_size = BYTE_SIZE as usize * regex_and_dfa.dfa.states.len();
     if !regex_and_dfa.has_end_anchor {
         table_size += BYTE_SIZE as usize;
     }
-    let lookup_table = format!(
-        r#"
-comptime fn make_lookup_table() -> [Field; {table_size}] {{
-    let mut table = [0; {table_size}];
-{lookup_table_body}
 
-    table
-}}
-    "#
+    // make sparse array in comptime
+    let mut keys: Vec<FieldElement> = Vec::new();
+    let mut values: Vec<FieldElement> = Vec::new();
+    for (curr_state_id, char_code, next_state_id) in rows {
+        keys.push(FieldElement::from(
+            curr_state_id * BYTE_SIZE as usize + char_code as usize,
+        ));
+        values.push(FieldElement::from(next_state_id));
+    }
+
+    let sparse_array: SparseArray<FieldElement> = SparseArray::create(
+        &keys,
+        &values,
+        FieldElement::from(table_size)
     );
+    let sparse_array_str = sparse_array.to_noir_string(None);
+
 
     // substring_ranges contains the transitions that belong to the substring
     let substr_ranges: &Vec<BTreeSet<(usize, usize)>> = &regex_and_dfa.substrings.substring_ranges;
@@ -175,7 +179,7 @@ comptime fn make_lookup_table() -> [Field; {table_size}] {{
 
         format!(
             r#"
-global table: [Field; {table_size}] = comptime {{ make_lookup_table() }};
+global table: {sparse_array_str}
 pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {{
     // regex: {regex_pattern}
     let mut substrings: Vec<BoundedVec<Field, N>> = Vec::new();
@@ -218,29 +222,35 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {{
     }}
     substrings
 }}"#,
-            regex_pattern = regex_and_dfa.regex_pattern.replace('\n', "\\n").replace('\r', "\\r")
+            regex_pattern = regex_and_dfa
+                .regex_pattern
+                .replace('\n', "\\n")
+                .replace('\r', "\\r")
         )
     } else {
         format!(
             r#"
-global table = comptime {{ make_lookup_table() }};
+global table: {sparse_array_str}
 pub fn regex_match<let N: u32>(input: [u8; N]) {{
     // regex: {regex_pattern}
     let mut s = 0;
-    s = table[255];
+    s = table.get(255);
     for i in 0..input.len() {{
-        s = table[s * {BYTE_SIZE} + input[i] as Field];
+        s = table.get(s * {BYTE_SIZE} + input[i] as Field);
     }}
     assert({final_states_condition_body}, f"no match: {{s}}");
 }}"#,
-            regex_pattern = regex_and_dfa.regex_pattern.replace('\n', "\\n").replace('\r', "\\r"),
+            regex_pattern = regex_and_dfa
+                .regex_pattern
+                .replace('\n', "\\n")
+                .replace('\r', "\\r"),
         )
     };
 
     format!(
         r#"
+        use sparse_array::SparseArray;
         {fn_body}
-        {lookup_table}
     "#
     )
     .trim()
