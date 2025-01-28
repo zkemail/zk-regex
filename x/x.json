@@ -2,15 +2,15 @@
   "parts": [
     {
       "is_public": false,
-      "regex_def": "(\r\n|^)from:"
-    },
-    {
-      "is_public": true,
-      "regex_def": "[^\r\n]+"
+      "regex_def": "x[0-9]{2}"
     },
     {
       "is_public": false,
-      "regex_def": "\r\n"
+      "regex_def": "-y{2,3}"
+    },
+    {
+      "is_public": false,
+      "regex_def": "_z$"
     }
   ]
 }

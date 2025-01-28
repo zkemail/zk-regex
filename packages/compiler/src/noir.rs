@@ -23,8 +23,6 @@ pub fn gen_noir_fn(
     Ok(())
 }
 
-// fn gen_sparse_array
-
 /// Generates Noir code based on the DFA and whether a substring should be extracted.
 ///
 /// # Arguments
@@ -186,7 +184,7 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {{
 
     // "Previous" state
     let mut s: Field = 0;
-    s = table[255];
+    s = table.get(255);
     // "Next"/upcoming state
     let mut s_next: Field = 0;
 
@@ -196,14 +194,16 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {{
     for i in 0..input.len() {{
         let temp = input[i] as Field;
         let mut reset = false;
-        s_next = table[s * 256 + temp];
+        let mut s_next_idx = s * 256 + temp;
         if s_next == 0 {{
           // Check if there is any transition that could be done from a "restart"
-          s_next = table[temp];
+          s_next_idx = temp;
           // whether the next state changes or not, we mark this as a reset.
           reset = true;
           s = 0;
         }}
+        s_next = table.get(s_next_idx);
+        
 
         // If a substring was in the making, but the state was reset
         // we disregard previous progress because apparently it is invalid
