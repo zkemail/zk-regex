@@ -9,7 +9,7 @@
       "regex_def": "-y{2,3}"
     },
     {
-      "is_public": false,
+      "is_public": true,
       "regex_def": "_z$"
     }
   ]

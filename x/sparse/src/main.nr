@@ -1,17 +1,20 @@
-// mod regex_sparse;
 mod regex;
-mod regex_old;
 
-global MAX_INPUT_SIZE: u32 = 1024;
+global MAX_INPUT_SIZE: u32 = 256;
 
 fn main(input: [u8; MAX_INPUT_SIZE]) {
     let x = regex::regex_match(input);
-    // let x = regex_old::regex_match(input);
-    // regex_simple::regex_match(input);
-    // regex_sparse::regex_match(input);
-    // let x = regex_sparse::table.get(1);
-    // let x = regex_simple::table[1];
-    // assert(x == 0);
+}
+
+#[test]
+fn test_out() {
+    let input: [u8; 8] = "x12-yy_z".as_bytes();
+    let mut full_input = [0; MAX_INPUT_SIZE];
+    for i in 0..8 {
+        full_input[MAX_INPUT_SIZE-8+i] = input[i];
+    }
+    println(full_input);
+    // main(input);
 }
 
 #[test]

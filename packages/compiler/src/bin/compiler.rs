@@ -70,6 +70,8 @@ enum Commands {
         noir_file_path: Option<String>,
         #[arg(short, long)]
         gen_substrs: Option<bool>,
+        #[arg(short, long)]
+        sparse_array: Option<bool>,
     },
     Raw {
         #[arg(short, long)]
@@ -86,6 +88,8 @@ enum Commands {
         noir_file_path: Option<String>,
         #[arg(short, long)]
         gen_substrs: Option<bool>,
+        #[arg(short, long)]
+        sparse_array: Option<bool>,
     },
 }
 
@@ -105,6 +109,7 @@ fn process_decomposed(cli: Cli) {
         template_name,
         noir_file_path,
         gen_substrs,
+        sparse_array,
     } = cli.command
     {
         if let Err(e) = gen_from_decomposed(
@@ -114,6 +119,7 @@ fn process_decomposed(cli: Cli) {
             template_name.as_deref(),
             noir_file_path.as_deref(),
             gen_substrs,
+            sparse_array
         ) {
             eprintln!("Error: {}", e);
             std::process::exit(1);
@@ -130,6 +136,7 @@ fn process_raw(cli: Cli) {
         template_name,
         noir_file_path,
         gen_substrs,
+        sparse_array,
     } = cli.command
     {
         if let Err(e) = gen_from_raw(
@@ -140,6 +147,7 @@ fn process_raw(cli: Cli) {
             template_name.as_deref(),
             noir_file_path.as_deref(),
             gen_substrs,
+            sparse_array
         ) {
             eprintln!("Error: {}", e);
             std::process::exit(1);

@@ -1,5 +1,5 @@
 [package]
-name = "from_addr"
+name = "sparse_regex"
 type = "bin"
 authors = [""]
 compiler_version = ">=1.0.0"

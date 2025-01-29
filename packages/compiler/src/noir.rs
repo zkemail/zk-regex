@@ -15,8 +15,10 @@ pub fn gen_noir_fn(
     regex_and_dfa: &RegexAndDFA,
     path: &Path,
     gen_substrs: bool,
+    sparse_array: Option<bool>,
 ) -> Result<(), std::io::Error> {
-    let noir_fn = to_noir_fn(regex_and_dfa, gen_substrs);
+    let use_sparse = sparse_array.unwrap_or(false);
+    let noir_fn = to_noir_fn(regex_and_dfa, gen_substrs, use_sparse);
     let mut file = File::create(path)?;
     file.write_all(noir_fn.as_bytes())?;
     file.flush()?;
@@ -33,7 +35,7 @@ pub fn gen_noir_fn(
 /// # Returns
 ///
 /// A `String` that contains the Noir code
-fn to_noir_fn(regex_and_dfa: &RegexAndDFA, gen_substrs: bool) -> String {
+fn to_noir_fn(regex_and_dfa: &RegexAndDFA, gen_substrs: bool, sparse_array: bool) -> String {
     // Multiple accepting states are not supported
     // This is a vector nonetheless, to support an extra accepting state we'll use
     // to allow any character occurrences after the original accepting state
@@ -51,7 +53,6 @@ fn to_noir_fn(regex_and_dfa: &RegexAndDFA, gen_substrs: bool) -> String {
         );
         accept_states
     };
-
 
     // curr_state + char_code -> next_state
     let mut rows: Vec<(usize, u8, usize)> = vec![];
@@ -77,6 +78,7 @@ fn to_noir_fn(regex_and_dfa: &RegexAndDFA, gen_substrs: bool) -> String {
             rows.push((extra_accept_id, char_code, extra_accept_id));
         }
     }
+
     for state in regex_and_dfa.dfa.states.iter() {
         for (&tran_next_state_id, tran) in &state.transitions {
             for &char_code in tran {
@@ -90,23 +92,54 @@ fn to_noir_fn(regex_and_dfa: &RegexAndDFA, gen_substrs: bool) -> String {
         table_size += BYTE_SIZE as usize;
     }
 
-    // make sparse array in comptime
-    let mut keys: Vec<FieldElement> = Vec::new();
-    let mut values: Vec<FieldElement> = Vec::new();
-    for (curr_state_id, char_code, next_state_id) in rows {
-        keys.push(FieldElement::from(
-            curr_state_id * BYTE_SIZE as usize + char_code as usize,
-        ));
-        values.push(FieldElement::from(next_state_id));
+    // handle conditional use of sparse array
+    let mut table_str = String::new();
+    if !sparse_array {
+        let mut lut_body = String::new();
+        for (curr_state_id, char_code, next_state_id) in rows {
+            lut_body += &format!(
+                "table[{curr_state_id} * {BYTE_SIZE} + {char_code}] = {next_state_id};\n",
+            );
+        }
+        lut_body = indent(&lut_body, 1);
+
+        table_str = format!(
+            r#"
+global table: [Field; {table_size}] = comptime {{ make_lookup_table() }};
+
+comptime fn make_lookup_table() -> [Field; {table_size}] {{
+    let mut table = [0; {table_size}];
+    {lut_body}
+    table
+}}
+
+        "#
+        );
+    } else {
+        let mut keys: Vec<FieldElement> = Vec::new();
+        let mut values: Vec<FieldElement> = Vec::new();
+        for (curr_state_id, char_code, next_state_id) in rows {
+            keys.push(FieldElement::from(
+                curr_state_id * BYTE_SIZE as usize + char_code as usize,
+            ));
+            values.push(FieldElement::from(next_state_id));
+        }
+
+        let sparse_array: SparseArray<FieldElement> =
+            SparseArray::create(&keys, &values, FieldElement::from(table_size));
+
+        table_str = format!(
+            r#"
+global table: {sparse_str}
+
+            "#,
+            sparse_str = sparse_array.to_noir_string(None)
+        );
     }
 
-    let sparse_array: SparseArray<FieldElement> = SparseArray::create(
-        &keys,
-        &values,
-        FieldElement::from(table_size)
-    );
-    let sparse_array_str = sparse_array.to_noir_string(None);
+    // make sparse array in comptime
 
+    // let sparse_array_str = sparse_array.to_noir_string(None);
 
     // substring_ranges contains the transitions that belong to the substring
     let substr_ranges: &Vec<BTreeSet<(usize, usize)>> = &regex_and_dfa.substrings.substring_ranges;
@@ -177,14 +210,14 @@ fn to_noir_fn(regex_and_dfa: &RegexAndDFA, gen_substrs: bool) -> String {
 
         format!(
             r#"
-global table: {sparse_array_str}
+{table_str}
 pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {{
     // regex: {regex_pattern}
     let mut substrings: Vec<BoundedVec<Field, N>> = Vec::new();
 
     // "Previous" state
     let mut s: Field = 0;
-    s = table.get(255);
+    s = {table_access_255};
     // "Next"/upcoming state
     let mut s_next: Field = 0;
 
@@ -202,7 +235,7 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {{
           reset = true;
           s = 0;
         }}
-        s_next = table.get(s_next_idx);
+        s_next = {table_access_s_next_idx};
         
 
         // If a substring was in the making, but the state was reset
@@ -225,18 +258,22 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {{
             regex_pattern = regex_and_dfa
                 .regex_pattern
                 .replace('\n', "\\n")
-                .replace('\r', "\\r")
+                .replace('\r', "\\r"),
+            table_access_255 = access_table("255", sparse_array),
+            table_access_s_next_idx = access_table("s_next_idx", sparse_array),
         )
     } else {
         format!(
             r#"
-global table: {sparse_array_str}
+{table_str}
 pub fn regex_match<let N: u32>(input: [u8; N]) {{
     // regex: {regex_pattern}
     let mut s = 0;
-    s = table.get(255);
+    s = {table_access_255};
     for i in 0..input.len() {{
-        s = table.get(s * {BYTE_SIZE} + input[i] as Field);
+        let s_idx = s * {BYTE_SIZE} + input[i] as Field;
+        std::as_witness(s_idx);
+        s = {table_access_s_idx};
     }}
     assert({final_states_condition_body}, f"no match: {{s}}");
 }}"#,
@@ -244,12 +281,13 @@ pub fn regex_match<let N: u32>(input: [u8; N]) {{
                 .regex_pattern
                 .replace('\n', "\\n")
                 .replace('\r', "\\r"),
+            table_access_255 = access_table("255", sparse_array),
+            table_access_s_idx = access_table("s_idx", sparse_array),
         )
     };
 
     format!(
         r#"
-        use sparse_array::SparseArray;
         {fn_body}
     "#
     )
@@ -271,4 +309,12 @@ fn indent(s: &str, level: usize) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+/// Access table by array index or sparse API index
+fn access_table(s: &str, sparse: bool) -> String {
+    match sparse {
+        true => format!("table.get({})", s),
+        false => format!("table[{}]", s),
+    }
 }
