@@ -1033,6 +1033,7 @@ fn create_dfa_graph_from_regex(regex: &str) -> Result<DFAGraph, CompilerError> {
 /// # Returns
 ///
 /// A boolean indicating whether the input string matches the regex pattern.
+#[cfg(test)]
 fn match_string_with_dfa_graph(graph: &DFAGraph, input: &str) -> bool {
     let mut current_state = 0;
 
@@ -1132,10 +1133,12 @@ pub(crate) fn get_max_state(dfa: &DFAGraph) -> usize {
         .unwrap_or_default()
 }
 
+#[cfg(test)]
 mod dfa_test {
-    use crate::regex::{create_dfa_graph_from_regex, match_string_with_dfa_graph};
+    use super::create_dfa_graph_from_regex;
+    use crate::regex::match_string_with_dfa_graph;
     use serde::{Deserialize, Serialize};
-    use std::{env, fs::File, io::BufReader, path::PathBuf};
+    use std::{fs::File, io::BufReader, path::PathBuf};
 
     #[derive(Debug, Deserialize, Serialize)]
     struct RegexTestCase {
