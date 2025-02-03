@@ -755,12 +755,7 @@ fn gen_circom_allstr(
 
     let init_code = generate_init_code(state_len);
 
-    let accept_lines = generate_accept_logic(accept_nodes, end_anchor).map_err(|e| match e {
-        CompilerError::AcceptNodesError(msg) => {
-            CompilerError::AcceptNodesError(format!("{} for regex: {}", msg, regex_str))
-        }
-        _ => e,
-    })?;
+    let accept_lines = generate_accept_logic(accept_nodes, end_anchor)?;
 
     let final_code = [declarations, init_code, lines, accept_lines].concat();
 
