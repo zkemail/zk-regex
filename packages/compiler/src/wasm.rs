@@ -13,12 +13,16 @@ pub fn init_panic_hook() {
 
 #[wasm_bindgen]
 #[allow(non_snake_case)]
-pub fn genFromDecomposed(decomposedRegexJson: &str, circomTemplateName: &str) -> String {
+pub fn genFromDecomposed(
+    decomposedRegexJson: &str,
+    circomTemplateName: &str,
+) -> Result<String, JsValue> {
     let mut decomposed_regex_config: DecomposedRegexConfig =
         serde_json::from_str(decomposedRegexJson).expect("failed to parse decomposed_regex json");
     let regex_and_dfa = get_regex_and_dfa(&mut decomposed_regex_config)
         .expect("failed to convert the decomposed regex to dfa");
-    gen_circom_string(&regex_and_dfa, circomTemplateName).expect("failed to generate circom")
+    gen_circom_string(&regex_and_dfa, circomTemplateName)
+        .map_err(|e| JsValue::from_str(&format!("Failed to generate Circom string: {}", e)))
 }
 
 #[wasm_bindgen]

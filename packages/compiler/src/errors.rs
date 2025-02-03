@@ -24,4 +24,6 @@ pub enum CompilerError {
     GraphError(String),
     #[error("No accepted state found in DFA")]
     NoAcceptedState,
+    #[error("Accept Nodes Error: {0}")]
+    AcceptNodesError(String),
 }
