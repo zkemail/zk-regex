@@ -17,6 +17,7 @@ pub fn gen_noir_fn(
     gen_substrs: bool,
     sparse_array: Option<bool>,
 ) -> Result<(), std::io::Error> {
+    println!("{}", regex_and_dfa.dfa);
     let use_sparse = sparse_array.unwrap_or(false);
     let noir_fn = to_noir_fn(regex_and_dfa, gen_substrs, use_sparse);
     let mut file = File::create(path)?;
@@ -249,14 +250,14 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<BoundedVec<Field, N
     // check the match
     for i in 0..N {{
         let temp = input[i] as Field;
-        let mut s_next_idx = s * 256 + temp;
+        s_next = {table_access_s_next};
+        let potential_s_next = {table_access_s_next_temp};
         if s_next == 0 {{
-          // Check if there is any transition that could be done from a "restart"
-          s_next_idx = temp;
-          // whether the next state changes or not, we mark this as a reset.
-          s = 0;
+            s = 0;
+            s_next = potential_s_next;
         }}
-        s_next = {table_access_s_next_idx};
+        std::as_witness(s_next);
+
         let range = i >= start & i <= end;
         let cases = {all_cases}
         // idk why have to say == true
@@ -289,17 +290,13 @@ pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> (BoundedVec<Bo
     for i in 0..input.len() {{
         let temp = input[i] as Field;
         let mut reset = false;
-        let mut s_next_idx = s * 256 + temp;
+        s_next = {table_access_s_next};
+        let potential_s_next = {table_access_s_next_temp};
         if s_next == 0 {{
-          // Check if there is any transition that could be done from a "restart"
-          s_next_idx = temp;
-          // whether the next state changes or not, we mark this as a reset.
-          reset = true;
-          s = 0;
+            reset = true;
+            s = 0;
+            s_next = potential_s_next;
         }}
-        s_next = {table_access_s_next_idx};
-        
-
         // If a substring was in the making, but the state was reset
         // we disregard previous progress because apparently it is invalid
         if (reset & (consecutive_substr == 1)) {{
@@ -322,7 +319,8 @@ pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> (BoundedVec<Bo
                 .replace('\n', "\\n")
                 .replace('\r', "\\r"),
             table_access_255 = access_table("255", sparse_array),
-            table_access_s_next_idx = access_table("s_next_idx", sparse_array),
+            table_access_s_next = access_table("s * 256 + temp", sparse_array),
+            table_access_s_next_temp = access_table("temp", sparse_array),
             substr_length = regex_and_dfa.substrings.substring_ranges.len(),
         )
     } else {

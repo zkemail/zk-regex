@@ -1,6 +1,6 @@
 mod regex;
 
-global MAX_INPUT_SIZE: u32 = 1024;
+global MAX_INPUT_SIZE: u32 = 128;
 
 fn main(input: [u8; MAX_INPUT_SIZE]) {
     let x = regex::regex_match(input);
@@ -34,10 +34,16 @@ fn test_out() {
 
 #[test]
 fn test_2() {
-    // let input = "\r\nsubject:this is a test.\r\n            ".as_bytes();
+    let input2 = "\r\nsubject:this is a test.\r\n            ".as_bytes();
     let input = "subject:これはテストです。\r\n".as_bytes();
+    let mut x = [0; 38];
+    for i in 0..37 {
+        x[i + 1] = input[i];
+    }
+    // x[0] = 0xFF;
+    println(x);
     // let (out, _, _) = regex::__regex_match(input);
-    let out = regex::regex_match(input);
+    let out = regex::regex_match(input2);
     for i in 0..10 {
         if i < out.len() {
             println(out.get(i));

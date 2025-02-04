@@ -6,6 +6,7 @@ mod regex;
 mod structs;
 mod wasm;
 
+
 use circom::gen_circom_template;
 use errors::CompilerError;
 use halo2::gen_halo2_tables;

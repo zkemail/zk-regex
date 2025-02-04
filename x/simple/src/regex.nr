@@ -1216,14 +1216,14 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<BoundedVec<Field, N
     // check the match
     for i in 0..N {
         let temp = input[i] as Field;
-        let mut s_next_idx = s * 256 + temp;
+        s_next = table[s * 256 + temp];
+        let potential_s_next = table[temp];
         if s_next == 0 {
-          // Check if there is any transition that could be done from a "restart"
-          s_next_idx = temp;
-          // whether the next state changes or not, we mark this as a reset.
-          s = 0;
+            s = 0;
+            s_next = potential_s_next;
         }
-        s_next = table[s_next_idx];
+        std::as_witness(s_next);
+
         let range = i >= start & i <= end;
         let cases = [
             (s == 10) & (s_next == 11),
@@ -1282,17 +1282,13 @@ pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> (BoundedVec<Bo
     for i in 0..input.len() {
         let temp = input[i] as Field;
         let mut reset = false;
-        let mut s_next_idx = s * 256 + temp;
+        s_next = table[s * 256 + temp];
+        let potential_s_next = table[temp];
         if s_next == 0 {
-          // Check if there is any transition that could be done from a "restart"
-          s_next_idx = temp;
-          // whether the next state changes or not, we mark this as a reset.
-          reset = true;
-          s = 0;
+            reset = true;
+            s = 0;
+            s_next = potential_s_next;
         }
-        s_next = table[s_next_idx];
-        
-
         // If a substring was in the making, but the state was reset
         // we disregard previous progress because apparently it is invalid
         if (reset & (consecutive_substr == 1)) {
