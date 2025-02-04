@@ -1,0 +1,16 @@
+{
+  "parts": [
+    {
+      "is_public": true,
+      "regex_def": "a"
+    },
+    {
+      "is_public": true,
+      "regex_def": "b"
+    },
+    {
+      "is_public": true,
+      "regex_def": "c"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+[package]
+name = "regex_test"
+type = "lib"
+authors = [""]
+compiler_version = ">=1.0.0"
+
+[dependencies]
+# sparse_array = { git = "https://github.com/jp4g/sparse_array/", tag = "feat/comptime-codegen"}

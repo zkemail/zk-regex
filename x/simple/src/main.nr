@@ -1,27 +1,36 @@
 mod regex;
 
-global MAX_INPUT_SIZE: u32 = 192;
+global MAX_INPUT_SIZE: u32 = 512;
 
 fn main(input: [u8; MAX_INPUT_SIZE]) {
     let x = regex::regex_match(input);
 }
 
-#[test]
+// #[test]
 fn test_out() {
-    let input: [u8; 8] = "x12-yy_z".as_bytes();
+    let input: [u8; 8] = "abcdabcd".as_bytes();
     let mut full_input = [0; MAX_INPUT_SIZE];
-    for i in 0..8 {
-        full_input[i] = input[i];
+    for i in 8..16 {
+        full_input[i] = input[i - 8];
     }
     println(full_input);
-    // main(input);
+    let x = regex::regex_match(input);
+    println(x);
 }
 
-// #[test]
-// fn test_pass_1() {
-//     let input: [u8; 8] = "x12-yy_z".as_bytes();
-//     regex::regex_match(input);
-// }
+#[test]
+fn test_pass_1() {
+    // let input: [u8; 8] = "x12-yy_z".as_bytes();
+    let input: [u8; 26] = "x12-yy_     x12-yy_z      ".as_bytes();
+
+    let out = regex::regex_match(input);
+    for i in 0..10 {
+        if i < out.len() {
+            println(out.get(i));
+        }
+    }
+    // println(out);
+}
 
 // #[test]
 // fn test_pass_2() {
