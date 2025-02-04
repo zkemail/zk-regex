@@ -32,7 +32,7 @@ fn test_out() {
 //     // println(out);
 // }
 
-#[test]
+// #[test]
 fn test_2() {
     let input2 = "\r\nsubject:this is a test.\r\n            ".as_bytes();
     let input = "subject:これはテストです。\r\n".as_bytes();
@@ -49,6 +49,25 @@ fn test_2() {
             println(out.get(i));
         }
     }
+}
+
+// #[test]
+fn test_3() {
+    let input = "1=a 2=b 2=bc 2=c d".as_bytes();
+    let out = regex::regex_match(input);
+    for i in 0..3 {
+        if i < out.len() {
+            println(out.get(i));
+        }
+    }
+    
+}
+
+#[test]
+fn test_4() {
+    let input = "aa".as_bytes();
+    let out = regex::__regex_match(input);
+    println(out.0.get(0));
 }
 
 // #[test]
