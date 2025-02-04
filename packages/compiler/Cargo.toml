@@ -36,5 +36,5 @@ regex = "=1.10.6"
 getrandom = { version = "0.2", features = ["js"] }
 wasm-bindgen = "0.2"
 serde-wasm-bindgen = "0.6.5"
-# comptime = { git = "https://github.com/jp4g/sparse_array", branch = "feat/comptime-codegen" }
-comptime = { path = "../../../../aztec/sparse_array/comptime" }
+comptime = { git = "https://github.com/jp4g/sparse_array", branch = "feat/comptime-codegen" }
+# comptime = { path = "../../../../aztec/sparse_array/comptime" }

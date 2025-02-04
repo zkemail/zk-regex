@@ -240,12 +240,23 @@ global table: {sparse_str}
 pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<BoundedVec<Field, N>, {substr_length}> {{
     let (substrings, start, end) = unsafe {{ __regex_match(input) }};
     
+    // "Previous" state
     let mut s: Field = 0;
-    s = table[255];
+    s = {table_access_255};
+    // "Next"/upcoming state
+    let mut s_next: Field = 0;
+
     // check the match
     for i in 0..N {{
         let temp = input[i] as Field;
-        let s_next: Field = table[s * 256 + temp];
+        let mut s_next_idx = s * 256 + temp;
+        if s_next == 0 {{
+          // Check if there is any transition that could be done from a "restart"
+          s_next_idx = temp;
+          // whether the next state changes or not, we mark this as a reset.
+          s = 0;
+        }}
+        s_next = {table_access_s_next_idx};
         let range = i >= start & i <= end;
         let cases = {all_cases}
         // idk why have to say == true

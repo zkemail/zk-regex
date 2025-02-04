@@ -1,16 +1,16 @@
 {
   "parts": [
     {
+      "is_public": false,
+      "regex_def": "(\\r\\n|^)subject:"
+    },
+    {
       "is_public": true,
-      "regex_def": "x[0-9]{2}"
+      "regex_def": "[^\\r\\n]+"
     },
     {
       "is_public": false,
-      "regex_def": "-y{2,3}"
-    },
-    {
-      "is_public": true,
-      "regex_def": "_z"
+      "regex_def": "\\r\\n"
     }
   ]
 }
