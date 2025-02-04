@@ -2,7 +2,7 @@ global table: [Field; 2816] = comptime { make_lookup_table() };
 
 comptime fn make_lookup_table() -> [Field; 2816] {
     let mut table = [0; 2816];
-        table[9 * 256 + 0] = 10;
+    table[9 * 256 + 0] = 10;
     table[10 * 256 + 0] = 10;
     table[9 * 256 + 1] = 10;
     table[10 * 256 + 1] = 10;
@@ -544,13 +544,13 @@ comptime fn make_lookup_table() -> [Field; 2816] {
     table
 }
 
-        
-pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<BoundedVec<Field, N>, 2> {
+pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<BoundedVec<Field, N>, 10> {
     let (substrings, start, end) = unsafe { __regex_match(input) };
-    
+    println(f"Start index: {start}");
+    println(f"End index: {end} ");
+
     let mut s: Field = 0;
     s = table[255];
-    let mut substr_index = 0;
     // check the match
     for i in 0..N {
         let temp = input[i] as Field;
@@ -565,32 +565,25 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<BoundedVec<Field, N
             (s == 8) & (s_next == 9),
             (s == 9) & (s_next == 10),
             (s == 10) & (s_next == 10)
-		];
+        ];
         // idk why have to say == true
         let found = cases.any(|case|  case == true | range == false );
+        println(f"i: {i}, s: {s}, s_next: {s_next}, found: {found}, range: {range}");
         s = s_next;
-        assert(found, "no match");
-
-        // check construction of arrays
-        let substrs = [
-            substrings.get_unchecked(0).get_unchecked(substr_index),
-            // substrings.get_unchecked(1).get_unchecked(i)
-        ];
-        let substr_1_range = (i >= start) & (i < start + substrings.get_unchecked(0).len());
-        // let substr_2_range = (i >= start + substrings.get_unchecked(0).len()) & (i <= end);
-        let is_match_1 = substrs[0] == temp;
-        // println(f"i: {i}, temp: {temp}, substr_1_range: {substr_1_range}, is_match: {is_match}, substr_index: {substr_index}, char: {substrs}");
-        assert(!substr_1_range | is_match_1, "substring 1 mismatch");
-        substr_index += (is_match_1 & substr_1_range) as u32;
+        // assert(found, "no match");
     }
-    assert((s == 9) | (s == 10), "no match");
+    // check last is 9 or 10
 
     substrings
 }
 
-pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> (BoundedVec<BoundedVec<Field, N>, 2>, u32, u32) {
+pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> (
+    BoundedVec<BoundedVec<Field, N>, 10>,
+    u32,
+    u32
+) {
     // regex: x[0-9]{2}-y{2,3}_z
-    let mut substrings: BoundedVec<BoundedVec<Field, N>, 2> = BoundedVec::new();
+    let mut substrings: BoundedVec<BoundedVec<Field, N>, 10> = BoundedVec::new();
 
     // "Previous" state
     let mut s: Field = 0;
@@ -609,40 +602,41 @@ pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> (BoundedVec<Bo
         let mut reset = false;
         let mut s_next_idx = s * 256 + temp;
         if s_next == 0 {
-          // Check if there is any transition that could be done from a "restart"
-          s_next_idx = temp;
-          // whether the next state changes or not, we mark this as a reset.
-          reset = true;
-          s = 0;
+            // Check if there is any transition that could be done from a "restart"
+            s_next_idx = temp;
+            // whether the next state changes or not, we mark this as a reset.
+            reset = true;
+            s = 0;
         }
         s_next = table[s_next_idx];
-        
 
         // If a substring was in the making, but the state was reset
         // we disregard previous progress because apparently it is invalid
+        println(f"reset: {reset}, consecutive_substr: {consecutive_substr}");
         if (reset & (consecutive_substr == 1)) {
             current_substring = BoundedVec::new();
             consecutive_substr = 0;
+            println("Reset");
         }
         // Fill up substrings
+        println(f"s: {s}, s_next: {s_next}, i: {i}");
         if ((s == 0) & (s_next == 1) | (s == 1) & (s_next == 2) | (s == 2) & (s_next == 3)) {
             if (consecutive_substr == 0) {
                 start_index = i;
-            };
-
+            }
             current_substring.push(temp);
-            consecutive_substr = 1;   
-        }
-        else if ((s == 6) & (s_next == 8) | (s == 7) & (s_next == 8) | (s == 8) & (s_next == 9)) {
+            consecutive_substr = 1;
+        } else if ((s == 6) & (s_next == 8) | (s == 7) & (s_next == 8) | (s == 8) & (s_next == 9)) {
             current_substring.push(temp);
-            consecutive_substr = 1;   
+            consecutive_substr = 1;
         } else if ((consecutive_substr == 1) & (s_next == 0)) {
             current_substring = BoundedVec::new();
             substrings = BoundedVec::new();
             consecutive_substr = 0;
             start_index = 0;
             end_index = 0;
-        } else if (s == 9) & (s_next == 10) {
+            println("Ending");
+        } else if ((s == 9) & (s_next == 10)) {
             end_index = i;
             complete = true;
             break;

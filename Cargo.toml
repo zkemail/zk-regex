@@ -1,6 +1,6 @@
 [workspace]
 members = ["packages/*"]
-exclude = ["packages/circom", "test"]
+exclude = ["packages/circom", "test", "packages/noir"]
 
 # [patch."https://github.com/stalwartlabs/mail-builder"]
 # mail-builder = { version = "0.2.5", git = "https://github.com/stalwartlabs//mail-builder", tag = "0.2.5" }

@@ -151,9 +151,27 @@ global table: {sparse_str}
         .map(|id| format!("(s == {id})"))
         .collect_vec()
         .join(" | ");
-
+    let end_states_condition_body = format!("(s == {}) & (s_next == {})", accept_state_ids[0], accept_state_ids[1]);
+    let finished_condition_body = format!("(s == {}) & (s_next == {})", accept_state_ids[1], accept_state_ids[1]);
     // If substrings have to be extracted, the function returns a vector of BoundedVec
     // otherwise there is no return type
+    let all_cases = {
+        let mut cases = substr_ranges.iter().map(|range_set| {
+            range_set
+                .iter()
+                .map(|(range_start, range_end)| {
+                    indent(&format!("(s == {range_start}) & (s_next == {range_end}),"), 3)
+                })
+                .collect::<Vec<_>>()
+                .join("\n")
+        }).collect::<Vec<_>>().join("\n");
+        cases = format!(
+            "{cases}\n{accept_state}\n{finished_state}",
+            accept_state = format!("{},", indent(&end_states_condition_body, 3)),
+            finished_state = indent(&finished_condition_body, 3)
+        );
+        format!("[\n{}\n\t\t];", cases)
+    };
     let fn_body = if gen_substrs {
         let mut first_condition = true;
 
@@ -170,22 +188,23 @@ global table: {sparse_str}
                     .join(" | ");
 
                 // For the first condition, use `if`, for others, use `else if`
-                let start_part = if first_condition {
+                let (start_part, start_index) = if first_condition {
                     first_condition = false;
-                    "if"
+                    let start_index_text = format!("\tif (consecutive_substr == 0) {{
+        start_index = i;
+    }};\n");
+                    ("if", start_index_text)
                 } else {
-                    "else if"
+                    ("else if", format!(""))
                 };
+
 
                 // The body of the condition handling substring creation/updating
                 format!(
                     "{start_part} ({range_conditions}) {{
-    if (consecutive_substr == 0) {{
-      current_substring.push(temp);
-      consecutive_substr = 1;
-    }} else if (consecutive_substr == 1) {{
-      current_substring.push(temp);
-    }}   
+    {start_index}
+    current_substring.push(temp);
+    consecutive_substr = 1;   
 }}"
                 )
             })
@@ -196,7 +215,14 @@ global table: {sparse_str}
         let final_conditions = format!(
             "{conditions} else if ((consecutive_substr == 1) & (s_next == 0)) {{
     current_substring = BoundedVec::new();
+    substrings = BoundedVec::new();
     consecutive_substr = 0;
+    start_index = 0;
+    end_index = 0;
+}} else if {end_states_condition_body} {{
+    end_index = i;
+    complete = true;
+    break;
 }} else if (consecutive_substr == 1) {{
     // The substring is done so \"save\" it
     substrings.push(current_substring);
@@ -211,9 +237,31 @@ global table: {sparse_str}
         format!(
             r#"
 {table_str}
-pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {{
+pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<BoundedVec<Field, N>, {substr_length}> {{
+    let (substrings, start, end) = unsafe {{ __regex_match(input) }};
+    
+    let mut s: Field = 0;
+    s = table[255];
+    // check the match
+    for i in 0..N {{
+        let temp = input[i] as Field;
+        let s_next: Field = table[s * 256 + temp];
+        let range = i >= start & i <= end;
+        let cases = {all_cases}
+        // idk why have to say == true
+        let found = cases.any(|case|  case == true | range == false );
+        s = s_next;
+        assert(found, "no match");
+    }}
+    // check final state
+    assert({final_states_condition_body}, f"no match: {{s}}");
+
+    substrings
+}}
+
+pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> (BoundedVec<BoundedVec<Field, N>, {substr_length}>, u32, u32) {{
     // regex: {regex_pattern}
-    let mut substrings: Vec<BoundedVec<Field, N>> = Vec::new();
+    let mut substrings: BoundedVec<BoundedVec<Field, N>, {substr_length}> = BoundedVec::new();
 
     // "Previous" state
     let mut s: Field = 0;
@@ -223,6 +271,9 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {{
 
     let mut consecutive_substr = 0;
     let mut current_substring = BoundedVec::new();
+    let mut start_index = 0;
+    let mut end_index = 0;
+    let mut complete = false;
 
     for i in 0..input.len() {{
         let temp = input[i] as Field;
@@ -253,7 +304,7 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {{
     if consecutive_substr == 1 {{
         substrings.push(current_substring);
     }}
-    substrings
+    (substrings, start_index, end_index)
 }}"#,
             regex_pattern = regex_and_dfa
                 .regex_pattern
@@ -261,6 +312,7 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {{
                 .replace('\r', "\\r"),
             table_access_255 = access_table("255", sparse_array),
             table_access_s_next_idx = access_table("s_next_idx", sparse_array),
+            substr_length = regex_and_dfa.substrings.substring_ranges.len(),
         )
     } else {
         format!(

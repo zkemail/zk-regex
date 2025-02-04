@@ -5,9 +5,39 @@ global table: sparse_array::SparseArray<538, Field> = sparse_array::SparseArray 
 };
 
             
-pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {
+pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<BoundedVec<Field, N>, 2> {
+    let (substrings, start, end) = unsafe { __regex_match(input) };
+    
+    let mut s: Field = 0;
+    s = table[255];
+    // check the match
+    for i in 0..N {
+        let temp = input[i] as Field;
+        let s_next: Field = table[s * 256 + temp];
+        let range = i >= start & i <= end;
+        let cases = [
+            (s == 0) & (s_next == 1),
+            (s == 1) & (s_next == 2),
+            (s == 2) & (s_next == 3),
+            (s == 6) & (s_next == 8),
+            (s == 7) & (s_next == 8),
+            (s == 8) & (s_next == 9),
+            (s == 9) & (s_next == 10),
+            (s == 10) & (s_next == 10)
+		];
+        // idk why have to say == true
+        let found = cases.any(|case|  case == true | range == false );
+        s = s_next;
+        assert(found, "no match");
+    }
+    // check last is 9 or 10
+
+    substrings
+}
+
+pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> (BoundedVec<BoundedVec<Field, N>, 2>, u32, u32) {
     // regex: x[0-9]{2}-y{2,3}_z
-    let mut substrings: Vec<BoundedVec<Field, N>> = Vec::new();
+    let mut substrings: BoundedVec<BoundedVec<Field, N>, 2> = BoundedVec::new();
 
     // "Previous" state
     let mut s: Field = 0;
@@ -17,6 +47,9 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {
 
     let mut consecutive_substr = 0;
     let mut current_substring = BoundedVec::new();
+    let mut start_index = 0;
+    let mut end_index = 0;
+    let mut complete = false;
 
     for i in 0..input.len() {
         let temp = input[i] as Field;
@@ -40,23 +73,27 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {
         }
         // Fill up substrings
         if ((s == 0) & (s_next == 1) | (s == 1) & (s_next == 2) | (s == 2) & (s_next == 3)) {
-            if (consecutive_substr == 0) {
-              current_substring.push(temp);
-              consecutive_substr = 1;
-            } else if (consecutive_substr == 1) {
-              current_substring.push(temp);
-            }   
+            	if (consecutive_substr == 0) {
+                                start_index = i;
+                            };
+
+            current_substring.push(temp);
+            consecutive_substr = 1;   
         }
         else if ((s == 6) & (s_next == 8) | (s == 7) & (s_next == 8) | (s == 8) & (s_next == 9)) {
-            if (consecutive_substr == 0) {
-              current_substring.push(temp);
-              consecutive_substr = 1;
-            } else if (consecutive_substr == 1) {
-              current_substring.push(temp);
-            }   
+    
+            current_substring.push(temp);
+            consecutive_substr = 1;   
         } else if ((consecutive_substr == 1) & (s_next == 0)) {
             current_substring = BoundedVec::new();
+            substrings = BoundedVec::new();
             consecutive_substr = 0;
+            start_index = 0;
+            end_index = 0;
+        } else if (s == 9) & (s_next == 10) {
+            end_index = i;
+            complete = true;
+            break;
         } else if (consecutive_substr == 1) {
             // The substring is done so "save" it
             substrings.push(current_substring);
@@ -71,5 +108,5 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {
     if consecutive_substr == 1 {
         substrings.push(current_substring);
     }
-    substrings
+    (substrings, start_index, end_index)
 }

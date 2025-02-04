@@ -1,6 +1,6 @@
 mod regex;
 
-global MAX_INPUT_SIZE: u32 = 512;
+global MAX_INPUT_SIZE: u32 = 2048;
 
 fn main(input: [u8; MAX_INPUT_SIZE]) {
     let x = regex::regex_match(input);
