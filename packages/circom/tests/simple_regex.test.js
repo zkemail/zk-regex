@@ -68,7 +68,7 @@ describe("Simple Regex", () => {
       for (let idx = 0; idx < 64; ++idx) {
         if (revealedIdx[substr_idx].includes(idx)) {
           expect(BigInt(paddedStr[idx])).toEqual(
-            witness[2 + 64 * substr_idx + idx]
+            witness[2 + 64 * substr_idx +   idx]
           );
         } else {
           expect(0n).toEqual(witness[2 + 64 * substr_idx + idx]);

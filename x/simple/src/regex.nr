@@ -570,7 +570,7 @@ pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> (BoundedVec<Bo
     let mut current_substring = BoundedVec::new();
     let mut start_index = 0;
     let mut end_index = 0;
-    let mut complete = true;
+    let mut complete = false;
 
     for i in 0..input.len() {
         let temp = input[i] as Field;
@@ -582,8 +582,6 @@ pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> (BoundedVec<Bo
             s = 0;
             s_next = potential_s_next;
         }
-        println(f"s: {s}");
-
         // If a substring was in the making, but the state was reset
         // we disregard previous progress because apparently it is invalid
         if (reset & (consecutive_substr == 1)) {
@@ -592,10 +590,10 @@ pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> (BoundedVec<Bo
         }
         // Fill up substrings
         if ((s == 1) & (s_next == 2)) {
-            if (consecutive_substr == 0) {
-                println("hi");
+            	if (consecutive_substr == 0) {
                 start_index = i;
             };
+
             current_substring.push(temp);
             consecutive_substr = 1;   
         } else if ((consecutive_substr == 1) & (s_next == 0)) {
@@ -613,7 +611,7 @@ pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> (BoundedVec<Bo
             // reset the substring holder for next use
             current_substring = BoundedVec::new();
             consecutive_substr = 0;
-        } 
+        }
         s = s_next;
         if complete == true {
             break;

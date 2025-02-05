@@ -56,6 +56,7 @@ pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> (BoundedVec<Bo
     let mut current_substring = BoundedVec::new();
     let mut start_index = 0;
     let mut end_index = 0;
+    let mut complete = false;
 
     for i in 0..input.len() {
         let temp = input[i] as Field;
@@ -89,7 +90,7 @@ pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> (BoundedVec<Bo
             end_index = 0;
         } else if (s == 2) & (s_next == 3) {
             end_index = i;
-            break;
+            complete = true;
         } else if (consecutive_substr == 1) {
             // The substring is done so "save" it
             substrings.push(current_substring);
@@ -98,6 +99,9 @@ pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> (BoundedVec<Bo
             consecutive_substr = 0;
         }
         s = s_next;
+        if complete == true {
+            break;
+        }
     }
     assert((s == 2) | (s == 3), f"no match: {s}");
     // Add pending substring that hasn't been added

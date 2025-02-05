@@ -66,8 +66,8 @@ fn test_3() {
 #[test]
 fn test_4() {
     let input = "aa".as_bytes();
-    let out = regex::__regex_match(input);
-    println(out.0.get(0));
+    let out = regex::regex_match(input);
+    println(out.get(0));
 }
 
 // #[test]

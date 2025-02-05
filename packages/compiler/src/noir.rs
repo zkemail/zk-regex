@@ -223,7 +223,6 @@ global table: {sparse_str}
 }} else if {end_states_condition_body} {{
     end_index = i;
     complete = true;
-    break;
 }} else if (consecutive_substr == 1) {{
     // The substring is done so \"save\" it
     substrings.push(current_substring);
@@ -306,11 +305,15 @@ pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> (BoundedVec<Bo
         // Fill up substrings
 {conditions}
         s = s_next;
+        if complete == true {{
+            break;
+        }}
     }}
     assert({final_states_condition_body}, f"no match: {{s}}");
     // Add pending substring that hasn't been added
     if consecutive_substr == 1 {{
         substrings.push(current_substring);
+        end_index = input.len();
     }}
     (substrings, start_index, end_index)
 }}"#,
