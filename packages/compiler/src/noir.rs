@@ -152,20 +152,45 @@ global table: {sparse_str}
         .map(|id| format!("(s == {id})"))
         .collect_vec()
         .join(" | ");
-    let end_states_condition_body = format!("(s == {}) & (s_next == {})", accept_state_ids[0], accept_state_ids[1]);
-    let finished_condition_body = format!("(s == {}) & (s_next == {})", accept_state_ids[1], accept_state_ids[1]);
+    let end_states_condition_body = match accept_state_ids.len() == 1 {
+        true => format!(
+            "(s == {}) & (s_next == {})",
+            accept_state_ids[0], accept_state_ids[0]
+        ),
+        false => format!(
+            "(s == {}) & (s_next == {})",
+            accept_state_ids[0], accept_state_ids[1]
+        ),
+    };
+    let finished_condition_body = match accept_state_ids.len() == 1 {
+        true => format!(
+            "(s == {}) & (s_next == {})",
+            accept_state_ids[0], accept_state_ids[0]
+        ),
+        false => format!(
+            "(s == {}) & (s_next == {})",
+            accept_state_ids[1], accept_state_ids[1]
+        ),
+    };
     // If substrings have to be extracted, the function returns a vector of BoundedVec
     // otherwise there is no return type
     let all_cases = {
-        let mut cases = substr_ranges.iter().map(|range_set| {
-            range_set
-                .iter()
-                .map(|(range_start, range_end)| {
-                    indent(&format!("(s == {range_start}) & (s_next == {range_end}),"), 3)
-                })
-                .collect::<Vec<_>>()
-                .join("\n")
-        }).collect::<Vec<_>>().join("\n");
+        let mut cases = substr_ranges
+            .iter()
+            .map(|range_set| {
+                range_set
+                    .iter()
+                    .map(|(range_start, range_end)| {
+                        indent(
+                            &format!("(s == {range_start}) & (s_next == {range_end}),"),
+                            3,
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
         cases = format!(
             "{cases}\n{accept_state}\n{finished_state}",
             accept_state = format!("{},", indent(&end_states_condition_body, 3)),
@@ -191,14 +216,15 @@ global table: {sparse_str}
                 // For the first condition, use `if`, for others, use `else if`
                 let (start_part, start_index) = if first_condition {
                     first_condition = false;
-                    let start_index_text = format!("\tif (consecutive_substr == 0) {{
+                    let start_index_text = format!(
+                        "\tif (consecutive_substr == 0) {{
         start_index = i;
-    }};\n");
+    }};\n"
+                    );
                     ("if", start_index_text)
                 } else {
                     ("else if", format!(""))
                 };
-
 
                 // The body of the condition handling substring creation/updating
                 format!(
@@ -317,10 +343,12 @@ pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> (BoundedVec<Bo
     }}
     (substrings, start_index, end_index)
 }}"#,
-            regex_pattern = regex_and_dfa
-                .regex_pattern
-                .replace('\n', "\\n")
-                .replace('\r', "\\r"),
+            regex_pattern = escape_non_ascii(
+                &regex_and_dfa
+                    .regex_pattern
+                    .replace('\n', "\\n")
+                    .replace('\r', "\\r")
+            ),
             table_access_255 = access_table("255", sparse_array),
             table_access_s_next = access_table("s * 256 + temp", sparse_array),
             table_access_s_next_temp = access_table("temp", sparse_array),
@@ -341,10 +369,11 @@ pub fn regex_match<let N: u32>(input: [u8; N]) {{
     }}
     assert({final_states_condition_body}, f"no match: {{s}}");
 }}"#,
-            regex_pattern = regex_and_dfa
+            regex_pattern = escape_non_ascii(&regex_and_dfa
                 .regex_pattern
                 .replace('\n', "\\n")
-                .replace('\r', "\\r"),
+                .replace('\r', "\\r")
+            ),
             table_access_255 = access_table("255", sparse_array),
             table_access_s_idx = access_table("s_idx", sparse_array),
         )
@@ -381,4 +410,18 @@ fn access_table(s: &str, sparse: bool) -> String {
         true => format!("table.get({})", s),
         false => format!("table[{}]", s),
     }
+}
+
+// Noir does not like non-ascii comments so use this to show regex
+fn escape_non_ascii(input: &str) -> String {
+    input
+        .chars()
+        .map(|c| {
+            if c.is_ascii() {
+                c.to_string()
+            } else {
+                format!("\\u{{{:04x}}}", c as u32)
+            }
+        })
+        .collect()
 }
