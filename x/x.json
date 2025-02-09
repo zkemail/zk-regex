@@ -1,8 +1,28 @@
 {
-  "parts": [
+  "parts":[
+    {
+      "is_public": false,
+      "regex_def": "Latin-Extension="
+    },
     {
       "is_public": true,
-      "regex_def": "^a"
+      "regex_def": "[¡-ƿ]+"
+    },
+    {
+      "is_public": false,
+      "regex_def": " Greek="
+    },
+    {
+      "is_public": true,
+      "regex_def": "[Ͱ-Ͽ]+"
+    },
+    {
+      "is_public": false,
+      "regex_def": " Cyrillic="
+    },
+    {
+      "is_public": true,
+      "regex_def": "[Ѐ-ӿ]+"
     }
   ]
 }

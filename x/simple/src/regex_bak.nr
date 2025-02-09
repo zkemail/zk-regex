@@ -1,0 +1,692 @@
+global table: [Field; 1024] = comptime { make_lookup_table() };
+
+comptime fn make_lookup_table() -> [Field; 1024] {
+    let mut table = [0; 1024];
+    table[2 * 256 + 0] = 3;
+    table[3 * 256 + 0] = 3;
+    table[2 * 256 + 1] = 3;
+    table[3 * 256 + 1] = 3;
+    table[2 * 256 + 2] = 3;
+    table[3 * 256 + 2] = 3;
+    table[2 * 256 + 3] = 3;
+    table[3 * 256 + 3] = 3;
+    table[2 * 256 + 4] = 3;
+    table[3 * 256 + 4] = 3;
+    table[2 * 256 + 5] = 3;
+    table[3 * 256 + 5] = 3;
+    table[2 * 256 + 6] = 3;
+    table[3 * 256 + 6] = 3;
+    table[2 * 256 + 7] = 3;
+    table[3 * 256 + 7] = 3;
+    table[2 * 256 + 8] = 3;
+    table[3 * 256 + 8] = 3;
+    table[2 * 256 + 9] = 3;
+    table[3 * 256 + 9] = 3;
+    table[2 * 256 + 10] = 3;
+    table[3 * 256 + 10] = 3;
+    table[2 * 256 + 11] = 3;
+    table[3 * 256 + 11] = 3;
+    table[2 * 256 + 12] = 3;
+    table[3 * 256 + 12] = 3;
+    table[2 * 256 + 13] = 3;
+    table[3 * 256 + 13] = 3;
+    table[2 * 256 + 14] = 3;
+    table[3 * 256 + 14] = 3;
+    table[2 * 256 + 15] = 3;
+    table[3 * 256 + 15] = 3;
+    table[2 * 256 + 16] = 3;
+    table[3 * 256 + 16] = 3;
+    table[2 * 256 + 17] = 3;
+    table[3 * 256 + 17] = 3;
+    table[2 * 256 + 18] = 3;
+    table[3 * 256 + 18] = 3;
+    table[2 * 256 + 19] = 3;
+    table[3 * 256 + 19] = 3;
+    table[2 * 256 + 20] = 3;
+    table[3 * 256 + 20] = 3;
+    table[2 * 256 + 21] = 3;
+    table[3 * 256 + 21] = 3;
+    table[2 * 256 + 22] = 3;
+    table[3 * 256 + 22] = 3;
+    table[2 * 256 + 23] = 3;
+    table[3 * 256 + 23] = 3;
+    table[2 * 256 + 24] = 3;
+    table[3 * 256 + 24] = 3;
+    table[2 * 256 + 25] = 3;
+    table[3 * 256 + 25] = 3;
+    table[2 * 256 + 26] = 3;
+    table[3 * 256 + 26] = 3;
+    table[2 * 256 + 27] = 3;
+    table[3 * 256 + 27] = 3;
+    table[2 * 256 + 28] = 3;
+    table[3 * 256 + 28] = 3;
+    table[2 * 256 + 29] = 3;
+    table[3 * 256 + 29] = 3;
+    table[2 * 256 + 30] = 3;
+    table[3 * 256 + 30] = 3;
+    table[2 * 256 + 31] = 3;
+    table[3 * 256 + 31] = 3;
+    table[2 * 256 + 32] = 3;
+    table[3 * 256 + 32] = 3;
+    table[2 * 256 + 33] = 3;
+    table[3 * 256 + 33] = 3;
+    table[2 * 256 + 34] = 3;
+    table[3 * 256 + 34] = 3;
+    table[2 * 256 + 35] = 3;
+    table[3 * 256 + 35] = 3;
+    table[2 * 256 + 36] = 3;
+    table[3 * 256 + 36] = 3;
+    table[2 * 256 + 37] = 3;
+    table[3 * 256 + 37] = 3;
+    table[2 * 256 + 38] = 3;
+    table[3 * 256 + 38] = 3;
+    table[2 * 256 + 39] = 3;
+    table[3 * 256 + 39] = 3;
+    table[2 * 256 + 40] = 3;
+    table[3 * 256 + 40] = 3;
+    table[2 * 256 + 41] = 3;
+    table[3 * 256 + 41] = 3;
+    table[2 * 256 + 42] = 3;
+    table[3 * 256 + 42] = 3;
+    table[2 * 256 + 43] = 3;
+    table[3 * 256 + 43] = 3;
+    table[2 * 256 + 44] = 3;
+    table[3 * 256 + 44] = 3;
+    table[2 * 256 + 45] = 3;
+    table[3 * 256 + 45] = 3;
+    table[2 * 256 + 46] = 3;
+    table[3 * 256 + 46] = 3;
+    table[2 * 256 + 47] = 3;
+    table[3 * 256 + 47] = 3;
+    table[2 * 256 + 48] = 3;
+    table[3 * 256 + 48] = 3;
+    table[2 * 256 + 49] = 3;
+    table[3 * 256 + 49] = 3;
+    table[2 * 256 + 50] = 3;
+    table[3 * 256 + 50] = 3;
+    table[2 * 256 + 51] = 3;
+    table[3 * 256 + 51] = 3;
+    table[2 * 256 + 52] = 3;
+    table[3 * 256 + 52] = 3;
+    table[2 * 256 + 53] = 3;
+    table[3 * 256 + 53] = 3;
+    table[2 * 256 + 54] = 3;
+    table[3 * 256 + 54] = 3;
+    table[2 * 256 + 55] = 3;
+    table[3 * 256 + 55] = 3;
+    table[2 * 256 + 56] = 3;
+    table[3 * 256 + 56] = 3;
+    table[2 * 256 + 57] = 3;
+    table[3 * 256 + 57] = 3;
+    table[2 * 256 + 58] = 3;
+    table[3 * 256 + 58] = 3;
+    table[2 * 256 + 59] = 3;
+    table[3 * 256 + 59] = 3;
+    table[2 * 256 + 60] = 3;
+    table[3 * 256 + 60] = 3;
+    table[2 * 256 + 61] = 3;
+    table[3 * 256 + 61] = 3;
+    table[2 * 256 + 62] = 3;
+    table[3 * 256 + 62] = 3;
+    table[2 * 256 + 63] = 3;
+    table[3 * 256 + 63] = 3;
+    table[2 * 256 + 64] = 3;
+    table[3 * 256 + 64] = 3;
+    table[2 * 256 + 65] = 3;
+    table[3 * 256 + 65] = 3;
+    table[2 * 256 + 66] = 3;
+    table[3 * 256 + 66] = 3;
+    table[2 * 256 + 67] = 3;
+    table[3 * 256 + 67] = 3;
+    table[2 * 256 + 68] = 3;
+    table[3 * 256 + 68] = 3;
+    table[2 * 256 + 69] = 3;
+    table[3 * 256 + 69] = 3;
+    table[2 * 256 + 70] = 3;
+    table[3 * 256 + 70] = 3;
+    table[2 * 256 + 71] = 3;
+    table[3 * 256 + 71] = 3;
+    table[2 * 256 + 72] = 3;
+    table[3 * 256 + 72] = 3;
+    table[2 * 256 + 73] = 3;
+    table[3 * 256 + 73] = 3;
+    table[2 * 256 + 74] = 3;
+    table[3 * 256 + 74] = 3;
+    table[2 * 256 + 75] = 3;
+    table[3 * 256 + 75] = 3;
+    table[2 * 256 + 76] = 3;
+    table[3 * 256 + 76] = 3;
+    table[2 * 256 + 77] = 3;
+    table[3 * 256 + 77] = 3;
+    table[2 * 256 + 78] = 3;
+    table[3 * 256 + 78] = 3;
+    table[2 * 256 + 79] = 3;
+    table[3 * 256 + 79] = 3;
+    table[2 * 256 + 80] = 3;
+    table[3 * 256 + 80] = 3;
+    table[2 * 256 + 81] = 3;
+    table[3 * 256 + 81] = 3;
+    table[2 * 256 + 82] = 3;
+    table[3 * 256 + 82] = 3;
+    table[2 * 256 + 83] = 3;
+    table[3 * 256 + 83] = 3;
+    table[2 * 256 + 84] = 3;
+    table[3 * 256 + 84] = 3;
+    table[2 * 256 + 85] = 3;
+    table[3 * 256 + 85] = 3;
+    table[2 * 256 + 86] = 3;
+    table[3 * 256 + 86] = 3;
+    table[2 * 256 + 87] = 3;
+    table[3 * 256 + 87] = 3;
+    table[2 * 256 + 88] = 3;
+    table[3 * 256 + 88] = 3;
+    table[2 * 256 + 89] = 3;
+    table[3 * 256 + 89] = 3;
+    table[2 * 256 + 90] = 3;
+    table[3 * 256 + 90] = 3;
+    table[2 * 256 + 91] = 3;
+    table[3 * 256 + 91] = 3;
+    table[2 * 256 + 92] = 3;
+    table[3 * 256 + 92] = 3;
+    table[2 * 256 + 93] = 3;
+    table[3 * 256 + 93] = 3;
+    table[2 * 256 + 94] = 3;
+    table[3 * 256 + 94] = 3;
+    table[2 * 256 + 95] = 3;
+    table[3 * 256 + 95] = 3;
+    table[2 * 256 + 96] = 3;
+    table[3 * 256 + 96] = 3;
+    table[2 * 256 + 97] = 3;
+    table[3 * 256 + 97] = 3;
+    table[2 * 256 + 98] = 3;
+    table[3 * 256 + 98] = 3;
+    table[2 * 256 + 99] = 3;
+    table[3 * 256 + 99] = 3;
+    table[2 * 256 + 100] = 3;
+    table[3 * 256 + 100] = 3;
+    table[2 * 256 + 101] = 3;
+    table[3 * 256 + 101] = 3;
+    table[2 * 256 + 102] = 3;
+    table[3 * 256 + 102] = 3;
+    table[2 * 256 + 103] = 3;
+    table[3 * 256 + 103] = 3;
+    table[2 * 256 + 104] = 3;
+    table[3 * 256 + 104] = 3;
+    table[2 * 256 + 105] = 3;
+    table[3 * 256 + 105] = 3;
+    table[2 * 256 + 106] = 3;
+    table[3 * 256 + 106] = 3;
+    table[2 * 256 + 107] = 3;
+    table[3 * 256 + 107] = 3;
+    table[2 * 256 + 108] = 3;
+    table[3 * 256 + 108] = 3;
+    table[2 * 256 + 109] = 3;
+    table[3 * 256 + 109] = 3;
+    table[2 * 256 + 110] = 3;
+    table[3 * 256 + 110] = 3;
+    table[2 * 256 + 111] = 3;
+    table[3 * 256 + 111] = 3;
+    table[2 * 256 + 112] = 3;
+    table[3 * 256 + 112] = 3;
+    table[2 * 256 + 113] = 3;
+    table[3 * 256 + 113] = 3;
+    table[2 * 256 + 114] = 3;
+    table[3 * 256 + 114] = 3;
+    table[2 * 256 + 115] = 3;
+    table[3 * 256 + 115] = 3;
+    table[2 * 256 + 116] = 3;
+    table[3 * 256 + 116] = 3;
+    table[2 * 256 + 117] = 3;
+    table[3 * 256 + 117] = 3;
+    table[2 * 256 + 118] = 3;
+    table[3 * 256 + 118] = 3;
+    table[2 * 256 + 119] = 3;
+    table[3 * 256 + 119] = 3;
+    table[2 * 256 + 120] = 3;
+    table[3 * 256 + 120] = 3;
+    table[2 * 256 + 121] = 3;
+    table[3 * 256 + 121] = 3;
+    table[2 * 256 + 122] = 3;
+    table[3 * 256 + 122] = 3;
+    table[2 * 256 + 123] = 3;
+    table[3 * 256 + 123] = 3;
+    table[2 * 256 + 124] = 3;
+    table[3 * 256 + 124] = 3;
+    table[2 * 256 + 125] = 3;
+    table[3 * 256 + 125] = 3;
+    table[2 * 256 + 126] = 3;
+    table[3 * 256 + 126] = 3;
+    table[2 * 256 + 127] = 3;
+    table[3 * 256 + 127] = 3;
+    table[2 * 256 + 128] = 3;
+    table[3 * 256 + 128] = 3;
+    table[2 * 256 + 129] = 3;
+    table[3 * 256 + 129] = 3;
+    table[2 * 256 + 130] = 3;
+    table[3 * 256 + 130] = 3;
+    table[2 * 256 + 131] = 3;
+    table[3 * 256 + 131] = 3;
+    table[2 * 256 + 132] = 3;
+    table[3 * 256 + 132] = 3;
+    table[2 * 256 + 133] = 3;
+    table[3 * 256 + 133] = 3;
+    table[2 * 256 + 134] = 3;
+    table[3 * 256 + 134] = 3;
+    table[2 * 256 + 135] = 3;
+    table[3 * 256 + 135] = 3;
+    table[2 * 256 + 136] = 3;
+    table[3 * 256 + 136] = 3;
+    table[2 * 256 + 137] = 3;
+    table[3 * 256 + 137] = 3;
+    table[2 * 256 + 138] = 3;
+    table[3 * 256 + 138] = 3;
+    table[2 * 256 + 139] = 3;
+    table[3 * 256 + 139] = 3;
+    table[2 * 256 + 140] = 3;
+    table[3 * 256 + 140] = 3;
+    table[2 * 256 + 141] = 3;
+    table[3 * 256 + 141] = 3;
+    table[2 * 256 + 142] = 3;
+    table[3 * 256 + 142] = 3;
+    table[2 * 256 + 143] = 3;
+    table[3 * 256 + 143] = 3;
+    table[2 * 256 + 144] = 3;
+    table[3 * 256 + 144] = 3;
+    table[2 * 256 + 145] = 3;
+    table[3 * 256 + 145] = 3;
+    table[2 * 256 + 146] = 3;
+    table[3 * 256 + 146] = 3;
+    table[2 * 256 + 147] = 3;
+    table[3 * 256 + 147] = 3;
+    table[2 * 256 + 148] = 3;
+    table[3 * 256 + 148] = 3;
+    table[2 * 256 + 149] = 3;
+    table[3 * 256 + 149] = 3;
+    table[2 * 256 + 150] = 3;
+    table[3 * 256 + 150] = 3;
+    table[2 * 256 + 151] = 3;
+    table[3 * 256 + 151] = 3;
+    table[2 * 256 + 152] = 3;
+    table[3 * 256 + 152] = 3;
+    table[2 * 256 + 153] = 3;
+    table[3 * 256 + 153] = 3;
+    table[2 * 256 + 154] = 3;
+    table[3 * 256 + 154] = 3;
+    table[2 * 256 + 155] = 3;
+    table[3 * 256 + 155] = 3;
+    table[2 * 256 + 156] = 3;
+    table[3 * 256 + 156] = 3;
+    table[2 * 256 + 157] = 3;
+    table[3 * 256 + 157] = 3;
+    table[2 * 256 + 158] = 3;
+    table[3 * 256 + 158] = 3;
+    table[2 * 256 + 159] = 3;
+    table[3 * 256 + 159] = 3;
+    table[2 * 256 + 160] = 3;
+    table[3 * 256 + 160] = 3;
+    table[2 * 256 + 161] = 3;
+    table[3 * 256 + 161] = 3;
+    table[2 * 256 + 162] = 3;
+    table[3 * 256 + 162] = 3;
+    table[2 * 256 + 163] = 3;
+    table[3 * 256 + 163] = 3;
+    table[2 * 256 + 164] = 3;
+    table[3 * 256 + 164] = 3;
+    table[2 * 256 + 165] = 3;
+    table[3 * 256 + 165] = 3;
+    table[2 * 256 + 166] = 3;
+    table[3 * 256 + 166] = 3;
+    table[2 * 256 + 167] = 3;
+    table[3 * 256 + 167] = 3;
+    table[2 * 256 + 168] = 3;
+    table[3 * 256 + 168] = 3;
+    table[2 * 256 + 169] = 3;
+    table[3 * 256 + 169] = 3;
+    table[2 * 256 + 170] = 3;
+    table[3 * 256 + 170] = 3;
+    table[2 * 256 + 171] = 3;
+    table[3 * 256 + 171] = 3;
+    table[2 * 256 + 172] = 3;
+    table[3 * 256 + 172] = 3;
+    table[2 * 256 + 173] = 3;
+    table[3 * 256 + 173] = 3;
+    table[2 * 256 + 174] = 3;
+    table[3 * 256 + 174] = 3;
+    table[2 * 256 + 175] = 3;
+    table[3 * 256 + 175] = 3;
+    table[2 * 256 + 176] = 3;
+    table[3 * 256 + 176] = 3;
+    table[2 * 256 + 177] = 3;
+    table[3 * 256 + 177] = 3;
+    table[2 * 256 + 178] = 3;
+    table[3 * 256 + 178] = 3;
+    table[2 * 256 + 179] = 3;
+    table[3 * 256 + 179] = 3;
+    table[2 * 256 + 180] = 3;
+    table[3 * 256 + 180] = 3;
+    table[2 * 256 + 181] = 3;
+    table[3 * 256 + 181] = 3;
+    table[2 * 256 + 182] = 3;
+    table[3 * 256 + 182] = 3;
+    table[2 * 256 + 183] = 3;
+    table[3 * 256 + 183] = 3;
+    table[2 * 256 + 184] = 3;
+    table[3 * 256 + 184] = 3;
+    table[2 * 256 + 185] = 3;
+    table[3 * 256 + 185] = 3;
+    table[2 * 256 + 186] = 3;
+    table[3 * 256 + 186] = 3;
+    table[2 * 256 + 187] = 3;
+    table[3 * 256 + 187] = 3;
+    table[2 * 256 + 188] = 3;
+    table[3 * 256 + 188] = 3;
+    table[2 * 256 + 189] = 3;
+    table[3 * 256 + 189] = 3;
+    table[2 * 256 + 190] = 3;
+    table[3 * 256 + 190] = 3;
+    table[2 * 256 + 191] = 3;
+    table[3 * 256 + 191] = 3;
+    table[2 * 256 + 192] = 3;
+    table[3 * 256 + 192] = 3;
+    table[2 * 256 + 193] = 3;
+    table[3 * 256 + 193] = 3;
+    table[2 * 256 + 194] = 3;
+    table[3 * 256 + 194] = 3;
+    table[2 * 256 + 195] = 3;
+    table[3 * 256 + 195] = 3;
+    table[2 * 256 + 196] = 3;
+    table[3 * 256 + 196] = 3;
+    table[2 * 256 + 197] = 3;
+    table[3 * 256 + 197] = 3;
+    table[2 * 256 + 198] = 3;
+    table[3 * 256 + 198] = 3;
+    table[2 * 256 + 199] = 3;
+    table[3 * 256 + 199] = 3;
+    table[2 * 256 + 200] = 3;
+    table[3 * 256 + 200] = 3;
+    table[2 * 256 + 201] = 3;
+    table[3 * 256 + 201] = 3;
+    table[2 * 256 + 202] = 3;
+    table[3 * 256 + 202] = 3;
+    table[2 * 256 + 203] = 3;
+    table[3 * 256 + 203] = 3;
+    table[2 * 256 + 204] = 3;
+    table[3 * 256 + 204] = 3;
+    table[2 * 256 + 205] = 3;
+    table[3 * 256 + 205] = 3;
+    table[2 * 256 + 206] = 3;
+    table[3 * 256 + 206] = 3;
+    table[2 * 256 + 207] = 3;
+    table[3 * 256 + 207] = 3;
+    table[2 * 256 + 208] = 3;
+    table[3 * 256 + 208] = 3;
+    table[2 * 256 + 209] = 3;
+    table[3 * 256 + 209] = 3;
+    table[2 * 256 + 210] = 3;
+    table[3 * 256 + 210] = 3;
+    table[2 * 256 + 211] = 3;
+    table[3 * 256 + 211] = 3;
+    table[2 * 256 + 212] = 3;
+    table[3 * 256 + 212] = 3;
+    table[2 * 256 + 213] = 3;
+    table[3 * 256 + 213] = 3;
+    table[2 * 256 + 214] = 3;
+    table[3 * 256 + 214] = 3;
+    table[2 * 256 + 215] = 3;
+    table[3 * 256 + 215] = 3;
+    table[2 * 256 + 216] = 3;
+    table[3 * 256 + 216] = 3;
+    table[2 * 256 + 217] = 3;
+    table[3 * 256 + 217] = 3;
+    table[2 * 256 + 218] = 3;
+    table[3 * 256 + 218] = 3;
+    table[2 * 256 + 219] = 3;
+    table[3 * 256 + 219] = 3;
+    table[2 * 256 + 220] = 3;
+    table[3 * 256 + 220] = 3;
+    table[2 * 256 + 221] = 3;
+    table[3 * 256 + 221] = 3;
+    table[2 * 256 + 222] = 3;
+    table[3 * 256 + 222] = 3;
+    table[2 * 256 + 223] = 3;
+    table[3 * 256 + 223] = 3;
+    table[2 * 256 + 224] = 3;
+    table[3 * 256 + 224] = 3;
+    table[2 * 256 + 225] = 3;
+    table[3 * 256 + 225] = 3;
+    table[2 * 256 + 226] = 3;
+    table[3 * 256 + 226] = 3;
+    table[2 * 256 + 227] = 3;
+    table[3 * 256 + 227] = 3;
+    table[2 * 256 + 228] = 3;
+    table[3 * 256 + 228] = 3;
+    table[2 * 256 + 229] = 3;
+    table[3 * 256 + 229] = 3;
+    table[2 * 256 + 230] = 3;
+    table[3 * 256 + 230] = 3;
+    table[2 * 256 + 231] = 3;
+    table[3 * 256 + 231] = 3;
+    table[2 * 256 + 232] = 3;
+    table[3 * 256 + 232] = 3;
+    table[2 * 256 + 233] = 3;
+    table[3 * 256 + 233] = 3;
+    table[2 * 256 + 234] = 3;
+    table[3 * 256 + 234] = 3;
+    table[2 * 256 + 235] = 3;
+    table[3 * 256 + 235] = 3;
+    table[2 * 256 + 236] = 3;
+    table[3 * 256 + 236] = 3;
+    table[2 * 256 + 237] = 3;
+    table[3 * 256 + 237] = 3;
+    table[2 * 256 + 238] = 3;
+    table[3 * 256 + 238] = 3;
+    table[2 * 256 + 239] = 3;
+    table[3 * 256 + 239] = 3;
+    table[2 * 256 + 240] = 3;
+    table[3 * 256 + 240] = 3;
+    table[2 * 256 + 241] = 3;
+    table[3 * 256 + 241] = 3;
+    table[2 * 256 + 242] = 3;
+    table[3 * 256 + 242] = 3;
+    table[2 * 256 + 243] = 3;
+    table[3 * 256 + 243] = 3;
+    table[2 * 256 + 244] = 3;
+    table[3 * 256 + 244] = 3;
+    table[2 * 256 + 245] = 3;
+    table[3 * 256 + 245] = 3;
+    table[2 * 256 + 246] = 3;
+    table[3 * 256 + 246] = 3;
+    table[2 * 256 + 247] = 3;
+    table[3 * 256 + 247] = 3;
+    table[2 * 256 + 248] = 3;
+    table[3 * 256 + 248] = 3;
+    table[2 * 256 + 249] = 3;
+    table[3 * 256 + 249] = 3;
+    table[2 * 256 + 250] = 3;
+    table[3 * 256 + 250] = 3;
+    table[2 * 256 + 251] = 3;
+    table[3 * 256 + 251] = 3;
+    table[2 * 256 + 252] = 3;
+    table[3 * 256 + 252] = 3;
+    table[2 * 256 + 253] = 3;
+    table[3 * 256 + 253] = 3;
+    table[2 * 256 + 254] = 3;
+    table[3 * 256 + 254] = 3;
+    table[0 * 256 + 255] = 1;
+    table[1 * 256 + 97] = 2;
+
+    table
+}
+
+pub struct Sequence {
+    index: u32,
+    length: u32,
+}
+
+impl Sequence {
+    pub fn new(index: u32, length: u32) -> Self {
+        Self { index, length }
+    }
+
+    pub fn default() -> Self {
+        Self { index: 0, length: 0 }
+    }
+}
+
+pub struct RegexMatch<let INPUT_LENGTH: u32, let NUM_SUBSTRINGS: u32> {
+    masked: [u8; INPUT_LENGTH],
+    full_match: Sequence,
+    substrings: [Sequence; NUM_SUBSTRINGS],
+}
+
+pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<BoundedVec<u8, N>, 1> {
+    let pattern_match = unsafe { __regex_match(input) };
+
+    // "Previous" state
+    let mut s: Field = 0;
+    s = table[255];
+    // "Next"/upcoming state
+    let mut s_next: Field = 0;
+
+    // check the match
+    for i in 0..N {
+        let temp = input[i] as Field;
+        s_next = table[s * 256 + temp];
+        let potential_s_next = table[temp];
+        if s_next == 0 {
+            s = 0;
+            s_next = potential_s_next;
+        }
+        std::as_witness(s_next);
+
+        // let range = i >= start & i <= end;
+        // let cases = [(s == 1) & (s_next == 2), (s == 2) & (s_next == 3), (s == 3) & (s_next == 3)];
+        // // idk why have to say == true
+        // let found = cases.any(|case| case == true | range == false);
+        s = s_next;
+        // assert(found, "no match");
+    }
+    // check final state
+    assert((s == 2) | (s == 3), f"no match: {s}");
+
+    // extract substrings
+    let mut substrings: BoundedVec<BoundedVec<u8, N>, 1> = BoundedVec::new();
+    for i in 0..1 {
+        let substring = pattern_match.substrings[i];
+        let extracted_substring = extract_substring(substring, input);
+        substrings.push(extracted_substring);
+    }
+
+    substrings
+}
+
+pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> RegexMatch<N, 1> {
+    // regex: ^a
+    // let mut substrings: BoundedVec<BoundedVec<Field, N>, 1> = BoundedVec::new();
+    // "Previous" state
+    let mut s: Field = 0;
+    s = table[255];
+    // "Next"/upcoming state
+    let mut s_next: Field = 0;
+
+    let mut consecutive_substr = 0;
+    let mut current_substring = Sequence::default();
+    let mut full_match = Sequence::default();
+    let mut substrings: BoundedVec<Sequence, 1> = BoundedVec::new();
+    let mut complete = false;
+
+    for i in 0..input.len() {
+        let temp = input[i] as Field;
+        let mut reset = false;
+        s_next = table[s * 256 + temp];
+        let potential_s_next = table[temp];
+        if s_next == 0 {
+            reset = true;
+            s = 0;
+            s_next = potential_s_next;
+        }
+        // If a substring was in the making, but the state was reset
+        // we disregard previous progress because apparently it is invalid
+        if (reset & (consecutive_substr == 1)) {
+            current_substring = Sequence::default();
+            consecutive_substr = 0;
+        }
+        // Fill up substrings
+        if ((s == 1) & (s_next == 2)) {
+            if (consecutive_substr == 0) {
+                full_match.index = i;
+                current_substring.index = i;
+            };
+
+            current_substring.length += 1;
+            consecutive_substr = 1;
+        } else if ((consecutive_substr == 1) & (s_next == 0)) {
+            current_substring = Sequence::default();
+            full_match = Sequence::default();
+            substrings = BoundedVec::new();
+            consecutive_substr = 0;
+        } else if (s == 2) & (s_next == 3) {
+            full_match.length = i - full_match.index + 1;
+            complete = true;
+        } else if (consecutive_substr == 1) {
+            // The substring is done so "save" it
+            substrings.push(current_substring);
+            // reset the substring holder for next use
+            current_substring = Sequence::default();
+            consecutive_substr = 0;
+        }
+        s = s_next;
+        if complete == true {
+            break;
+        }
+    }
+    assert((s == 2) | (s == 3), f"no match: {s}");
+    // Add pending substring that hasn't been added
+    if consecutive_substr == 1 {
+        substrings.push(current_substring);
+        full_match.length = input.len() - full_match.index;
+    }
+
+    // make masked array
+    let mut masked = [0; N];
+    for i in 0..substrings.len() {
+        let substring = substrings.get(i);
+        let start_index = substring.index;
+        let end_index = start_index + substring.length;
+        for j in start_index..end_index {
+            masked[j] = input[j];
+        }
+    }
+
+    // return match
+    RegexMatch { masked, full_match, substrings: substrings.storage() }
+}
+
+pub fn extract_substring<let INPUT_LENGTH: u32, let MAX_SUBSTRING_LENGTH: u32>(
+    substring_sequence: Sequence,
+    input: [u8; INPUT_LENGTH],
+) -> BoundedVec<u8, MAX_SUBSTRING_LENGTH> {
+    let mut substring: BoundedVec<u8, MAX_SUBSTRING_LENGTH> = unsafe { __extract_substring(substring_sequence, input) };
+    assert(substring_sequence.length == substring.len(), "length mismatch");
+    for i in 0..MAX_SUBSTRING_LENGTH {
+        let index = substring_sequence.index + i;
+        let range_check = i >= substring_sequence.length;
+        let expected_byte = input[index];
+        let byte = substring.get_unchecked(index);
+        let matched = expected_byte == byte;
+        assert(range_check | matched, "incorrect substring construction");
+    }
+    substring
+}
+
+unconstrained fn __extract_substring<let INPUT_LENGTH: u32, let MAX_SUBSTRING_LENGTH: u32>(
+    substring_sequence: Sequence,
+    input: [u8; INPUT_LENGTH],
+) -> BoundedVec<u8, MAX_SUBSTRING_LENGTH> {
+    let mut substring: BoundedVec<u8, MAX_SUBSTRING_LENGTH> = BoundedVec::new();
+    for i in 0..substring_sequence.length {
+        let byte = input[substring_sequence.index + i];
+        substring.push(byte);
+    }
+    substring
+}

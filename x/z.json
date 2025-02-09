@@ -2,15 +2,11 @@
   "parts": [
     {
       "is_public": false,
-      "regex_def": "(\\r\\n|^)subject:"
+      "regex_def": "a"
     },
     {
       "is_public": true,
-      "regex_def": "[^\\r\\n]+"
-    },
-    {
-      "is_public": false,
-      "regex_def": "\\r\\n"
+      "regex_def": "b*"
     }
   ]
 }

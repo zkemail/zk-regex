@@ -1,6 +1,6 @@
 mod regex;
 
-global MAX_INPUT_SIZE: u32 = 128;
+global MAX_INPUT_SIZE: u32 = 1024;
 
 fn main(input: [u8; MAX_INPUT_SIZE]) {
     let x = regex::regex_match(input);
@@ -18,19 +18,20 @@ fn test_out() {
     println(x);
 }
 
-// #[test]
-// fn test_pass_1() {
-//     // let input: [u8; 8] = "x12-yy_z".as_bytes();
-//     let input: [u8; 26] = "x12-yy_     x12-yy_z      ".as_bytes();
+#[test]
+fn test_pass_1() {
+    // let input: [u8; 8] = "x12-yy_z".as_bytes();
+    let input = "x12-yy_     x12-yy_z      ".as_bytes();
 
-//     let out = regex::regex_match(input);
-//     for i in 0..10 {
-//         if i < out.len() {
-//             println(out.get(i));
-//         }
-//     }
-//     // println(out);
-// }
+    let out = regex::regex_match(input);
+    println(f"out: {out}");
+    // for i in 0..2 {
+    //     if i < out.len() {
+    //         println(out.get(i));
+    //     }
+    // }
+    // println(out);
+}
 
 // #[test]
 fn test_2() {
@@ -70,11 +71,18 @@ fn test_4() {
     println(out.get(0));
 }
 
-// #[test]
-// fn test_pass_2() {
-//     let input: [u8; 9] = "x99-yyy_z".as_bytes();
-//     regex::regex_match(input);
-// }
+#[test]
+fn test_5() {
+    let input = "Latin-Extension=Ʃƣƙ Greek=ϕω Cyrillic=иЩ Arabic=أبت Devanagari=आदित्य Hiragana&Katakana=なツ".as_bytes();
+    let out = regex::regex_match(input);
+    for i in 0..3 {
+        if i < out.len() {
+            println(out.get(i));
+        } else {
+            println(f"No element at {i}");
+        }
+    }
+}
 
 // #[test]
 // fn test_pass_3() {
