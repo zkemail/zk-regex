@@ -216,6 +216,5 @@ pub fn gen_circom_from_decomposed_regex(
     Ok(())
 }
 
-// do not re-define
 #[cfg(target_arch = "wasm32")]
 pub use crate::wasm::*;

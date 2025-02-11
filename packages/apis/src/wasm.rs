@@ -3,6 +3,7 @@ use crate::*;
 use console_error_panic_hook;
 use js_sys::Array;
 use serde_json::Value;
+use std::panic;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen(start)]
