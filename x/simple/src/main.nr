@@ -57,11 +57,11 @@ fn test_2() {
     }
 }
 
-// #[test]
+#[test]
 fn test_3() {
-    let input = "1=a 2=b 2=bc 2=c d".as_bytes();
+    let input = "dkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20230601; t=1694989812; x=1695594612; dara=google.com; h=to:subject:message-id:date:from:mime-version:from:to:cc:subject :date:message-id:reply-to; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=".as_bytes();
     let out = regex::regex_match(input);
-    for i in 0..3 {
+    for i in 0..1 {
         if i < out.len() {
             println(out.get(i));
         }

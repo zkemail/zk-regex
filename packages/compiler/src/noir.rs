@@ -304,7 +304,7 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<BoundedVec<u8, N>, 
         let substring = pattern_match.substrings.get_unchecked(i);
         let mut extracted_substring = extract_substring(substring, input);
         let mut len = substrings.len() + 1;
-        if i < pattern_match.substrings.len() {{
+        if i >= pattern_match.substrings.len() {{
             extracted_substring = BoundedVec::new();
             len = substrings.len();
         }}
@@ -556,7 +556,7 @@ fn ranges_to_predicate(states: Vec<StateMatch>, index: usize) -> String {
 let range_{index} = pattern_match.substrings.get_unchecked({index}).in_range(i);
 let case_{index} = [
     {cases}
-].any(|case| case == true | range_{index} == false);
+].any(|case| case == true) | !range_{index};
 "#
         ),
         2,

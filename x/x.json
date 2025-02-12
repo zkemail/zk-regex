@@ -2,27 +2,19 @@
   "parts":[
     {
       "is_public": false,
-      "regex_def": "Latin-Extension="
-    },
-    {
-      "is_public": true,
-      "regex_def": "[¡-ƿ]+"
+      "regex_def": "(\\r\\n|^)dkim-signature:"
     },
     {
       "is_public": false,
-      "regex_def": " Greek="
+      "regex_def": "([a-z]+=[^;]+; )+t="
     },
     {
       "is_public": true,
-      "regex_def": "[Ͱ-Ͽ]+"
+      "regex_def": "[0-9]+"
     },
     {
       "is_public": false,
-      "regex_def": " Cyrillic="
-    },
-    {
-      "is_public": true,
-      "regex_def": "[Ѐ-ӿ]+"
+      "regex_def": ";"
     }
   ]
 }
