@@ -25,6 +25,35 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<BoundedVec<u8, N>, 
         }
         std::as_witness(s_next);
 
+        
+        let range_0 = pattern_match.substrings.get_unchecked(0).in_range(i);
+        let case_0 = [
+            (s == 16) & ((s_next == 17) | (s_next == 18)),
+        	(s == 19) & ((s_next == 17) | (s_next == 18)),
+        	(s_next == 19) & ((s == 17) | (s == 18))
+        ].any(|case| case == true | range_0 == false);
+
+        let range_1 = pattern_match.substrings.get_unchecked(1).in_range(i);
+        let case_1 = [
+            (s == 26) & ((s_next == 27) | (s_next == 28)),
+        	(s == 29) & ((s_next == 27) | (s_next == 28)),
+        	(s_next == 29) & ((s == 27) | (s == 28))
+        ].any(|case| case == true | range_1 == false);
+
+        let range_2 = pattern_match.substrings.get_unchecked(2).in_range(i);
+        let case_2 = [
+            (s_next == 40) & ((s == 39) | (s == 41)),
+        	(s_next == 41) & ((s == 40))
+        ].any(|case| case == true | range_2 == false);
+
+
+        
+        let substring_range_check = [case_0, case_1, case_2]
+            .all(|case| case == true);
+
+        assert(substring_range_check, "substr array ranges wrong");
+            
+
         s = s_next;
     }
     // check final state
@@ -34,10 +63,14 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<BoundedVec<u8, N>, 
     let mut substrings: BoundedVec<BoundedVec<u8, N>, 3> = BoundedVec::new();
     for i in 0..3 {
         let substring = pattern_match.substrings.get_unchecked(i);
-        let extracted_substring = extract_substring(substring, input);
+        let mut extracted_substring = extract_substring(substring, input);
+        let mut len = substrings.len() + 1;
         if i < pattern_match.substrings.len() {
-            substrings.push(extracted_substring);
+            extracted_substring = BoundedVec::new();
+            len = substrings.len();
         }
+        substrings.len = len;
+        substrings.storage[i] = extracted_substring;
     }
 
     substrings
@@ -76,7 +109,7 @@ pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> RegexMatch<N, 
         }
         // Fill up substrings
         if ((s == 16) & (s_next == 17) | (s == 16) & (s_next == 18) | (s == 17) & (s_next == 19) | (s == 18) & (s_next == 19) | (s == 19) & (s_next == 17) | (s == 19) & (s_next == 18)) {
-            	if (consecutive_substr == 0) {
+            if (consecutive_substr == 0) {
                 full_match.index = i;
                 current_substring.index = i;
             };
@@ -148,6 +181,14 @@ impl Sequence {
     pub fn default() -> Self {
         Self { index: 0, length: 0 }
     }
+
+    pub fn end(self) -> u32 {
+        self.index + self.length
+    }
+
+    pub fn in_range(self, index: u32) -> bool {
+        index >= self.index & index < self.end()
+    }
 }
 
 pub struct RegexMatch<let INPUT_LENGTH: u32, let NUM_SUBSTRINGS: u32> {
@@ -167,7 +208,7 @@ pub fn extract_substring<let INPUT_LENGTH: u32, let MAX_SUBSTRING_LENGTH: u32>(
         // must be constrained to be true when matching is required to prevent 0's passing when shouldn't
         // @dev while this adds constraints in worse case it can be more efficient if MAX_SUBSTRING_LENGTH < INPUT_LENGTH
         let input_range_check = substring_sequence.index + i < INPUT_LENGTH;
-        let index = (substring_sequence.index + i) * (input_range_check) as u32;
+        let index = (substring_sequence.index + i) as Field * input_range_check as Field;
 
         // range where input should match substring
         let sequence_range_check = i >= substring_sequence.length;
@@ -175,8 +216,8 @@ pub fn extract_substring<let INPUT_LENGTH: u32, let MAX_SUBSTRING_LENGTH: u32>(
         // constrain array construction if in range
         let expected_byte = input[index];
         let byte = substring.get_unchecked(i);
-        let matched = (expected_byte == byte) & input_range_check;
-        assert(sequence_range_check | matched, "incorrect substring construction");
+        let matched = (expected_byte as Field == byte as Field);
+        assert(matched | sequence_range_check, "incorrect substring construction");
     }
     substring
 }

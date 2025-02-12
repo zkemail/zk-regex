@@ -1,5 +1,8 @@
 use std::{
-    collections::BTreeSet, collections::HashSet, fs::File, io::Write, iter::FromIterator,
+    collections::{BTreeSet, HashMap, HashSet},
+    fs::File,
+    io::Write,
+    iter::FromIterator,
     path::Path,
 };
 
@@ -172,32 +175,35 @@ global table: {sparse_str}
             accept_state_ids[1], accept_state_ids[1]
         ),
     };
-    // If substrings have to be extracted, the function returns a vector of BoundedVec
-    // otherwise there is no return type
-    let all_cases = {
-        let mut cases = substr_ranges
-            .iter()
-            .map(|range_set| {
-                range_set
-                    .iter()
-                    .map(|(range_start, range_end)| {
-                        indent(
-                            &format!("(s == {range_start}) & (s_next == {range_end}),"),
-                            3,
-                        )
-                    })
-                    .collect::<Vec<_>>()
-                    .join("\n")
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
-        cases = format!(
-            "{cases}\n{accept_state}\n{finished_state}",
-            accept_state = format!("{},", indent(&end_states_condition_body, 3)),
-            finished_state = indent(&finished_condition_body, 3)
-        );
-        format!("[\n{}\n\t\t];", cases)
+
+    let range_conditions = substr_ranges
+        .iter()
+        .enumerate()
+        .map(|(index, range)| {
+            let sorted = organize_states(range);
+            ranges_to_predicate(sorted, index)
+        })
+        .join("");
+
+    let final_range_predicate = {
+        let mut cases = Vec::new();
+        for i in 0..substr_ranges.len() {
+            cases.push(format!("case_{}", i));
+        }
+        let case_str = cases.join(", ");
+        indent(
+            &format!(
+                r#"
+let substring_range_check = [{case_str}]
+    .all(|case| case == true);
+
+assert(substring_range_check, "substr array ranges wrong");
+            "#
+            ),
+            2,
+        )
     };
+
     let fn_body = if gen_substrs {
         let mut first_condition = true;
 
@@ -217,7 +223,7 @@ global table: {sparse_str}
                 let (start_part, start_index) = if first_condition {
                     first_condition = false;
                     let start_index_text = format!(
-                        "\tif (consecutive_substr == 0) {{
+                        "if (consecutive_substr == 0) {{
         full_match.index = i;
         current_substring.index = i;
     }};\n"
@@ -283,6 +289,10 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<BoundedVec<u8, N>, 
         }}
         std::as_witness(s_next);
 
+        {range_conditions}
+
+        {final_range_predicate}
+
         s = s_next;
     }}
     // check final state
@@ -292,10 +302,14 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<BoundedVec<u8, N>, 
     let mut substrings: BoundedVec<BoundedVec<u8, N>, {substr_length}> = BoundedVec::new();
     for i in 0..{substr_length} {{
         let substring = pattern_match.substrings.get_unchecked(i);
-        let extracted_substring = extract_substring(substring, input);
+        let mut extracted_substring = extract_substring(substring, input);
+        let mut len = substrings.len() + 1;
         if i < pattern_match.substrings.len() {{
-            substrings.push(extracted_substring);
+            extracted_substring = BoundedVec::new();
+            len = substrings.len();
         }}
+        substrings.len = len;
+        substrings.storage[i] = extracted_substring;
     }}
 
     substrings
@@ -374,7 +388,8 @@ pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> RegexMatch<N, 
             substr_length = regex_and_dfa.substrings.substring_ranges.len(),
         )
     } else {
-        format!(r#"
+        format!(
+            r#"
 {table_str}
 pub fn regex_match<let N: u32>(input: [u8; N]) {{
     // regex: {regex_pattern}
@@ -387,10 +402,11 @@ pub fn regex_match<let N: u32>(input: [u8; N]) {{
     }}
     assert({final_states_condition_body}, f"no match: {{s}}");
 }}"#,
-            regex_pattern = escape_non_ascii(&regex_and_dfa
-                .regex_pattern
-                .replace('\n', "\\n")
-                .replace('\r', "\\r")
+            regex_pattern = escape_non_ascii(
+                &regex_and_dfa
+                    .regex_pattern
+                    .replace('\n', "\\n")
+                    .replace('\r', "\\r")
             ),
             table_access_255 = access_table("255", sparse_array),
             table_access_s_idx = access_table("s_idx", sparse_array),
@@ -444,6 +460,108 @@ fn escape_non_ascii(input: &str) -> String {
         .collect()
 }
 
+#[derive(Debug, Clone)]
+struct StateMatch {
+    single: usize,
+    match_vec: Vec<usize>,
+    s: bool,
+}
+
+fn organize_states(states: &BTreeSet<(usize, usize)>) -> Vec<StateMatch> {
+    use std::collections::{HashMap, HashSet};
+
+    // Create maps for forward and reverse connections
+    let mut s_to_next: HashMap<usize, Vec<usize>> = HashMap::new();
+    let mut next_to_s: HashMap<usize, Vec<usize>> = HashMap::new();
+
+    for &(s, next) in states {
+        s_to_next.entry(s).or_default().push(next);
+        next_to_s.entry(next).or_default().push(s);
+    }
+
+    // Helper function to get sorted unique values
+    let get_unique_sorted = |v: &Vec<usize>| -> Vec<usize> {
+        let mut unique: Vec<usize> = v.iter().copied().collect();
+        unique.sort_unstable();
+        unique.dedup();
+        unique
+    };
+
+    let mut result = Vec::new();
+    let mut covered = HashSet::new();
+
+    // First pass: Find nodes that have multiple outgoing edges
+    for (&num, matches_found) in &s_to_next {
+        let matches = get_unique_sorted(matches_found);
+        if matches.len() > 1 {
+            result.push(StateMatch {
+                single: num,
+                match_vec: matches.clone(),
+                s: true,
+            });
+            for &m in &matches {
+                covered.insert((num, m));
+            }
+        }
+    }
+
+    // Second pass: Find remaining edges that need to be covered
+    let mut uncovered = states
+        .iter()
+        .filter(|&&(s, next)| !covered.contains(&(s, next)))
+        .collect::<Vec<_>>();
+
+    // Group remaining by destination
+    let mut dest_groups: HashMap<usize, Vec<usize>> = HashMap::new();
+    for &(s, next) in &uncovered {
+        dest_groups.entry(*next).or_default().push(*s);
+    }
+
+    // Add any groups with multiple sources
+    for (dest, sources) in dest_groups {
+        let mut sources = sources;
+        sources.sort_unstable();
+        result.push(StateMatch {
+            single: dest,
+            match_vec: sources,
+            s: false,
+        });
+    }
+
+    // Sort results by single value
+    result.sort_by_key(|sm| sm.single);
+
+    result
+}
+
+fn ranges_to_predicate(states: Vec<StateMatch>, index: usize) -> String {
+    let cases = states
+        .iter()
+        .map(|state| {
+            let (single_label, matches_label) = match state.s {
+                true => ("s", "s_next"),
+                false => ("s_next", "s"),
+            };
+            let matches_str = state
+                .match_vec
+                .iter()
+                .map(|state| format!("({} == {})", matches_label, state))
+                .join(" | ");
+            format!("({} == {}) & ({})", single_label, state.single, matches_str)
+        })
+        .join(",\n\t");
+    indent(
+        &format!(
+            r#"
+let range_{index} = pattern_match.substrings.get_unchecked({index}).in_range(i);
+let case_{index} = [
+    {cases}
+].any(|case| case == true | range_{index} == false);
+"#
+        ),
+        2,
+    )
+}
 const COMMON_NOIR_CODE: &str = r#"
 pub struct Sequence {
     index: u32,
@@ -457,6 +575,14 @@ impl Sequence {
 
     pub fn default() -> Self {
         Self { index: 0, length: 0 }
+    }
+
+    pub fn end(self) -> u32 {
+        self.index + self.length
+    }
+
+    pub fn in_range(self, index: u32) -> bool {
+        index >= self.index & index < self.end()
     }
 }
 
@@ -477,7 +603,7 @@ pub fn extract_substring<let INPUT_LENGTH: u32, let MAX_SUBSTRING_LENGTH: u32>(
         // must be constrained to be true when matching is required to prevent 0's passing when shouldn't
         // @dev while this adds constraints in worse case it can be more efficient if MAX_SUBSTRING_LENGTH < INPUT_LENGTH
         let input_range_check = substring_sequence.index + i < INPUT_LENGTH;
-        let index = (substring_sequence.index + i) * (input_range_check) as u32;
+        let index = (substring_sequence.index + i) as Field * input_range_check as Field;
 
         // range where input should match substring
         let sequence_range_check = i >= substring_sequence.length;
@@ -485,8 +611,8 @@ pub fn extract_substring<let INPUT_LENGTH: u32, let MAX_SUBSTRING_LENGTH: u32>(
         // constrain array construction if in range
         let expected_byte = input[index];
         let byte = substring.get_unchecked(i);
-        let matched = (expected_byte == byte) & input_range_check;
-        assert(sequence_range_check | matched, "incorrect substring construction");
+        let matched = (expected_byte as Field == byte as Field);
+        assert(matched | sequence_range_check, "incorrect substring construction");
     }
     substring
 }

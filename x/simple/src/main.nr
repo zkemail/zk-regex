@@ -4,6 +4,11 @@ global MAX_INPUT_SIZE: u32 = 1024;
 
 fn main(input: [u8; MAX_INPUT_SIZE]) {
     let x = regex::regex_match(input);
+    let q = x.get_unchecked(0);
+    for i in 0..MAX_INPUT_SIZE {
+        let r = q.get_unchecked(i);
+        assert(r != 0);
+    }
 }
 
 // #[test]

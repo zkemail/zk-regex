@@ -2,7 +2,7 @@ global table: [Field; 11008] = comptime { make_lookup_table() };
 
 comptime fn make_lookup_table() -> [Field; 11008] {
     let mut table = [0; 11008];
-        table[41 * 256 + 0] = 42;
+    table[41 * 256 + 0] = 42;
     table[42 * 256 + 0] = 42;
     table[41 * 256 + 1] = 42;
     table[42 * 256 + 1] = 42;
@@ -812,10 +812,9 @@ comptime fn make_lookup_table() -> [Field; 11008] {
     table
 }
 
-        
 pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<BoundedVec<u8, N>, 3> {
     let pattern_match = unsafe { __regex_match(input) };
-    
+    let substring_ranges = pattern_match.substrings;
     // "Previous" state
     let mut s: Field = 0;
     s = table[255];
@@ -833,34 +832,44 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<BoundedVec<u8, N>, 
         }
         std::as_witness(s_next);
 
-        
-        let range_0 = pattern_match.substrings.get_unchecked(0).in_range(i);
-        let case_0 = [
-            (s == 16) & ((s_next == 17) | (s_next == 18)),
-        	(s == 19) & ((s_next == 17) | (s_next == 18)),
-        	(s_next == 19) & ((s == 17) | (s == 18))
-        ].any(|case| case == true | range_0 == false);
-
-        let range_1 = pattern_match.substrings.get_unchecked(1).in_range(i);
+        // check case 1
+        let range_1 = substring_ranges.get_unchecked(0).in_range(i);
         let case_1 = [
-            (s == 26) & ((s_next == 27) | (s_next == 28)),
-        	(s == 29) & ((s_next == 27) | (s_next == 28)),
-        	(s_next == 29) & ((s == 27) | (s == 28))
-        ].any(|case| case == true | range_1 == false);
+            (s == 16) & ((s_next == 17) | (s_next == 18)),
+            (s_next == 19) & ((s == 17) | (s == 18)),
+            (s == 19) & ((s_next == 17) | (s_next == 18)),
+        ]
+            .any(|case| case == true | range_1 == false);
 
-        let range_2 = pattern_match.substrings.get_unchecked(2).in_range(i);
+        let range_2 = substring_ranges.get_unchecked(1).in_range(i);
+        // ((s == 26) & (s_next == 27)),
+        // ((s == 26) & (s_next == 28)),
+        // ((s == 27) & (s_next == 29)),
+        // ((s == 28) & (s_next == 29)),
+        // ((s == 29) & (s_next == 27)),
+        // ((s == 29) & (s_next == 28)),
         let case_2 = [
-            (s_next == 40) & ((s == 39) | (s == 41)),
-        	(s_next == 41) & ((s == 40))
-        ].any(|case| case == true | range_2 == false);
+            (s_next == 27) & ((s == 26) | (s == 29)),
+            (s_next == 28) & ((s == 26) | (s == 29)),
+            (s_next == 29) & ((s == 27) | (s == 28)),
+        ]
+            .any(|case| case == true | range_2 == false);
 
+        // let check_2 = case_2.any(|case| case == true | range_2 == false);
+        let range_3 = substring_ranges.get_unchecked(2).in_range(i);
+        let case_3 = [
+            (s_next == 40) & ((s == 41) | (s == 39)),
+            (s == 40) & (s_next == 41),
+        ].any(|case| case == true | range_3 == false);
 
-        
-        let substring_range_check = [case_0, case_1, case_2]
-            .all(|case| case == true);
+        // let check_3 = case_3.any(|case| case == true | range_3 == false);
 
+        let substring_range_check = [case_1, case_2, case_3]
+            .all(|check| check == true);
+
+        // let check = check_1 & check_2 & check_3;
         assert(substring_range_check, "substr array ranges wrong");
-            
+
         s = s_next;
     }
     // check final state
@@ -870,7 +879,7 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<BoundedVec<u8, N>, 
     let mut substrings: BoundedVec<BoundedVec<u8, N>, 3> = BoundedVec::new();
     for i in 0..3 {
         let substring = pattern_match.substrings.get_unchecked(i);
-        let mut extracted_substring = extract_substring(substring, input);
+        let mut extracted_substring = extract_substring(substring, pattern_match.masked);
         let mut len = substrings.len() + 1;
         if i < pattern_match.substrings.len() {
             extracted_substring = BoundedVec::new();
@@ -915,24 +924,36 @@ pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> RegexMatch<N, 
             consecutive_substr = 0;
         }
         // Fill up substrings
-        if ((s == 16) & (s_next == 17) | (s == 16) & (s_next == 18) | (s == 17) & (s_next == 19) | (s == 18) & (s_next == 19) | (s == 19) & (s_next == 17) | (s == 19) & (s_next == 18)) {
+        if (
+            (s == 16) & (s_next == 17)
+                | (s == 16) & (s_next == 18)
+                | (s == 17) & (s_next == 19)
+                | (s == 18) & (s_next == 19)
+                | (s == 19) & (s_next == 17)
+                | (s == 19) & (s_next == 18)
+        ) {
             if (consecutive_substr == 0) {
                 full_match.index = i;
                 current_substring.index = i;
             };
 
             current_substring.length += 1;
-            consecutive_substr = 1; 
-        }
-        else if ((s == 26) & (s_next == 27) | (s == 26) & (s_next == 28) | (s == 27) & (s_next == 29) | (s == 28) & (s_next == 29) | (s == 29) & (s_next == 27) | (s == 29) & (s_next == 28)) {
-    
+            consecutive_substr = 1;
+        } else if (
+            (s == 26) & (s_next == 27)
+                | (s == 26) & (s_next == 28)
+                | (s == 27) & (s_next == 29)
+                | (s == 28) & (s_next == 29)
+                | (s == 29) & (s_next == 27)
+                | (s == 29) & (s_next == 28)
+        ) {
             current_substring.length += 1;
-            consecutive_substr = 1; 
-        }
-        else if ((s == 39) & (s_next == 40) | (s == 40) & (s_next == 41) | (s == 41) & (s_next == 40)) {
-    
+            consecutive_substr = 1;
+        } else if (
+            (s == 39) & (s_next == 40) | (s == 40) & (s_next == 41) | (s == 41) & (s_next == 40)
+        ) {
             current_substring.length += 1;
-            consecutive_substr = 1; 
+            consecutive_substr = 1;
         } else if ((consecutive_substr == 1) & (s_next == 0)) {
             current_substring = Sequence::default();
             full_match = Sequence::default();
@@ -974,7 +995,6 @@ pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> RegexMatch<N, 
     RegexMatch { masked, full_match, substrings }
 }
 
-
 pub struct Sequence {
     index: u32,
     length: u32,
@@ -1008,8 +1028,10 @@ pub fn extract_substring<let INPUT_LENGTH: u32, let MAX_SUBSTRING_LENGTH: u32>(
     substring_sequence: Sequence,
     input: [u8; INPUT_LENGTH],
 ) -> BoundedVec<u8, MAX_SUBSTRING_LENGTH> {
-    let mut substring: BoundedVec<u8, MAX_SUBSTRING_LENGTH> = unsafe { __extract_substring(substring_sequence, input) };
+    let mut substring: BoundedVec<u8, MAX_SUBSTRING_LENGTH> =
+        unsafe { __extract_substring(substring_sequence, input) };
     assert(substring_sequence.length == substring.len(), "length mismatch");
+    // let first_index = input[substring_sequence.index];
     for i in 0..MAX_SUBSTRING_LENGTH {
         // hack for index to never exceed array bounds
         // must be constrained to be true when matching is required to prevent 0's passing when shouldn't
@@ -1019,7 +1041,7 @@ pub fn extract_substring<let INPUT_LENGTH: u32, let MAX_SUBSTRING_LENGTH: u32>(
 
         // range where input should match substring
         let sequence_range_check = i >= substring_sequence.length;
-        
+
         // constrain array construction if in range
         let expected_byte = input[index];
         let byte = substring.get_unchecked(i);
