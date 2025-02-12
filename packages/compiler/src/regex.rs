@@ -985,6 +985,11 @@ pub(crate) fn get_regex_and_dfa(
         .map(|regex| regex.regex_def.as_str())
         .collect::<String>();
 
+    // Remove epsilon transitions
+    for state in &mut net_dfa_graph.states {
+        state.transitions.retain(|_, chars| !chars.is_empty());
+    }
+
     Ok(RegexAndDFA {
         regex_pattern: regex_str,
         dfa: net_dfa_graph,
