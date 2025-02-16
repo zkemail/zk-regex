@@ -242,7 +242,7 @@ fn squash_transition_predicate(states: &BTreeSet<(usize, usize)>, index: usize) 
     indent(
         &format!(
             r#"
-let range_{index} = pattern_match.substrings.get_unchecked({index}).in_range(i);
+let range_{index} = substrings.get_unchecked({index}).in_range(i);
 let case_{index} = [
     {cases}
 ].any(|case| case == true) | !range_{index};
@@ -266,11 +266,11 @@ pub fn force_match_condition(
         true => match force_match {
             true => (
                 format!("-> {}", return_type.unwrap()),
-                String::from("pattern_match"),
+                String::from("substrings"),
             ),
             false => (
                 format!("-> ({}, bool)", return_type.unwrap()),
-                String::from("(pattern_match, matched"),
+                String::from("(substrings, matched)"),
             ),
         },
         false => match force_match {

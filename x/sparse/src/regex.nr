@@ -1,4 +1,6 @@
 
+use crate::regex_common::Sequence;
+
 
 global table: sparse_array::SparseArray<513, Field> = sparse_array::SparseArray {
     keys: [0x00000000, 0x00000078, 0x00000161, 0x00000162, 0x00000200, 0x00000201, 0x00000202, 0x00000203, 0x00000204, 0x00000205, 0x00000206, 0x00000207, 0x00000208, 0x00000209, 0x0000020a, 0x0000020b, 0x0000020c, 0x0000020d, 0x0000020e, 0x0000020f, 0x00000210, 0x00000211, 0x00000212, 0x00000213, 0x00000214, 0x00000215, 0x00000216, 0x00000217, 0x00000218, 0x00000219, 0x0000021a, 0x0000021b, 0x0000021c, 0x0000021d, 0x0000021e, 0x0000021f, 0x00000220, 0x00000221, 0x00000222, 0x00000223, 0x00000224, 0x00000225, 0x00000226, 0x00000227, 0x00000228, 0x00000229, 0x0000022a, 0x0000022b, 0x0000022c, 0x0000022d, 0x0000022e, 0x0000022f, 0x00000230, 0x00000231, 0x00000232, 0x00000233, 0x00000234, 0x00000235, 0x00000236, 0x00000237, 0x00000238, 0x00000239, 0x0000023a, 0x0000023b, 0x0000023c, 0x0000023d, 0x0000023e, 0x0000023f, 0x00000240, 0x00000241, 0x00000242, 0x00000243, 0x00000244, 0x00000245, 0x00000246, 0x00000247, 0x00000248, 0x00000249, 0x0000024a, 0x0000024b, 0x0000024c, 0x0000024d, 0x0000024e, 0x0000024f, 0x00000250, 0x00000251, 0x00000252, 0x00000253, 0x00000254, 0x00000255, 0x00000256, 0x00000257, 0x00000258, 0x00000259, 0x0000025a, 0x0000025b, 0x0000025c, 0x0000025d, 0x0000025e, 0x0000025f, 0x00000260, 0x00000261, 0x00000262, 0x00000263, 0x00000264, 0x00000265, 0x00000266, 0x00000267, 0x00000268, 0x00000269, 0x0000026a, 0x0000026b, 0x0000026c, 0x0000026d, 0x0000026e, 0x0000026f, 0x00000270, 0x00000271, 0x00000272, 0x00000273, 0x00000274, 0x00000275, 0x00000276, 0x00000277, 0x00000278, 0x00000279, 0x0000027a, 0x0000027b, 0x0000027c, 0x0000027d, 0x0000027e, 0x0000027f, 0x00000280, 0x00000281, 0x00000282, 0x00000283, 0x00000284, 0x00000285, 0x00000286, 0x00000287, 0x00000288, 0x00000289, 0x0000028a, 0x0000028b, 0x0000028c, 0x0000028d, 0x0000028e, 0x0000028f, 0x00000290, 0x00000291, 0x00000292, 0x00000293, 0x00000294, 0x00000295, 0x00000296, 0x00000297, 0x00000298, 0x00000299, 0x0000029a, 0x0000029b, 0x0000029c, 0x0000029d, 0x0000029e, 0x0000029f, 0x000002a0, 0x000002a1, 0x000002a2, 0x000002a3, 0x000002a4, 0x000002a5, 0x000002a6, 0x000002a7, 0x000002a8, 0x000002a9, 0x000002aa, 0x000002ab, 0x000002ac, 0x000002ad, 0x000002ae, 0x000002af, 0x000002b0, 0x000002b1, 0x000002b2, 0x000002b3, 0x000002b4, 0x000002b5, 0x000002b6, 0x000002b7, 0x000002b8, 0x000002b9, 0x000002ba, 0x000002bb, 0x000002bc, 0x000002bd, 0x000002be, 0x000002bf, 0x000002c0, 0x000002c1, 0x000002c2, 0x000002c3, 0x000002c4, 0x000002c5, 0x000002c6, 0x000002c7, 0x000002c8, 0x000002c9, 0x000002ca, 0x000002cb, 0x000002cc, 0x000002cd, 0x000002ce, 0x000002cf, 0x000002d0, 0x000002d1, 0x000002d2, 0x000002d3, 0x000002d4, 0x000002d5, 0x000002d6, 0x000002d7, 0x000002d8, 0x000002d9, 0x000002da, 0x000002db, 0x000002dc, 0x000002dd, 0x000002de, 0x000002df, 0x000002e0, 0x000002e1, 0x000002e2, 0x000002e3, 0x000002e4, 0x000002e5, 0x000002e6, 0x000002e7, 0x000002e8, 0x000002e9, 0x000002ea, 0x000002eb, 0x000002ec, 0x000002ed, 0x000002ee, 0x000002ef, 0x000002f0, 0x000002f1, 0x000002f2, 0x000002f3, 0x000002f4, 0x000002f5, 0x000002f6, 0x000002f7, 0x000002f8, 0x000002f9, 0x000002fa, 0x000002fb, 0x000002fc, 0x000002fd, 0x000002fe, 0x00000300, 0x00000301, 0x00000302, 0x00000303, 0x00000304, 0x00000305, 0x00000306, 0x00000307, 0x00000308, 0x00000309, 0x0000030a, 0x0000030b, 0x0000030c, 0x0000030d, 0x0000030e, 0x0000030f, 0x00000310, 0x00000311, 0x00000312, 0x00000313, 0x00000314, 0x00000315, 0x00000316, 0x00000317, 0x00000318, 0x00000319, 0x0000031a, 0x0000031b, 0x0000031c, 0x0000031d, 0x0000031e, 0x0000031f, 0x00000320, 0x00000321, 0x00000322, 0x00000323, 0x00000324, 0x00000325, 0x00000326, 0x00000327, 0x00000328, 0x00000329, 0x0000032a, 0x0000032b, 0x0000032c, 0x0000032d, 0x0000032e, 0x0000032f, 0x00000330, 0x00000331, 0x00000332, 0x00000333, 0x00000334, 0x00000335, 0x00000336, 0x00000337, 0x00000338, 0x00000339, 0x0000033a, 0x0000033b, 0x0000033c, 0x0000033d, 0x0000033e, 0x0000033f, 0x00000340, 0x00000341, 0x00000342, 0x00000343, 0x00000344, 0x00000345, 0x00000346, 0x00000347, 0x00000348, 0x00000349, 0x0000034a, 0x0000034b, 0x0000034c, 0x0000034d, 0x0000034e, 0x0000034f, 0x00000350, 0x00000351, 0x00000352, 0x00000353, 0x00000354, 0x00000355, 0x00000356, 0x00000357, 0x00000358, 0x00000359, 0x0000035a, 0x0000035b, 0x0000035c, 0x0000035d, 0x0000035e, 0x0000035f, 0x00000360, 0x00000361, 0x00000362, 0x00000363, 0x00000364, 0x00000365, 0x00000366, 0x00000367, 0x00000368, 0x00000369, 0x0000036a, 0x0000036b, 0x0000036c, 0x0000036d, 0x0000036e, 0x0000036f, 0x00000370, 0x00000371, 0x00000372, 0x00000373, 0x00000374, 0x00000375, 0x00000376, 0x00000377, 0x00000378, 0x00000379, 0x0000037a, 0x0000037b, 0x0000037c, 0x0000037d, 0x0000037e, 0x0000037f, 0x00000380, 0x00000381, 0x00000382, 0x00000383, 0x00000384, 0x00000385, 0x00000386, 0x00000387, 0x00000388, 0x00000389, 0x0000038a, 0x0000038b, 0x0000038c, 0x0000038d, 0x0000038e, 0x0000038f, 0x00000390, 0x00000391, 0x00000392, 0x00000393, 0x00000394, 0x00000395, 0x00000396, 0x00000397, 0x00000398, 0x00000399, 0x0000039a, 0x0000039b, 0x0000039c, 0x0000039d, 0x0000039e, 0x0000039f, 0x000003a0, 0x000003a1, 0x000003a2, 0x000003a3, 0x000003a4, 0x000003a5, 0x000003a6, 0x000003a7, 0x000003a8, 0x000003a9, 0x000003aa, 0x000003ab, 0x000003ac, 0x000003ad, 0x000003ae, 0x000003af, 0x000003b0, 0x000003b1, 0x000003b2, 0x000003b3, 0x000003b4, 0x000003b5, 0x000003b6, 0x000003b7, 0x000003b8, 0x000003b9, 0x000003ba, 0x000003bb, 0x000003bc, 0x000003bd, 0x000003be, 0x000003bf, 0x000003c0, 0x000003c1, 0x000003c2, 0x000003c3, 0x000003c4, 0x000003c5, 0x000003c6, 0x000003c7, 0x000003c8, 0x000003c9, 0x000003ca, 0x000003cb, 0x000003cc, 0x000003cd, 0x000003ce, 0x000003cf, 0x000003d0, 0x000003d1, 0x000003d2, 0x000003d3, 0x000003d4, 0x000003d5, 0x000003d6, 0x000003d7, 0x000003d8, 0x000003d9, 0x000003da, 0x000003db, 0x000003dc, 0x000003dd, 0x000003de, 0x000003df, 0x000003e0, 0x000003e1, 0x000003e2, 0x000003e3, 0x000003e4, 0x000003e5, 0x000003e6, 0x000003e7, 0x000003e8, 0x000003e9, 0x000003ea, 0x000003eb, 0x000003ec, 0x000003ed, 0x000003ee, 0x000003ef, 0x000003f0, 0x000003f1, 0x000003f2, 0x000003f3, 0x000003f4, 0x000003f5, 0x000003f6, 0x000003f7, 0x000003f8, 0x000003f9, 0x000003fa, 0x000003fb, 0x000003fc, 0x000003fd, 0x000003fe, 0x000003ff],
@@ -8,8 +10,8 @@ global table: sparse_array::SparseArray<513, Field> = sparse_array::SparseArray 
     
 
 
-pub fn regex_match<let N: u32>(input: [u8; N]) -> SubstringMatch<1> {
-    let pattern_match = unsafe { __regex_match(input) };
+pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<Sequence, 1> {
+    let substrings = unsafe { __regex_match(input) };
     
     // "Previous" state
     let mut s: Field = 0;
@@ -40,7 +42,7 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> SubstringMatch<1> {
         }
         
 
-        let range_0 = pattern_match.substrings.get_unchecked(0).in_range(i);
+        let range_0 = substrings.get_unchecked(0).in_range(i);
         let case_0 = [
             (s_next == 1) & ((s == 1))
         ].any(|case| case == true) | !range_0;
@@ -63,18 +65,18 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> SubstringMatch<1> {
     //let full_match = Sequence::new(start_range as u32, end_range as u32 - start_range as u32);
     //let full_match_end = full_match.end();
     // for i in 0..1 {
-    //     let substring = pattern_match.substrings.get_unchecked(i);
-    //     let is_not_valid = i >= pattern_match.substrings.len();
+    //     let substring = substrings.get_unchecked(i);
+    //     let is_not_valid = i >= substrings.len();
     //     let index_check = substring.index >= full_match.index;
     //     let length_check = substring.end() <= full_match_end;
     //     let check = (index_check) | is_not_valid;
     //     assert(check, f"Substring {i} range is out of bounds of the full match found");
     // }
-    pattern_match
+    substrings
 }
     
 
-pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> SubstringMatch<1> {
+pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) ->  BoundedVec<Sequence, 1> {
     // regex: xa*b
     let mut substrings: BoundedVec<Sequence, 1> = BoundedVec::new();
     let mut current_substring = Sequence::default();
@@ -144,172 +146,9 @@ pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> SubstringMatch
 
     
 
-    SubstringMatch { substrings }
+    substrings
 }
     
             
-
-    
-// points to a seque
-pub struct Sequence {
-    index: u32,
-    length: u32,
-    end: u32
-}
-
-impl Sequence {
-    pub fn new(index: u32, length: u32) -> Self {
-        Self { index, length, end: index + length }
-    }
-
-    pub fn default() -> Self {
-        Self { index: 0, length: 0, end: 0 }
-    }
-
-    pub fn initialized(self) -> bool {
-        self.length > 0
-    }
-
-    pub fn index(self) -> u32 {
-        self.index
-    }
-
-    pub fn length(self) -> u32 {
-        self.length
-    }
-
-    pub fn end(self) -> u32 {
-        self.end
-    }
-
-    pub fn in_range(self, index: u32) -> bool {
-        // if index + length == 0, index < self.end implicitly returns false if uninitialized
-        index >= self.index & index < self.end
-    }
-}
-
-
-    
-pub struct SubstringMatch<let NUM_SUBSTRINGS: u32> {
-    substrings: BoundedVec<Sequence, NUM_SUBSTRINGS>,
-}
-
-
-    
-/**
- * Extracts all substrings from a pattern match
- * @dev not super optimal - all substrings will be assumed to be of the length of longest substring.
- *      often this will be the size of the input. Use at discretion.
- * 
- * @param input - the input array to extract from
- * @param sequences - the sequences to extract from the input
- * @returns the extracted substrings
- */
-pub fn extract_all_substrings<
-    let INPUT_LENGTH: u32,
-    let NUM_SUBSTRINGS: u32,
-    let MAX_SUBSTRING_LENGTH: u32
->(
-    input: [u8; INPUT_LENGTH],
-    sequences: BoundedVec<Sequence, NUM_SUBSTRINGS>,
-) -> BoundedVec<BoundedVec<u8, MAX_SUBSTRING_LENGTH>, NUM_SUBSTRINGS> {{
-    let mut substrings: BoundedVec<BoundedVec<u8, MAX_SUBSTRING_LENGTH>, NUM_SUBSTRINGS> = BoundedVec::new();
-    for i in 0..NUM_SUBSTRINGS {{
-        let substring = sequences.get_unchecked(i);
-        let mut extracted_substring = extract_substring(substring, input);
-        let mut len = substrings.len() + 1;
-        if i >= sequences.len() {{
-            extracted_substring = BoundedVec::new();
-            len = substrings.len();
-        }}
-        substrings.len = len;
-        substrings.storage[i] = extracted_substring;
-    }}
-    substrings
-}}
-
-/**
- * Optimized algorithm for extracting a subsequence from an input array
- * 
- * @param substring_sequence - the sequence to extract from the input
- * @param input - the input array to extract from
- * @returns the extracted subsequence
- */
-pub fn extract_substring<let INPUT_LENGTH: u32, let MAX_SUBSTRING_LENGTH: u32>(
-    substring_sequence: Sequence,
-    input: [u8; INPUT_LENGTH],
-) -> BoundedVec<u8, MAX_SUBSTRING_LENGTH> {
-    let mut substring: BoundedVec<u8, MAX_SUBSTRING_LENGTH> = unsafe { __extract_substring(substring_sequence, input) };
-    assert(substring_sequence.length == substring.len(), "length mismatch");
-    for i in 0..MAX_SUBSTRING_LENGTH {
-        // hack for index to never exceed array bounds
-        // must be constrained to be true when matching is required to prevent 0's passing when shouldn't
-        // @dev while this adds constraints in worse case it can be more efficient if MAX_SUBSTRING_LENGTH < INPUT_LENGTH
-        let input_range_check = substring_sequence.index + i < INPUT_LENGTH;
-        let index = (substring_sequence.index + i) as Field * input_range_check as Field;
-
-        // range where input should match substring
-        let sequence_range_check = i >= substring_sequence.length;
         
-        // constrain array construction if in range
-        let expected_byte = input[index];
-        let byte = substring.get_unchecked(i);
-        let matched = (expected_byte as Field == byte as Field);
-        assert(matched | sequence_range_check, "incorrect substring construction");
-    }
-    substring
-}
-
-/**
- * Unconstrained helper to build the extracted substring
- * @dev must be checked by extract_substring to constrain construction of substring
- * 
- * @param substring_sequence - the sequence to extract from the input
- * @param input - the input array to extract from
- * @returns the extracted subsequence
- */
-unconstrained fn __extract_substring<let INPUT_LENGTH: u32, let MAX_SUBSTRING_LENGTH: u32>(
-    substring_sequence: Sequence,
-    input: [u8; INPUT_LENGTH],
-) -> BoundedVec<u8, MAX_SUBSTRING_LENGTH> {
-    let mut substring: BoundedVec<u8, MAX_SUBSTRING_LENGTH> = BoundedVec::new();
-    for i in 0..substring_sequence.length {
-        let byte = input[substring_sequence.index + i];
-        substring.push(byte);
-    }
-    substring
-}
-    
-
-    
-// pub fn mask_input<let INPUT_LENGTH: u32, let MAX_SUBSTRING_LENGTH: u32>(
-//     substring_sequences: BoundedVec<Sequence, MAX_SUBSTRING_LENGTH>,
-//     input: [u8; INPUT_LENGTH],
-// ) -> [u8; INPUT_LENGTH] {
-//     let masked: [u8; INPUT_LENGTH] = unsafe { __mask_input(substring_sequences, input) };
-//     for i in 0..INPUT_LENGTH {
-//         let any_in_range = substring_sequences
-//             .storage()
-//             .any(|sequence| sequence.in_range(i));
-//         let expected_byte = input[i] as Field * any_in_range as Field;
-//         assert(masked[i] as Field == expected_byte, "Incorrect masking");
-//     }
-//     masked
-// }
-
-unconstrained fn __mask_input<let INPUT_LENGTH: u32, let MAX_SUBSTRING_LENGTH: u32>(
-    substring_sequences: BoundedVec<Sequence, MAX_SUBSTRING_LENGTH>,
-    input: [u8; INPUT_LENGTH],
-) -> [u8; INPUT_LENGTH] {
-    let mut masked_input: [u8; INPUT_LENGTH] = [0; INPUT_LENGTH];
-    for i in 0..substring_sequences.len() {
-        let sequence = substring_sequences.get_unchecked(i);
-        for j in sequence.index..sequence.end() {
-            masked_input[j] = input[j];
-        }
-    }
-    masked_input
-}
-
-    
-        
+            

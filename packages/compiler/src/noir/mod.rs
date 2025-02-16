@@ -5,7 +5,6 @@ mod table;
 mod utils;
 
 use itertools::Itertools;
-use regex_automata::dfa::sparse;
 use std::{fs::File, io::Write, path::Path, collections::BTreeSet};
 
 use crate::structs::RegexAndDFA;
@@ -28,17 +27,21 @@ type TableRows = Vec<(usize, u8, usize)>;
  * @param path - the path to write the noir function to
  * @param gen_substrs - whether to generate substring matches
  * @param sparse_array - whether to use a sparse array for the DFA
+ * @param force_match - whether the circuit should force a match or export a boolean
+ * @param add_common - optional dependency import to include for regex common definitions
  */
 pub fn gen_noir_fn(
     regex_and_dfa: &RegexAndDFA,
     path: &Path,
     gen_substrs: bool,
-    // mask_substrs: bool,
     sparse_array: Option<bool>,
+    force_match: Option<bool>,
+    use_common: Option<&str>
 ) -> Result<(), std::io::Error> {
     println!("{}", regex_and_dfa.dfa);
     let use_sparse = sparse_array.unwrap_or(false);
-    let noir_fn = to_noir_fn(regex_and_dfa, gen_substrs, use_sparse);
+    let force_match = force_match.unwrap_or(true);
+    let noir_fn = to_noir_fn(regex_and_dfa, gen_substrs, use_sparse, force_match, use_common);
     let mut file = File::create(path)?;
     file.write_all(noir_fn.as_bytes())?;
     file.flush()?;
@@ -51,11 +54,20 @@ pub fn gen_noir_fn(
 ///
 /// * `regex_and_dfa` - The `RegexAndDFA` struct containing the regex pattern and DFA.
 /// * `gen_substrs` - A boolean indicating whether to generate substrings.
+/// * `sparse_array` - A boolean indicating whether to use a sparse array for the DFA.
+/// * `force_match` - A boolean indicating whether the circuit should force a match or export a boolean.
+/// * `use_common` - An optional dependency import to include for regex common definitions.
 ///
 /// # Returns
 ///
 /// A `String` that contains the Noir code
-fn to_noir_fn(regex_and_dfa: &RegexAndDFA, gen_substrs: bool, sparse_array: bool) -> String {
+fn to_noir_fn(
+    regex_and_dfa: &RegexAndDFA,
+    gen_substrs: bool,
+    sparse_array: bool,
+    force_match: bool,
+    use_common: Option<&str>,
+) -> String {
     // Regex pattern
     let mut regex_pattern =  
         regex_and_dfa
@@ -86,25 +98,43 @@ fn to_noir_fn(regex_and_dfa: &RegexAndDFA, gen_substrs: bool, sparse_array: bool
     // generate function body
     let regex_match_def = match gen_substrs {
         true => {
-            let constrained = capture_def(&accept_state_ids, substr_ranges, sparse_array, true);
+            let constrained = capture_def(&accept_state_ids, substr_ranges, sparse_array, force_match);
             let unconstrained = unconstrained_capture_def(&regex_pattern, &accept_state_ids, substr_ranges, sparse_array);
             format!(r#"
 {constrained}
 {unconstrained}
             "#)
         }
-        false => match_def(&regex_pattern, &accept_state_ids, sparse_array, true),
+        false => match_def(&regex_pattern, &accept_state_ids, sparse_array, force_match),
     };
 
     // codegen the file
-    let common_regex_def = get_common_regex_def();
-    format!(
+    let mut regex_codegen = format!(
         r#"
 {table_def}
 {regex_match_def}
-{common_regex_def}
         "#
-    )
+    );
+    if use_common.is_none() {
+        let common_regex_def = get_common_regex_def();
+
+        regex_codegen = format!(
+            r#"
+{regex_codegen}
+{common_regex_def}
+            "#,
+        );
+    } else {
+        let common_import = format!("use {}::Sequence;", use_common.unwrap());
+        regex_codegen = format!(
+            r#"
+{common_import}
+{regex_codegen}
+            "#,
+        );
+    }
+
+    regex_codegen
 }
 
 /**

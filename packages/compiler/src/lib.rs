@@ -6,7 +6,6 @@ mod regex;
 mod structs;
 mod wasm;
 
-
 use circom::gen_circom_template;
 use errors::CompilerError;
 use halo2::gen_halo2_tables;
@@ -50,6 +49,8 @@ fn load_substring_definitions_json(
 /// * `num_public_parts` - The number of public parts in the regex.
 /// * `gen_substrs` - A boolean indicating whether to generate substrings.
 /// * `sparse_array` - A boolean indicating whether to use a sparse array for the DFA. (TEST UTILITY)
+/// * `force_match` - A boolean indicating whether the circuit should force a match or export a boolean. (TEST UTILITY)
+/// * `add_common` - A boolean indicating whether to add common regex definitions in the file or not. (TEST UTILITY)
 ///
 /// # Returns
 ///
@@ -62,7 +63,9 @@ fn generate_outputs(
     noir_file_path: Option<&str>,
     num_public_parts: usize,
     gen_substrs: bool,
-    sparse_array: Option<bool>
+    sparse_array: Option<bool>,
+    force_match: Option<bool>,
+    use_common: Option<&str>,
 ) -> Result<(), CompilerError> {
     if let Some(halo2_dir_path) = halo2_dir_path {
         let halo2_dir_path = PathBuf::from(halo2_dir_path);
@@ -93,7 +96,14 @@ fn generate_outputs(
     }
 
     if let Some(noir_file_path) = noir_file_path {
-        gen_noir_fn(regex_and_dfa, &PathBuf::from(noir_file_path), gen_substrs, sparse_array)?;
+        gen_noir_fn(
+            regex_and_dfa,
+            &PathBuf::from(noir_file_path),
+            gen_substrs,
+            sparse_array,
+            force_match,
+            use_common,
+        )?;
     }
 
     Ok(())
@@ -119,7 +129,9 @@ pub fn gen_from_decomposed(
     circom_template_name: Option<&str>,
     noir_file_path: Option<&str>,
     gen_substrs: Option<bool>,
-    sparse_array: Option<bool>
+    sparse_array: Option<bool>,
+    force_match: Option<bool>,
+    use_common: Option<&str>,
 ) -> Result<(), CompilerError> {
     let mut decomposed_regex_config: DecomposedRegexConfig =
         serde_json::from_reader(File::open(decomposed_regex_path)?)?;
@@ -141,7 +153,9 @@ pub fn gen_from_decomposed(
         noir_file_path,
         num_public_parts,
         gen_substrs,
-        sparse_array
+        sparse_array,
+        force_match,
+        use_common,
     )?;
 
     Ok(())
@@ -169,7 +183,9 @@ pub fn gen_from_raw(
     template_name: Option<&str>,
     noir_file_path: Option<&str>,
     gen_substrs: Option<bool>,
-    sparse_array: Option<bool>
+    sparse_array: Option<bool>,
+    force_match: Option<bool>,
+    use_common: Option<&str>,
 ) -> Result<(), CompilerError> {
     let substrs_defs_json = load_substring_definitions_json(substrs_json_path)?;
     let num_public_parts = substrs_defs_json.transitions.len();
@@ -186,7 +202,9 @@ pub fn gen_from_raw(
         noir_file_path,
         num_public_parts,
         gen_substrs,
-        sparse_array
+        sparse_array,
+        force_match,
+        use_common,
     )?;
 
     Ok(())

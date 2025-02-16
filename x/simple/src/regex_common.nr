@@ -1,19 +1,8 @@
-/**
- * Defines common regex structures and functions to be used in generated code
- *
- * @returns the common regex file definition
- */
-pub fn get_common_regex_def() -> String {
-    format!(
-        r#"
-    {SEQUENCE_DEF}
-    {EXTRACT_SUBSTRING_DEF}
-    {MASK_MATCH_DEF}
-    "#
-    )
-}
+    
+            
+        
 
-const SEQUENCE_DEF: &str = r#"
+    
 // points to a seque
 pub struct Sequence {
     index: u32,
@@ -51,9 +40,8 @@ impl Sequence {
         index >= self.index & index < self.end
     }
 }
-"#;
 
-const EXTRACT_SUBSTRING_DEF: &str = r#"
+
 /**
  * Extracts all substrings from a pattern match
  * @dev not super optimal - all substrings will be assumed to be of the length of longest substring.
@@ -137,9 +125,9 @@ unconstrained fn __extract_substring<let INPUT_LENGTH: u32, let MAX_SUBSTRING_LE
     }
     substring
 }
-    "#;
+    
 
-const MASK_MATCH_DEF: &str = r#"
+    
 // pub fn mask_input<let INPUT_LENGTH: u32, let MAX_SUBSTRING_LENGTH: u32>(
 //     substring_sequences: BoundedVec<Sequence, MAX_SUBSTRING_LENGTH>,
 //     input: [u8; INPUT_LENGTH],
@@ -168,4 +156,6 @@ unconstrained fn __mask_input<let INPUT_LENGTH: u32, let MAX_SUBSTRING_LENGTH: u
     }
     masked_input
 }
-"#;
+
+    
+            

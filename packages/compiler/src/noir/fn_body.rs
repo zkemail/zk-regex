@@ -64,13 +64,13 @@ pub fn capture_def(
         force_match_condition(
             force_match,
             final_states_predicate,
-            Some(format!("SubstringMatch<{substr_length}>"))
+            Some(format!("BoundedVec<Sequence, {substr_length}>"))
         );
 
     format!(
         r#"
 pub fn regex_match<let N: u32>(input: [u8; N]) {return_type} {{
-    let pattern_match = unsafe {{ __regex_match(input) }};
+    let substrings = unsafe {{ __regex_match(input) }};
     
     // "Previous" state
     let mut s: Field = 0;
@@ -108,8 +108,8 @@ pub fn regex_match<let N: u32>(input: [u8; N]) {return_type} {{
     //let full_match = Sequence::new(start_range as u32, end_range as u32 - start_range as u32);
     //let full_match_end = full_match.end();
     // for i in 0..{substr_length} {{
-    //     let substring = pattern_match.substrings.get_unchecked(i);
-    //     let is_not_valid = i >= pattern_match.substrings.len();
+    //     let substring = substrings.get_unchecked(i);
+    //     let is_not_valid = i >= substrings.len();
     //     let index_check = substring.index >= full_match.index;
     //     let length_check = substring.end() <= full_match_end;
     //     let check = (index_check) | is_not_valid;
@@ -139,7 +139,7 @@ pub fn unconstrained_capture_def(
     let substr_length = substr_ranges.len();
     format!(
         r#"
-pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> SubstringMatch<{substr_length}> {{
+pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) ->  BoundedVec<Sequence, {substr_length}> {{
     // regex: {regex_pattern}
     let mut substrings: BoundedVec<Sequence, {substr_length}> = BoundedVec::new();
     let mut current_substring = Sequence::default();
@@ -186,7 +186,7 @@ pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> SubstringMatch
 
     
 
-    SubstringMatch {{ substrings }}
+    substrings
 }}
     "#
     )
