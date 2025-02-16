@@ -165,16 +165,11 @@ global table: {sparse_str}
             accept_state_ids[0], accept_state_ids[1]
         ),
     };
-    let finished_condition_body = match accept_state_ids.len() == 1 {
-        true => format!(
-            "(s == {}) & (s_next == {})",
-            accept_state_ids[0], accept_state_ids[0]
-        ),
-        false => format!(
-            "(s == {}) & (s_next == {})",
-            accept_state_ids[1], accept_state_ids[1]
-        ),
-    };
+
+    let end_range_condition = accept_state_ids
+        .iter()
+        .map(|id| format!("(s_next == {})", id))
+        .join(" | ");
 
     let range_conditions = substr_ranges
         .iter()
@@ -277,9 +272,12 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<BoundedVec<u8, N>, 
     s = {table_access_255};
     // "Next"/upcoming state
     let mut s_next: Field = 0;
+    let mut start_range = 0;
+    let mut end_range = 0;
 
     // check the match
     for i in 0..N {{
+        // state transition
         let temp = input[i] as Field;
         s_next = {table_access_s_next};
         let potential_s_next = {table_access_s_next_temp};
@@ -289,6 +287,21 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<BoundedVec<u8, N>, 
         }}
         std::as_witness(s_next);
 
+        // range conditions for substring matches
+        if ((start_range == 0) & (end_range == 0)) {{
+            start_range = i as Field;
+        }}
+        //let switch = (start_range + end_range != 0) as Field;
+        //let keep_start_case = start_range - (start_range * switch);
+        //let set_start_i_case = (1 - switch) * i as Field;
+        //start_range = keep_start_case + set_start_i_case;
+        //if (({end_range_condition}) & (end_range == 0)) {{
+        //    end_range = i as Field + 1;
+        //}}
+        if (({end_states_condition_body}) & (end_range == 0)) {{
+            end_range = i as Field + 1;
+        }}
+
         {range_conditions}
 
         {final_range_predicate}
@@ -296,7 +309,19 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<BoundedVec<u8, N>, 
         s = s_next;
     }}
     // check final state
-    assert({final_states_condition_body}, f"no match: {{s}}");
+    //assert({final_states_condition_body}, f"no match: {{s}}");
+    let matched = {final_states_condition_body};
+    // constrain extracted substrings to be in match range
+    let full_match = Sequence::new(start_range as u32, end_range as u32 - start_range as u32);
+    let full_match_end = full_match.end();
+    for i in 0..{substr_length} {{
+        let substring = pattern_match.substrings.get_unchecked(i);
+        let is_not_valid = i >= pattern_match.substrings.len();
+        let index_check = substring.index >= full_match.index;
+        let length_check = substring.end() <= full_match_end;
+        let check = (index_check) | is_not_valid;
+        assert(check, f"Substring {{i}} range is out of bounds of the full match found");
+    }}
 
     // extract substrings
     let mut substrings: BoundedVec<BoundedVec<u8, N>, {substr_length}> = BoundedVec::new();

@@ -3,90 +3,93 @@ mod regex;
 global MAX_INPUT_SIZE: u32 = 1024;
 
 fn main(input: [u8; MAX_INPUT_SIZE]) {
-    let x = regex::regex_match(input);
-    let q = x.get_unchecked(0);
+    let matches = regex::regex_match(input);
+    let substring = regex::extract_substring(
+        matches.substrings.get(0),
+        input
+    );
+    // let q = substrings.get_unchecked(0);
     for i in 0..MAX_INPUT_SIZE {
-        let r = q.get_unchecked(i);
+        let r = substring.get_unchecked(i);
         assert(r != 0);
     }
 }
 
-// #[test]
-fn test_out() {
-    let input: [u8; 8] = "abcdabcd".as_bytes();
-    let mut full_input = [0; MAX_INPUT_SIZE];
-    for i in 8..16 {
-        full_input[i] = input[i - 8];
-    }
-    println(full_input);
-    let x = regex::regex_match(input);
-    println(x);
-}
-
 #[test]
-fn test_pass_1() {
-    // let input: [u8; 8] = "x12-yy_z".as_bytes();
-    let input = "x12-yy_     x12-yy_z      ".as_bytes();
-
-    let out = regex::regex_match(input);
-    println(f"out: {out}");
-    // for i in 0..2 {
-    //     if i < out.len() {
-    //         println(out.get(i));
-    //     }
-    // }
-    // println(out);
+fn test_out() {
+    let input = "xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab".as_bytes();
+    let matches = regex::regex_match(input);
+    let substring = regex::extract_substring::<846, 846>(
+        matches.substrings.get(0),
+        input
+    );
+    println(f"substring: {substring}");
 }
+
+// #[test]
+// fn test_pass_1() {
+//     // let input: [u8; 8] = "x12-yy_z".as_bytes();
+//     let input = "x12-yy_     x12-yy_z      ".as_bytes();
+
+//     let out = regex::regex_match(input);
+//     println(f"out: {out}");
+//     // for i in 0..2 {
+//     //     if i < out.len() {
+//     //         println(out.get(i));
+//     //     }
+//     // }
+//     // println(out);
+// }
 
 // #[test]
 fn test_2() {
     let input2 = "\r\nsubject:this is a test.\r\n            ".as_bytes();
     let input = "subject:これはテストです。\r\n".as_bytes();
-    let mut x = [0; 38];
-    for i in 0..37 {
-        x[i + 1] = input[i];
-    }
-    // x[0] = 0xFF;
-    println(x);
-    // let (out, _, _) = regex::__regex_match(input);
-    let out = regex::regex_match(input2);
-    for i in 0..10 {
-        if i < out.len() {
-            println(out.get(i));
-        }
-    }
+    // let mut x = [0; 38];
+    // for i in 0..37 {
+    //     x[i + 1] = input[i];
+    // }
+    // // x[0] = 0xFF;
+    // println(x);
+    // // let (out, _, _) = regex::__regex_match(input);
+    // let out = regex::regex_match(input2);
+    // for i in 0..10 {
+    //     if i < out.len() {
+    //         println(out.get(i));
+    //     }
+    // }
 }
 
-#[test]
-fn test_3() {
-    let input = "dkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20230601; t=1694989812; x=1695594612; dara=google.com; h=to:subject:message-id:date:from:mime-version:from:to:cc:subject :date:message-id:reply-to; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=".as_bytes();
-    let out = regex::regex_match(input);
-    for i in 0..1 {
-        if i < out.len() {
-            println(out.get(i));
-        }
-    }
+// #[test]
+// fn test_3() {
+//     let input = "dkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20230601; t=1694989812; x=1695594612; dara=google.com; h=to:subject:message-id:date:from:mime-version:from:to:cc:subject :date:message-id:reply-to; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=".as_bytes();
+//     let out = regex::regex_match(input);
+//     for i in 0..1 {
+//         if i < out.len() {
+//             println(out.get(i));
+//         }
+//     }
     
-}
+// }
 
-#[test]
-fn test_4() {
-    let input = "aa".as_bytes();
-    let out = regex::regex_match(input);
-    println(out.get(0));
-}
+// #[test]
+// fn test_4() {
+//     let input = "aa".as_bytes();
+//     let out = regex::regex_match(input);
+//     println(out.get(0));
+// }
 
 #[test]
 fn test_5() {
     let input = "Latin-Extension=Ʃƣƙ Greek=ϕω Cyrillic=иЩ Arabic=أبت Devanagari=आदित्य Hiragana&Katakana=なツ".as_bytes();
-    let out = regex::regex_match(input);
-    for i in 0..3 {
-        if i < out.len() {
-            println(out.get(i));
-        } else {
-            println(f"No element at {i}");
-        }
-    }
+    // let out = regex::regex_match(input);
+    // for i in 0..3 {
+    //     if i < out.len() {
+    //         println(out.get(i));
+    //     } else {
+    //         println(f"No element at {i}");
+    //     }
+    // }
 }
 
 // #[test]

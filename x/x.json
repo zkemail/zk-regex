@@ -1,20 +1,16 @@
 {
   "parts":[
     {
-      "is_public": false,
-      "regex_def": "(\\r\\n|^)dkim-signature:"
+        "is_public": false,
+        "regex_def": "x"
     },
     {
-      "is_public": false,
-      "regex_def": "([a-z]+=[^;]+; )+t="
+        "is_public": true,
+        "regex_def": "a*"
     },
     {
-      "is_public": true,
-      "regex_def": "[0-9]+"
-    },
-    {
-      "is_public": false,
-      "regex_def": ";"
+        "is_public": false,
+        "regex_def": "b"
     }
-  ]
+]
 }

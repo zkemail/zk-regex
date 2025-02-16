@@ -1199,9 +1199,101 @@ comptime fn make_lookup_table() -> [Field; 4352] {
 }
 
         
-pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {
+pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<BoundedVec<u8, N>, 1> {
+    let pattern_match = unsafe { __regex_match(input) };
+    
+    // "Previous" state
+    let mut s: Field = 0;
+    s = table[255];
+    // "Next"/upcoming state
+    let mut s_next: Field = 0;
+    let mut start_range = 0;
+    let mut end_range = 0;
+
+    // check the match
+    for i in 0..N {
+        // state transition
+        let temp = input[i] as Field;
+        s_next = table[s * 256 + temp];
+        let potential_s_next = table[temp];
+        if s_next == 0 {
+            s = 0;
+            s_next = potential_s_next;
+        }
+        std::as_witness(s_next);
+
+        // range conditions for substring matches
+        if ((start_range == 0) & (end_range == 0)) {
+            start_range = i as Field;
+        }
+        //let switch = (start_range + end_range != 0) as Field;
+        //let keep_start_case = start_range - (start_range * switch);
+        //let set_start_i_case = (1 - switch) * i as Field;
+        //start_range = keep_start_case + set_start_i_case;
+        //if (((s_next == 15) | (s_next == 16)) & (end_range == 0)) {
+        //    end_range = i as Field + 1;
+        //}
+        if (((s == 15) & (s_next == 16)) & (end_range == 0)) {
+            end_range = i as Field + 1;
+        }
+
+        
+        let range_0 = pattern_match.substrings.get_unchecked(0).in_range(i);
+        let case_0 = [
+            (s == 5) & ((s_next == 6) | (s_next == 7) | (s_next == 8) | (s_next == 9) | (s_next == 10) | (s_next == 11) | (s_next == 12) | (s_next == 13)),
+        	(s == 6) & ((s_next == 6) | (s_next == 7) | (s_next == 8) | (s_next == 9) | (s_next == 10) | (s_next == 11) | (s_next == 12) | (s_next == 13)),
+        	(s_next == 6) & ((s == 7)),
+        	(s_next == 7) & ((s == 8) | (s == 9) | (s == 10)),
+        	(s_next == 9) & ((s == 11) | (s == 12) | (s == 13))
+        ].any(|case| case == true) | !range_0;
+
+
+        
+        let substring_range_check = [case_0]
+            .all(|case| case == true);
+
+        assert(substring_range_check, "substr array ranges wrong");
+            
+
+        s = s_next;
+    }
+    // check final state
+    assert((s == 15) | (s == 16), f"no match: {s}");
+
+    // constrain extracted substrings to be in match range
+    let full_match = Sequence::new(start_range as u32, end_range as u32 - start_range as u32);
+    let full_match_end = full_match.end();
+    for i in 0..1 {
+        let substring = pattern_match.substrings.get_unchecked(i);
+        let is_not_valid = i >= pattern_match.substrings.len();
+        let index_check = substring.index >= full_match.index;
+        let length_check = substring.end() <= full_match_end;
+        let check = (index_check) | is_not_valid;
+        assert(check, f"Substring {i} range is out of bounds of the full match found");
+    }
+
+    // extract substrings
+    let mut substrings: BoundedVec<BoundedVec<u8, N>, 1> = BoundedVec::new();
+    for i in 0..1 {
+        let substring = pattern_match.substrings.get_unchecked(i);
+        let mut extracted_substring = extract_substring(substring, input);
+        let mut len = substrings.len() + 1;
+        if i >= pattern_match.substrings.len() {
+            extracted_substring = BoundedVec::new();
+            len = substrings.len();
+        }
+        substrings.len = len;
+        substrings.storage[i] = extracted_substring;
+    }
+
+    substrings
+}
+
+pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) -> RegexMatch<N, 1> {
     // regex: (\r\n|^)to:[^\r\n]+\r\n
-    let mut substrings: Vec<BoundedVec<Field, N>> = Vec::new();
+    let mut substrings: BoundedVec<Sequence, 1> = BoundedVec::new();
+    let mut current_substring = Sequence::default();
+    let mut full_match = Sequence::default();
 
     // "Previous" state
     let mut s: Field = 0;
@@ -1210,52 +1302,137 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> Vec<BoundedVec<Field, N>> {
     let mut s_next: Field = 0;
 
     let mut consecutive_substr = 0;
-    let mut current_substring = BoundedVec::new();
+    let mut complete = false;
 
     for i in 0..input.len() {
         let temp = input[i] as Field;
         let mut reset = false;
-        let mut s_next_idx = s * 256 + temp;
+        s_next = table[s * 256 + temp];
+        let potential_s_next = table[temp];
         if s_next == 0 {
-          // Check if there is any transition that could be done from a "restart"
-          s_next_idx = temp;
-          // whether the next state changes or not, we mark this as a reset.
-          reset = true;
-          s = 0;
+            reset = true;
+            s = 0;
+            s_next = potential_s_next;
         }
-        s_next = table[s_next_idx];
-        
-
         // If a substring was in the making, but the state was reset
         // we disregard previous progress because apparently it is invalid
         if (reset & (consecutive_substr == 1)) {
-            current_substring = BoundedVec::new();
+            current_substring = Sequence::default();
             consecutive_substr = 0;
         }
         // Fill up substrings
         if ((s == 5) & (s_next == 6) | (s == 5) & (s_next == 7) | (s == 5) & (s_next == 8) | (s == 5) & (s_next == 9) | (s == 5) & (s_next == 10) | (s == 5) & (s_next == 11) | (s == 5) & (s_next == 12) | (s == 5) & (s_next == 13) | (s == 6) & (s_next == 6) | (s == 6) & (s_next == 7) | (s == 6) & (s_next == 8) | (s == 6) & (s_next == 9) | (s == 6) & (s_next == 10) | (s == 6) & (s_next == 11) | (s == 6) & (s_next == 12) | (s == 6) & (s_next == 13) | (s == 7) & (s_next == 6) | (s == 8) & (s_next == 7) | (s == 9) & (s_next == 7) | (s == 10) & (s_next == 7) | (s == 11) & (s_next == 9) | (s == 12) & (s_next == 9) | (s == 13) & (s_next == 9)) {
             if (consecutive_substr == 0) {
-              current_substring.push(temp);
-              consecutive_substr = 1;
-            } else if (consecutive_substr == 1) {
-              current_substring.push(temp);
-            }   
+                full_match.index = i;
+                current_substring.index = i;
+            };
+
+            current_substring.length += 1;
+            consecutive_substr = 1; 
         } else if ((consecutive_substr == 1) & (s_next == 0)) {
-            current_substring = BoundedVec::new();
+            current_substring = Sequence::default();
+            full_match = Sequence::default();
+            substrings = BoundedVec::new();
             consecutive_substr = 0;
+        } else if (s == 15) & (s_next == 16) {
+            full_match.length = i - full_match.index + 1;
+            complete = true;
         } else if (consecutive_substr == 1) {
             // The substring is done so "save" it
             substrings.push(current_substring);
             // reset the substring holder for next use
-            current_substring = BoundedVec::new();
+            current_substring = Sequence::default();
             consecutive_substr = 0;
         }
         s = s_next;
+        if complete == true {
+            break;
+        }
     }
     assert((s == 15) | (s == 16), f"no match: {s}");
     // Add pending substring that hasn't been added
     if consecutive_substr == 1 {
         substrings.push(current_substring);
+        full_match.length = input.len() - full_match.index;
     }
-    substrings
+
+    // make masked array
+    let mut masked = [0; N];
+    for i in 0..substrings.len() {
+        let substring = substrings.get(i);
+        let start_index = substring.index;
+        let end_index = start_index + substring.length;
+        for j in start_index..end_index {
+            masked[j] = input[j];
+        }
+    }
+
+    RegexMatch { masked, full_match, substrings }
+}
+
+
+pub struct Sequence {
+    index: u32,
+    length: u32,
+}
+
+impl Sequence {
+    pub fn new(index: u32, length: u32) -> Self {
+        Self { index, length }
+    }
+
+    pub fn default() -> Self {
+        Self { index: 0, length: 0 }
+    }
+
+    pub fn end(self) -> u32 {
+        self.index + self.length
+    }
+
+    pub fn in_range(self, index: u32) -> bool {
+        index >= self.index & index < self.end()
+    }
+}
+
+pub struct RegexMatch<let INPUT_LENGTH: u32, let NUM_SUBSTRINGS: u32> {
+    masked: [u8; INPUT_LENGTH],
+    full_match: Sequence,
+    substrings: BoundedVec<Sequence, NUM_SUBSTRINGS>,
+}
+
+pub fn extract_substring<let INPUT_LENGTH: u32, let MAX_SUBSTRING_LENGTH: u32>(
+    substring_sequence: Sequence,
+    input: [u8; INPUT_LENGTH],
+) -> BoundedVec<u8, MAX_SUBSTRING_LENGTH> {
+    let mut substring: BoundedVec<u8, MAX_SUBSTRING_LENGTH> = unsafe { __extract_substring(substring_sequence, input) };
+    assert(substring_sequence.length == substring.len(), "length mismatch");
+    for i in 0..MAX_SUBSTRING_LENGTH {
+        // hack for index to never exceed array bounds
+        // must be constrained to be true when matching is required to prevent 0's passing when shouldn't
+        // @dev while this adds constraints in worse case it can be more efficient if MAX_SUBSTRING_LENGTH < INPUT_LENGTH
+        let input_range_check = substring_sequence.index + i < INPUT_LENGTH;
+        let index = (substring_sequence.index + i) as Field * input_range_check as Field;
+
+        // range where input should match substring
+        let sequence_range_check = i >= substring_sequence.length;
+        
+        // constrain array construction if in range
+        let expected_byte = input[index];
+        let byte = substring.get_unchecked(i);
+        let matched = (expected_byte as Field == byte as Field);
+        assert(matched | sequence_range_check, "incorrect substring construction");
+    }
+    substring
+}
+
+unconstrained fn __extract_substring<let INPUT_LENGTH: u32, let MAX_SUBSTRING_LENGTH: u32>(
+    substring_sequence: Sequence,
+    input: [u8; INPUT_LENGTH],
+) -> BoundedVec<u8, MAX_SUBSTRING_LENGTH> {
+    let mut substring: BoundedVec<u8, MAX_SUBSTRING_LENGTH> = BoundedVec::new();
+    for i in 0..substring_sequence.length {
+        let byte = input[substring_sequence.index + i];
+        substring.push(byte);
+    }
+    substring
 }

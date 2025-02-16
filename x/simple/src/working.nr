@@ -877,7 +877,7 @@ pub fn regex_match<let N: u32>(input: [u8; N]) -> BoundedVec<BoundedVec<u8, N>, 
 
     // extract substrings
     let mut substrings: BoundedVec<BoundedVec<u8, N>, 3> = BoundedVec::new();
-    for i in 0..3 {
+    for i in 0..2 {
         let substring = pattern_match.substrings.get_unchecked(i);
         let mut extracted_substring = extract_substring(substring, pattern_match.masked);
         let mut len = substrings.len() + 1;
