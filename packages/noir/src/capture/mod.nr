@@ -2,6 +2,7 @@ pub mod body_hash;
 pub mod email_addr;
 pub mod email_domain;
 pub mod from_all;
+pub mod from_addr;
 pub mod message_id;
 pub mod reversed_bracket;
 pub mod subject_all;
