@@ -9,6 +9,7 @@ pub fn get_common_regex_def() -> String {
     {SEQUENCE_DEF}
     {EXTRACT_SUBSTRING_DEF}
     {MASK_MATCH_DEF}
+    {REVERSE_VEC_DEF}
     "#
     )
 }
@@ -148,7 +149,7 @@ const MASK_MATCH_DEF: &str = r#"
 //     for i in 0..INPUT_LENGTH {
 //         let any_in_range = substring_sequences
 //             .storage()
-//             .any(|sequence| sequence.in_range(i));
+//             .any(|sequence: Sequence| sequence.in_range(i));
 //         let expected_byte = input[i] as Field * any_in_range as Field;
 //         assert(masked[i] as Field == expected_byte, "Incorrect masking");
 //     }
@@ -167,5 +168,42 @@ unconstrained fn __mask_input<let INPUT_LENGTH: u32, let MAX_SUBSTRING_LENGTH: u
         }
     }
     masked_input
+}
+"#;
+
+const REVERSE_VEC_DEF: &str = r#"
+/**
+ * Optimized reversal of a BoundedVector with preservation of 0-padding at end
+ * 
+ * @param input - the input vector to reverse
+ * @returns the reversed vector
+ */
+fn reverse_vec<let N: u32>(input: BoundedVec<u8, N>) -> BoundedVec<u8, N> {
+    let mut reversed = unsafe { __reverse_vec(input) };
+    for i in 0..N {
+        let in_range = (i < reversed.len()) as Field;
+        // if in range choose opposite index, otherwise choose same index to check 0's
+        // yeah I know this is ugly show me a more efficient version and I'll use it
+        let index = (((input.len() as Field) - (i as Field * in_range) - 1) * in_range as Field + (i as Field * (1 - in_range))) as Field;
+        let expected_byte = input.get_unchecked(index as u32) as Field * in_range as Field;
+        let byte = reversed.get_unchecked(i) as Field;
+        assert(byte == expected_byte, "Incorrect reverse");
+    }
+    reversed
+}
+
+/**
+ * Unconstrained helper to build the reversed vector without using mutable RAM tables
+ * @dev SHOULD NOT BE CALLED BY ANYTHING EXCEPT `reverse_vec`
+ * 
+ * @param input - the input vector to reverse
+ * @output - the reversed vector
+ **/
+unconstrained fn __reverse_vec<let N: u32>(input: BoundedVec<u8, N>) -> BoundedVec<u8, N> {
+    let mut reversed: BoundedVec<u8, N> = BoundedVec::new();
+    for i in 0..input.len() {
+        reversed.push(input.get(input.len() - i - 1));
+    }
+    reversed
 }
 "#;
