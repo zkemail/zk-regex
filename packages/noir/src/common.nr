@@ -3,23 +3,37 @@
 pub struct Sequence {
     index: u32,
     length: u32,
+    end: u32
 }
 
 impl Sequence {
     pub fn new(index: u32, length: u32) -> Self {
-        Self { index, length }
+        Self { index, length, end: index + length }
     }
 
     pub fn default() -> Self {
-        Self { index: 0, length: 0 }
+        Self { index: 0, length: 0, end: 0 }
+    }
+
+    pub fn initialized(self) -> bool {
+        self.length > 0
+    }
+
+    pub fn index(self) -> u32 {
+        self.index
+    }
+
+    pub fn length(self) -> u32 {
+        self.length
     }
 
     pub fn end(self) -> u32 {
-        self.index + self.length
+        self.end
     }
 
     pub fn in_range(self, index: u32) -> bool {
-        index >= self.index & index < self.end()
+        // if indexend == 0, index < self.end implicitly returns false if uninitialized
+        index >= self.index & index < self.end
     }
 }
 

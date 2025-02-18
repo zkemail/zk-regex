@@ -1,8 +1,9 @@
 [package]
-name = "regex_test"
+name = "zkregex"
 type = "lib"
 authors = [""]
 compiler_version = ">=1.0.0"
 
 [dependencies]
+base64 = { tag = "v0.3.1", git = "https://github.com/noir-lang/noir_base64" }
 # sparse_array = { git = "https://github.com/jp4g/sparse_array/", tag = "feat/comptime-codegen"}

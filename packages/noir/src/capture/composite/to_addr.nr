@@ -1,5 +1,5 @@
 use crate::{
-    capture::{to_all, email_addr as email_addr_capture},
+    capture::raw::{to_all, email_addr as email_addr_capture},
     basic::email_addr,
     common::{extract_substring, reverse_vec},
     constants::{ADDR_REGEX_MAX_CAPTURE_LEN, TO_ALL_MAX_LEN}
