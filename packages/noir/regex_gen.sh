@@ -15,7 +15,9 @@ gen_regex() {
         --noir-file-path "../$file_name" \
         -t "$circuit_name" \
         -g true \
-        --sparse-array false
+        --sparse-array false \
+        --use-common crate::common \
+        --force-match false
 }
 
 cd src/templates/

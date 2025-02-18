@@ -90,11 +90,13 @@ fn test_5() {
     // }
 }
 
-// #[test]
-// fn test_pass_3() {
-//     let input: [u8; 8] = "x00-yy_z".as_bytes();
-//     regex::regex_match(input);
-// }
+#[test]
+fn test_pass_3() {
+    let input = "ab".as_bytes();
+    let matches = regex::regex_match(input);
+    let substring = regex_common::extract_substring::<_, 2>(matches.get(0), input);
+    println(f"substring: {substring}");
+}
 
 // #[test]
 // fn test_pass_4() {

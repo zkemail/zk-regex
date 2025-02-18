@@ -1,0 +1,7 @@
+[package]
+name = "x"
+type = "bin"
+authors = [""]
+
+[dependencies]
+regex = { path = "../" }

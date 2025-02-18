@@ -19,7 +19,7 @@ impl Sequence {
     pub fn in_range(self, index: u32) -> bool {
         index >= self.index & index < self.end()
     }
-}w
+}
 
 pub struct SubstringMatches<let INPUT_LENGTH: u32, let NUM_SUBSTRINGS: u32> {
     masked: [u8; INPUT_LENGTH],
