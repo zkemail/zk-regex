@@ -22,10 +22,10 @@ pub fn regex_match<let N: u32>(input: BoundedVec<u8, N>) -> [u8; TIMESTAMP_LEN] 
  * @param timestamp: timestamp to convert to number
  * @returns the same timestamp as a field element (cast as needed)
  */
-pub fn parse_timestamp(timestamp: [u8; TIMESTAMP_LEN]) -> Field {
+pub fn parse_timestamp<let N: u32>(timestamp: [u8; N]) -> Field {
     let mut number: Field = 0;
-    for i in 0..TIMESTAMP_LEN {
-        let byte = timestamp[TIMESTAMP_LEN - i - 1];
+    for i in 0..N {
+        let byte = timestamp[N - i - 1];
         assert((0x30 <= byte) & (byte <= 0x39), "Timestamp byte is not a UTF-8 digit");
         let digit = byte as Field - 0x30;
         number += digit * 10.pow_32(i as Field);
