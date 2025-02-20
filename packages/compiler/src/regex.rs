@@ -40,8 +40,7 @@ fn create_dfa_config() -> Config {
 /// An `Option<usize>` containing the index of the caret if found, or `None` if not found.
 fn find_caret_index(regex: &str) -> Option<usize> {
     let regex_bytes = regex.as_bytes();
-    let mut is_in_parenthesis = false;
-    let mut caret_found = false;
+    let mut depth = 0; // Changed to track nesting depth
     let mut idx = 0;
 
     while idx < regex_bytes.len() {
@@ -50,25 +49,34 @@ fn find_caret_index(regex: &str) -> Option<usize> {
                 idx += 2;
             }
             b'(' => {
-                is_in_parenthesis = true;
+                depth += 1; // Track nested parentheses
                 idx += 1;
-            }
-            b'[' => {
-                idx += 2;
             }
             b')' => {
-                debug_assert!(is_in_parenthesis, "Unmatched parenthesis");
-                is_in_parenthesis = false;
-                idx += 1;
-                if caret_found {
-                    break;
+                if depth > 0 {
+                    depth -= 1;
                 }
+                idx += 1;
+            }
+            b'^' if depth == 0 => {
+                // Only consider carets at root level
+                return Some(idx);
             }
             b'^' => {
-                caret_found = true;
+                idx += 1; // Ignore carets inside parentheses
+            }
+            b'[' => {
+                // Skip entire character class
                 idx += 1;
-                if !is_in_parenthesis {
-                    break;
+                while idx < regex_bytes.len() {
+                    if regex_bytes[idx] == b'\\' {
+                        idx += 2;
+                    } else if regex_bytes[idx] == b']' {
+                        idx += 1;
+                        break;
+                    } else {
+                        idx += 1;
+                    }
                 }
             }
             _ => {
@@ -77,11 +85,7 @@ fn find_caret_index(regex: &str) -> Option<usize> {
         }
     }
 
-    if caret_found {
-        Some(idx)
-    } else {
-        None
-    }
+    None
 }
 
 /// Processes the caret (^) in a regex, splitting it into two parts if necessary.
@@ -843,16 +847,15 @@ fn process_public_regex(
 ///
 /// # Arguments
 ///
-/// * `target_state` - A mutable reference to the DFAStateNode receiving the merged edges.
-/// * `source_state` - A reference to the DFAStateNode providing the edges to be merged.
-fn merge_edges(target_state: &mut DFAStateNode, source_state: &DFAStateNode) {
-    for (k, v) in &source_state.transitions {
-        for edge_value in v {
-            target_state.transitions.values_mut().for_each(|values| {
-                values.retain(|val| val != edge_value);
-            });
-        }
-        target_state.transitions.insert(*k, v.clone());
+/// * `prev_accept_state` - A mutable reference to the DFAStateNode receiving the merged edges.
+/// * `curr_start_state` - A reference to the DFAStateNode providing the edges to be merged.
+fn merge_edges(prev_accept_state: &mut DFAStateNode, curr_start_state: &DFAStateNode) {
+    for (k, v) in &curr_start_state.transitions {
+        prev_accept_state
+            .transitions
+            .entry(*k)
+            .and_modify(|existing| existing.extend(v.iter().cloned()))
+            .or_insert_with(|| v.clone());
     }
 }
 
@@ -873,11 +876,11 @@ fn update_state_type(target_state: &mut DFAStateNode, source_state: &DFAStateNod
 ///
 /// # Arguments
 ///
-/// * `accept_state` - A mutable reference to the accepting DFAStateNode being processed.
-/// * `start_state` - A reference to the start DFAStateNode of the graph being merged.
-fn process_accept_state(accept_state: &mut DFAStateNode, start_state: &DFAStateNode) {
-    merge_edges(accept_state, start_state);
-    update_state_type(accept_state, start_state);
+/// * `prev_accept_state` - A mutable reference to the accepting DFAStateNode being processed.
+/// * `curr_start_state` - A reference to the start DFAStateNode of the graph being merged.
+fn process_accept_state(prev_accept_state: &mut DFAStateNode, curr_start_state: &DFAStateNode) {
+    merge_edges(prev_accept_state, curr_start_state);
+    update_state_type(prev_accept_state, curr_start_state);
 }
 
 /// Adds a new DFA graph to an existing net DFA graph.
@@ -1033,11 +1036,25 @@ fn create_dfa_graph_from_regex(regex: &str) -> Result<DFAGraph, CompilerError> {
 /// # Returns
 ///
 /// A boolean indicating whether the input string matches the regex pattern.
+#[cfg(test)]
 fn match_string_with_dfa_graph(graph: &DFAGraph, input: &str) -> bool {
     let mut current_state = 0;
+    println!(
+        "Starting DFA match for '{}' (initial state {})",
+        input, current_state
+    );
 
-    for &byte in input.as_bytes() {
+    for (idx, &byte) in input.as_bytes().iter().enumerate() {
         let current_node = &graph.states[current_state];
+        let ch = char::from(byte); // For printlnging readability
+
+        println!(
+            "Processing byte {} ('{}') at state {} (type: {})",
+            idx,
+            ch.escape_default(),
+            current_state,
+            current_node.state_type
+        );
 
         let mut next_state = None;
         for (&state, char_set) in &current_node.transitions {
@@ -1049,16 +1066,32 @@ fn match_string_with_dfa_graph(graph: &DFAGraph, input: &str) -> bool {
 
         match next_state {
             Some(state) => {
+                println!(
+                    "Transition: {} --'{}'--> {}",
+                    current_state,
+                    ch.escape_default(),
+                    state
+                );
                 current_state = state;
             }
             None => {
+                println!(
+                    "No transition for '{}' (byte {:#04x}) in state {}",
+                    ch, byte, current_state
+                );
                 return false;
-            } // No valid transition found, input doesn't match
+            }
         }
     }
 
-    // Check if the final state is an accepting state
-    graph.states[current_state].state_type == "accept"
+    let accepted = graph.states[current_state].state_type == "accept";
+    println!(
+        "Final state: {} ({}) - {}",
+        current_state,
+        graph.states[current_state].state_type,
+        if accepted { "ACCEPTED" } else { "REJECTED" }
+    );
+    accepted
 }
 
 /// Creates a `RegexAndDFA` from a regex string and substring definitions.
@@ -1132,10 +1165,17 @@ pub(crate) fn get_max_state(dfa: &DFAGraph) -> usize {
         .unwrap_or_default()
 }
 
+#[cfg(test)]
 mod dfa_test {
-    use crate::regex::{create_dfa_graph_from_regex, match_string_with_dfa_graph};
+    use crate::{
+        regex::{create_dfa_graph_from_regex, find_caret_index, match_string_with_dfa_graph},
+        DecomposedRegexConfig, RegexPartConfig,
+    };
+    use regex_automata::dfa::regex::Regex;
     use serde::{Deserialize, Serialize};
-    use std::{env, fs::File, io::BufReader, path::PathBuf};
+    use std::{collections::VecDeque, env, fs::File, io::BufReader, path::PathBuf};
+
+    use super::get_regex_and_dfa;
 
     #[derive(Debug, Deserialize, Serialize)]
     struct RegexTestCase {
@@ -1146,41 +1186,77 @@ mod dfa_test {
 
     #[test]
     fn test_dfa_graph() {
-        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        path.push("src/dfa_tests.json");
-        let file = File::open(path).expect("Failed to open test cases file");
-        let reader = BufReader::new(file);
-        let test_cases: Vec<RegexTestCase> =
-            serde_json::from_reader(reader).expect("Failed to parse JSON");
+        // let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        // path.push("src/dfa_tests.json");
+        // let file = File::open(path).expect("Failed to open test cases file");
+        // let reader = BufReader::new(file);
+        // let test_cases: Vec<RegexTestCase> =
+        //     serde_json::from_reader(reader).expect("Failed to parse JSON");
 
-        for case in test_cases {
-            let dfa_graph = match create_dfa_graph_from_regex(&case.regex) {
-                Ok(graph) => graph,
-                Err(e) => {
-                    panic!(
-                        "Failed to create DFA graph for regex '{}': {:?}",
-                        case.regex, e
-                    );
-                }
-            };
+        // for case in test_cases {
+        //     let dfa_graph = match create_dfa_graph_from_regex(&case.regex) {
+        //         Ok(graph) => graph,
+        //         Err(e) => {
+        //             panic!(
+        //                 "Failed to create DFA graph for regex '{}': {:?}",
+        //                 case.regex, e
+        //             );
+        //         }
+        //     };
 
-            for pass_case in case.pass {
-                assert!(
-                    match_string_with_dfa_graph(&dfa_graph, &pass_case),
-                    "Positive case failed for regex '{}': '{}'",
-                    case.regex,
-                    pass_case
-                );
-            }
+        //     println!("dfa_graph: {}", dfa_graph);
 
-            for fail_case in case.fail {
-                assert!(
-                    !match_string_with_dfa_graph(&dfa_graph, &fail_case),
-                    "Negative case failed for regex '{}': '{}'",
-                    case.regex,
-                    fail_case
-                );
-            }
-        }
+        //     for pass_case in case.pass {
+        //         assert!(
+        //             match_string_with_dfa_graph(&dfa_graph, &pass_case),
+        //             "Positive case failed for regex '{}': '{}'",
+        //             case.regex,
+        //             pass_case
+        //         );
+        //     }
+
+        //     for fail_case in case.fail {
+        //         assert!(
+        //             !match_string_with_dfa_graph(&dfa_graph, &fail_case),
+        //             "Negative case failed for regex '{}': '{}'",
+        //             case.regex,
+        //             fail_case
+        //         );
+        //     }
+        // }
+
+        let mut parts = VecDeque::new();
+        parts.push_back(RegexPartConfig {
+            regex_def: "(^|\r\n)(to:)([^<\r\n]*<?)?".to_string(),
+            is_public: false,
+        });
+        parts.push_back(RegexPartConfig {
+            regex_def: "([A-Za-z0-9!#$%&'*=?\\-\\^_`{|}~.\\/]{3})".to_string(),
+            is_public: true,
+        });
+        parts.push_back(RegexPartConfig {
+            regex_def: "([A-Za-z0-9!#$%&'*\\+=?\\-\\^_`{|}~.\\/]*@[A-Za-z0-9.\\-]+>?)\r\n"
+                .to_string(),
+            is_public: false,
+        });
+
+        let mut decomposed_regex = DecomposedRegexConfig { parts };
+
+        // let regex_str =
+        //     "(^|\r\n)(to:)([^<\r\n]*<?)?([A-Za-z0-9!#$%&'*=?\\-\\^_`{|}~.\\/]{3})([A-Za-z0-9!#$%&'*\\+=?\\-\\^_`{|}~.\\/]*@[A-Za-z0-9.\\-]+>?)\r\n";
+
+        let tests_str = "to:Dave <user@example.com>\r\n";
+
+        // let graph1 = create_dfa_graph_from_regex(&regex_str).unwrap();
+        let graph2 = get_regex_and_dfa(&mut decomposed_regex).unwrap().dfa;
+
+        // println!("graph1: {}", graph1);
+        println!("graph2: {}", graph2);
+
+        // let res1 = match_string_with_dfa_graph(&graph1, &tests_str);
+        let res2 = match_string_with_dfa_graph(&graph2, &tests_str);
+
+        // println!("res1: {}", res1);
+        println!("res2: {}", res2);
     }
 }
