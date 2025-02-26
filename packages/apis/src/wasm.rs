@@ -6,11 +6,6 @@ use serde_json::Value;
 use std::panic;
 use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen(start)]
-pub fn init_panic_hook() {
-    panic::set_hook(Box::new(console_error_panic_hook::hook));
-}
-
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn padString(str: &str, paddedBytesSize: usize) -> Array {
