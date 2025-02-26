@@ -1,8 +1,15 @@
 use crate::extract_substrs::*;
 use crate::*;
+use console_error_panic_hook;
 use js_sys::Array;
 use serde_json::Value;
+use std::panic;
 use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen(start)]
+pub fn init_panic_hook() {
+    panic::set_hook(Box::new(console_error_panic_hook::hook));
+}
 
 #[wasm_bindgen]
 #[allow(non_snake_case)]
