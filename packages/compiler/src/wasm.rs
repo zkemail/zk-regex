@@ -1,5 +1,7 @@
 use crate::*;
+use console_error_panic_hook;
 use serde_wasm_bindgen::from_value;
+use std::panic;
 use wasm_bindgen::prelude::*;
 
 use self::circom::gen_circom_string;
@@ -10,13 +12,21 @@ pub fn genFromDecomposed(
     decomposedRegexJson: &str,
     circomTemplateName: &str,
     is_safe: bool,
-) -> String {
+) -> Result<String, JsValue> {
     let mut decomposed_regex_config: DecomposedRegexConfig =
-        serde_json::from_str(decomposedRegexJson).expect("failed to parse decomposed_regex json");
-    let regex_and_dfa = get_regex_and_dfa(&mut decomposed_regex_config)
-        .expect("failed to convert the decomposed regex to dfa");
+        serde_json::from_str(decomposedRegexJson).map_err(|e| {
+            JsValue::from_str(&format!("failed to parse decomposed_regex json: {}", e))
+        })?;
+
+    let regex_and_dfa = get_regex_and_dfa(&mut decomposed_regex_config).map_err(|e| {
+        JsValue::from_str(&format!(
+            "failed to convert the decomposed regex to dfa: {}",
+            e
+        ))
+    })?;
+
     gen_circom_string(&regex_and_dfa, circomTemplateName, is_safe)
-        .expect("failed to generate circom")
+        .map_err(|e| JsValue::from_str(&format!("Failed to generate Circom string: {}", e)))
 }
 
 #[wasm_bindgen]

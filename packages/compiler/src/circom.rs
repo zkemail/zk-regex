@@ -22,17 +22,17 @@ use std::{
 ///
 /// # Returns
 ///
-/// A tuple containing:
+/// A Result tuple containing:
 /// * The reverse graph as a `BTreeMap<usize, BTreeMap<usize, Vec<u8>>>`.
 /// * A `BTreeSet<usize>` of accepting state IDs.
 ///
 /// # Errors
 ///
-/// Returns a `CompilerError::NoAcceptedState` if no accepting states are found.
+/// Returns a `CompilerError::AcceptNodesError` if no accepting states are found.
 fn build_reverse_graph(
     state_len: usize,
     dfa_graph: &DFAGraph,
-) -> (BTreeMap<usize, BTreeMap<usize, Vec<u8>>>, BTreeSet<usize>) {
+) -> Result<(BTreeMap<usize, BTreeMap<usize, Vec<u8>>>, BTreeSet<usize>), CompilerError> {
     let mut rev_graph = BTreeMap::<usize, BTreeMap<usize, Vec<u8>>>::new();
     let mut accept_nodes = BTreeSet::<usize>::new();
 
@@ -52,10 +52,12 @@ fn build_reverse_graph(
     }
 
     if accept_nodes.is_empty() {
-        panic!("Accept node must exist");
+        return Err(CompilerError::AcceptNodesError(
+            "Accept node must exist".to_string(),
+        ));
     }
 
-    (rev_graph, accept_nodes)
+    Ok((rev_graph, accept_nodes))
 }
 
 /// Optimizes character ranges by grouping consecutive characters and identifying individual characters.
@@ -668,20 +670,25 @@ fn generate_init_code(state_len: usize) -> Vec<String> {
 ///
 /// # Returns
 ///
-/// A Vec of Strings containing the generated acceptance logic code.
+/// A Result Vec of Strings containing the generated acceptance logic code.
 ///
-/// # Panics
-///
-/// Panics if there are no accept nodes or if there is more than one accept node.
-fn generate_accept_logic(accept_nodes: BTreeSet<usize>, end_anchor: bool) -> Vec<String> {
+/// Returns error if there are no accept nodes or if there is more than one accept node.
+fn generate_accept_logic(
+    accept_nodes: BTreeSet<usize>,
+    end_anchor: bool,
+) -> Result<Vec<String>, CompilerError> {
     let mut accept_lines = vec![];
 
     if accept_nodes.is_empty() {
-        panic!("Accept node must exist");
+        return Err(CompilerError::AcceptNodesError(
+            "Accept node must exist".to_string(),
+        ));
     }
 
     if accept_nodes.len() != 1 {
-        panic!("The size of accept nodes must be one");
+        return Err(CompilerError::AcceptNodesError(
+            "The size of accept nodes must be one".to_string(),
+        ));
     }
 
     let accept_node = *accept_nodes.iter().next().unwrap();
@@ -713,7 +720,7 @@ fn generate_accept_logic(accept_nodes: BTreeSet<usize>, end_anchor: bool) -> Vec
         accept_lines.push("\tout <== is_accepted.out;".to_string());
     }
 
-    accept_lines
+    Ok(accept_lines)
 }
 
 /// Generates the complete Circom circuit as a string.
@@ -737,10 +744,10 @@ fn gen_circom_allstr(
     regex_str: &str,
     end_anchor: bool,
     is_safe: bool,
-) -> String {
+) -> Result<String, CompilerError> {
     let state_len = dfa_graph.states.len();
 
-    let (rev_graph, accept_nodes) = build_reverse_graph(state_len, dfa_graph);
+    let (rev_graph, accept_nodes) = build_reverse_graph(state_len, dfa_graph)?;
 
     let (eq_i, lt_i, and_i, multi_or_i, lines) =
         generate_state_transition_logic(&rev_graph, state_len, end_anchor);
@@ -759,11 +766,11 @@ fn gen_circom_allstr(
 
     let init_code = generate_init_code(state_len);
 
-    let accept_lines = generate_accept_logic(accept_nodes, end_anchor);
+    let accept_lines = generate_accept_logic(accept_nodes, end_anchor)?;
 
     let final_code = [declarations, init_code, lines, accept_lines].concat();
 
-    final_code.join("\n")
+    Ok(final_code.join("\n"))
 }
 
 /// Writes the consecutive logic for the Circom circuit.
@@ -978,7 +985,7 @@ pub(crate) fn gen_circom_template(
         &regex_and_dfa.regex_pattern,
         regex_and_dfa.has_end_anchor,
         is_safe,
-    );
+    )?;
 
     let mut file = File::create(circom_path)?;
     file.write_all(circom.as_bytes())?;
@@ -1015,7 +1022,7 @@ pub(crate) fn gen_circom_string(
         &regex_and_dfa.regex_pattern,
         regex_and_dfa.has_end_anchor,
         is_safe,
-    );
+    )?;
     let substrs = add_substrs_constraints(regex_and_dfa)?;
     let result = circom + &substrs;
     Ok(result)
