@@ -96,22 +96,19 @@ pub fn substring_extraction_conditions(
                 })
                 .collect::<Vec<_>>()
                 .join(" | ");
-
-            // For the first condition, use `if`, for others, use `else if`
-            let (start_part, start_index) = if first_condition {
-                first_condition = false;
-                let start_index_text = indent(
-                    &format!(
-                        r#"
+            let start_index = indent(
+                &format!(
+                    r#"
 if (consecutive_substr == 0) {{
-    current_substring.index = i;
+current_substring.index = i;
 }};"#
-                    ),
-                    1,
-                );
-                ("if", start_index_text)
-            } else {
-                ("else if", format!(""))
+                ),
+                1,
+            );
+            // For the first condition, use `if`, for others, use `else if`
+            let start_part = match first_condition {
+                true => "if",
+                false => "else if",
             };
 
             // The body of the condition handling substring creation/updating
