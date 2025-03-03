@@ -110,6 +110,7 @@ current_substring.index = i;
                 true => "if",
                 false => "else if",
             };
+            first_condition = false;
 
             // The body of the condition handling substring creation/updating
             format!(

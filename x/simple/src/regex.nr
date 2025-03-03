@@ -935,7 +935,7 @@ pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) ->  BoundedVec<Se
         if ((s == 16) & (s_next == 17) | (s == 16) & (s_next == 18) | (s == 17) & (s_next == 19) | (s == 18) & (s_next == 19) | (s == 19) & (s_next == 17) | (s == 19) & (s_next == 18)) {
     
             if (consecutive_substr == 0) {
-                current_substring.index = i;
+            current_substring.index = i;
             };
             current_substring.length += 1;
             consecutive_substr = 1; 
@@ -944,7 +944,7 @@ pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) ->  BoundedVec<Se
         else if ((s == 26) & (s_next == 27) | (s == 26) & (s_next == 28) | (s == 27) & (s_next == 29) | (s == 28) & (s_next == 29) | (s == 29) & (s_next == 27) | (s == 29) & (s_next == 28)) {
     
             if (consecutive_substr == 0) {
-                current_substring.index = i;
+            current_substring.index = i;
             };
             current_substring.length += 1;
             consecutive_substr = 1; 
@@ -953,7 +953,7 @@ pub unconstrained fn __regex_match<let N: u32>(input: [u8; N]) ->  BoundedVec<Se
         else if ((s == 39) & (s_next == 40) | (s == 40) & (s_next == 41) | (s == 41) & (s_next == 40)) {
     
             if (consecutive_substr == 0) {
-                current_substring.index = i;
+            current_substring.index = i;
             };
             current_substring.length += 1;
             consecutive_substr = 1; 
