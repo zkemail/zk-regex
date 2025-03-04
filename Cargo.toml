@@ -1,0 +1,10 @@
+[workspace]
+members = ["compiler"]
+
+[workspace.package]
+edition = "2024"
+
+[workspace.dependencies]
+regex-automata = "0.4.9"
+
+resolver = "2"
