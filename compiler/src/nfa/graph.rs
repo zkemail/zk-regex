@@ -1,5 +1,5 @@
 use super::NFAGraph;
-use std::collections::{ HashMap, HashSet, VecDeque };
+use std::collections::{HashMap, HashSet, VecDeque};
 
 impl NFAGraph {}
 
@@ -11,7 +11,7 @@ impl NFAGraph {
         // Step 1: Compute epsilon closure for all states
         let epsilon_closures = self.compute_all_epsilon_closures();
 
-        // Step 2: Duplicate all moves from epsilon-reachable states
+        // Step 2: Duplicate all moves from epsilon-reachable states and merge properties
         for node_idx in 0..self.nodes.len() {
             let closure = &epsilon_closures[node_idx];
 
@@ -25,11 +25,25 @@ impl NFAGraph {
                     continue;
                 }
 
-                // Add all byte transitions from the closure state
+                // Merge properties from epsilon-reachable states
                 if let Some(node) = self.nodes.get(closure_state) {
+                    // Merge capture groups
+                    for &capture_group in &node.capture_groups {
+                        if !new_graph.nodes[node_idx]
+                            .capture_groups
+                            .contains(&capture_group)
+                        {
+                            new_graph.nodes[node_idx].capture_groups.push(capture_group);
+                        }
+                    }
+
+                    // Add all byte transitions from the closure state
                     for (&byte, destinations) in &node.byte_transitions {
                         for &dest in destinations {
-                            new_transitions.entry(byte).or_insert_with(Vec::new).push(dest);
+                            new_transitions
+                                .entry(byte)
+                                .or_insert_with(Vec::new)
+                                .push(dest);
                         }
                     }
                 }
@@ -38,13 +52,14 @@ impl NFAGraph {
             // Merge the new transitions with existing ones
             for (byte, destinations) in new_transitions {
                 for dest in destinations {
-                    if
-                        !new_graph.nodes[node_idx].byte_transitions
-                            .entry(byte)
-                            .or_insert_with(Vec::new)
-                            .contains(&dest)
+                    if !new_graph.nodes[node_idx]
+                        .byte_transitions
+                        .entry(byte)
+                        .or_insert_with(Vec::new)
+                        .contains(&dest)
                     {
-                        new_graph.nodes[node_idx].byte_transitions
+                        new_graph.nodes[node_idx]
+                            .byte_transitions
                             .get_mut(&byte)
                             .unwrap()
                             .push(dest);
@@ -62,8 +77,8 @@ impl NFAGraph {
         }
         new_graph.start_states = new_start_states;
 
-        // Step 4: Make epsilon-reachable final states also final states
-        let mut new_accept_states = self.accept_states.clone();
+        // Step 4: Make states with epsilon-reachable accept states also accept states
+        let mut new_accept_states = HashSet::new();
         for node_idx in 0..self.nodes.len() {
             for &reachable in &epsilon_closures[node_idx] {
                 if self.accept_states.contains(&reachable) {
@@ -73,6 +88,30 @@ impl NFAGraph {
             }
         }
         new_graph.accept_states = new_accept_states;
+
+        // Remove unreachable states from accept states
+        let mut reachable_states = HashSet::new();
+        // Add all start states
+        reachable_states.extend(&new_graph.start_states);
+
+        // Find all states reachable through byte transitions
+        let mut queue: VecDeque<usize> = new_graph.start_states.iter().cloned().collect();
+        while let Some(state) = queue.pop_front() {
+            if let Some(node) = new_graph.nodes.get(state) {
+                for destinations in node.byte_transitions.values() {
+                    for &dest in destinations {
+                        if reachable_states.insert(dest) {
+                            queue.push_back(dest);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Keep only reachable states in accept states
+        new_graph
+            .accept_states
+            .retain(|&state| reachable_states.contains(&state));
 
         // Clear all epsilon transitions
         for node in &mut new_graph.nodes {
@@ -150,6 +189,8 @@ impl NFAGraph {
         }
 
         // Check if any current state is an accept state
-        current_states.iter().any(|&state| self.accept_states.contains(&state))
+        current_states
+            .iter()
+            .any(|&state| self.accept_states.contains(&state))
     }
 }

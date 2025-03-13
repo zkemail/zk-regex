@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::collections::HashSet;
 
 use super::NFAGraph;
@@ -12,7 +13,11 @@ impl NFAGraph {
 
         for (idx, node) in self.nodes.iter().enumerate() {
             let state_type = if self.start_states.contains(&idx) {
-                if self.accept_states.contains(&idx) { "start+accept" } else { "start" }
+                if self.accept_states.contains(&idx) {
+                    "start+accept"
+                } else {
+                    "start"
+                }
             } else if self.accept_states.contains(&idx) {
                 "accept"
             } else {
@@ -67,9 +72,140 @@ impl NFAGraph {
         self.get_all_transitions().len()
     }
 
+    /// Get all valid transitions in the form (curr_state, byte_range, next_state)
+    pub fn get_all_transitions_concise(&self) -> Vec<(usize, (u8, u8), usize)> {
+        let mut concise_transitions = Vec::new();
+
+        // Process each state
+        for (state_idx, node) in self.nodes.iter().enumerate() {
+            // Group transitions by destination state
+            let mut transitions_by_dest: HashMap<usize, Vec<u8>> = HashMap::new();
+
+            // Collect all bytes for each destination
+            for (&byte, destinations) in &node.byte_transitions {
+                for &dest in destinations {
+                    transitions_by_dest.entry(dest).or_default().push(byte);
+                }
+            }
+
+            // For each destination, find contiguous byte ranges
+            for (dest, mut bytes) in transitions_by_dest {
+                bytes.sort();
+
+                // Find contiguous ranges
+                let mut ranges = Vec::new();
+                if !bytes.is_empty() {
+                    let mut start = bytes[0];
+                    let mut end = bytes[0];
+
+                    for i in 1..bytes.len() {
+                        if bytes[i] == end + 1 {
+                            // Continue the current range
+                            end = bytes[i];
+                        } else {
+                            // End the current range and start a new one
+                            ranges.push((start, end));
+                            start = bytes[i];
+                            end = bytes[i];
+                        }
+                    }
+
+                    // Add the last range
+                    ranges.push((start, end));
+                }
+
+                // Add the ranges to the result
+                for (start, end) in ranges {
+                    concise_transitions.push((state_idx, (start, end), dest));
+                }
+            }
+        }
+
+        concise_transitions
+    }
+
+    /// Print the NFA in a concise format
+    pub fn print_concise(&self) {
+        println!("NFAGraph (Concise Format):");
+        println!("Start states: {:?}", self.start_states);
+        println!("Accept states: {:?}", self.accept_states);
+        println!("Transitions:");
+
+        let transitions = self.get_all_transitions_concise();
+
+        // Group transitions by source state
+        let mut transitions_by_source = HashMap::new();
+        for &(from, range, to) in &transitions {
+            transitions_by_source
+                .entry(from)
+                .or_insert_with(Vec::new)
+                .push((range, to));
+        }
+
+        // Print transitions for each state
+        let mut states: Vec<_> = transitions_by_source.keys().collect();
+        states.sort();
+
+        for &state in &states {
+            let state_type = if self.start_states.contains(&state) {
+                if self.accept_states.contains(&state) {
+                    "start+accept"
+                } else {
+                    "start"
+                }
+            } else if self.accept_states.contains(&state) {
+                "accept"
+            } else {
+                "normal"
+            };
+
+            println!("  State {} ({}):", state, state_type);
+
+            if let Some(node) = self.nodes.get(*state) {
+                // Print capture groups if any
+                if !node.capture_groups.is_empty() {
+                    println!("    Capture groups: {:?}", node.capture_groups);
+                }
+            }
+
+            // Print transitions
+            if let Some(transitions) = transitions_by_source.get(&state) {
+                println!("    Transitions:");
+
+                // Group transitions by destination
+                let mut by_dest = HashMap::new();
+                for &(range, dest) in transitions {
+                    by_dest.entry(dest).or_insert_with(Vec::new).push(range);
+                }
+
+                // Print transitions for each destination
+                let mut dests: Vec<_> = by_dest.keys().collect();
+                dests.sort();
+
+                for &dest in &dests {
+                    let ranges = &by_dest[&dest];
+                    print!("      -> {}: ", dest);
+
+                    let mut range_strs = Vec::new();
+                    for &(start, end) in ranges {
+                        if start == end {
+                            // Single byte
+                            range_strs.push(format_byte(start));
+                        } else {
+                            // Range of bytes
+                            range_strs.push(format!("{}-{}", format_byte(start), format_byte(end)));
+                        }
+                    }
+
+                    println!("{}", range_strs.join(", "));
+                }
+            }
+        }
+    }
+
     /// Get statistics about the NFA for circuit estimation
     pub fn get_stats(&self) -> NFAStats {
-        let transitions = self.get_all_transitions();
+        let transitions = self.get_all_transitions_concise();
 
         // Count unique states
         let mut states = HashSet::new();
@@ -78,19 +214,31 @@ impl NFAGraph {
             states.insert(to);
         }
 
-        // Count unique bytes used in transitions
-        let mut bytes = HashSet::new();
-        for &(_, byte, _) in &transitions {
-            bytes.insert(byte);
+        // Count total byte coverage in transitions
+        let mut byte_count = 0;
+        for &(_, (start, end), _) in &transitions {
+            byte_count += ((end as u32) - (start as u32) + 1) as usize;
         }
+
+        // Count unique byte ranges
+        let range_count = transitions.len();
 
         NFAStats {
             state_count: states.len(),
-            transition_count: transitions.len(),
-            unique_byte_count: bytes.len(),
+            transition_count: range_count,
+            byte_coverage: byte_count,
             start_state_count: self.start_states.len(),
             accept_state_count: self.accept_states.len(),
         }
+    }
+}
+
+/// Format a byte as a readable string
+fn format_byte(byte: u8) -> String {
+    if byte.is_ascii_graphic() || byte == b' ' {
+        format!("{} ('{}')", byte, byte as char)
+    } else {
+        format!("{}", byte)
     }
 }
 
@@ -99,7 +247,7 @@ impl NFAGraph {
 pub struct NFAStats {
     pub state_count: usize,
     pub transition_count: usize,
-    pub unique_byte_count: usize,
+    pub byte_coverage: usize,
     pub start_state_count: usize,
     pub accept_state_count: usize,
 }

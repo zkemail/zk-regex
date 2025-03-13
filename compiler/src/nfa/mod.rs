@@ -2,7 +2,7 @@ mod builder;
 mod debug;
 mod graph;
 
-use std::collections::{ HashMap, HashSet };
+use std::collections::{HashMap, HashSet};
 
 /// A node in the NFA graph
 #[derive(Debug, Clone)]
@@ -34,10 +34,10 @@ mod tests {
 
     #[test]
     fn test_build() {
-        let nfa = NFAGraph::build("a*b").unwrap();
+        let nfa = NFAGraph::build("(\r\n|^)from:[^\r\n]+\r\n").unwrap();
         let nfa_without_epsilon = nfa.remove_epsilon_transitions();
         println!("\nNFA without epsilon transitions:");
-        nfa_without_epsilon.print();
+        nfa_without_epsilon.print_concise();
 
         let stats = nfa_without_epsilon.get_stats();
         println!("NFA stats: {:?}", stats);
