@@ -1,4 +1,5 @@
 mod builder;
+mod codegen;
 mod debug;
 mod graph;
 
@@ -30,16 +31,29 @@ pub struct NFAGraph {
 
 #[cfg(test)]
 mod tests {
+    use std::{fs::File, io::Write};
+
     use super::*;
 
     #[test]
     fn test_build() {
-        let nfa = NFAGraph::build("(\r\n|^)from:[^\r\n]+\r\n").unwrap();
+        let nfa = NFAGraph::build("a*b").unwrap();
         let nfa_without_epsilon = nfa.remove_epsilon_transitions();
         println!("\nNFA without epsilon transitions:");
         nfa_without_epsilon.print_concise();
 
         let stats = nfa_without_epsilon.get_stats();
         println!("NFA stats: {:?}", stats);
+
+        nfa_without_epsilon.print_transitions_for_circom();
+        let circom_code = nfa_without_epsilon.generate_circom_code("Rando", "a*b");
+        // println!("Circom code:\n{}", circom_code);
+
+        // Create the output directory directly
+        std::fs::create_dir_all("output").unwrap();
+
+        // Write the code to the file
+        let mut file = File::create("output/Rando.circom").unwrap();
+        file.write_all(circom_code.as_bytes()).unwrap();
     }
 }

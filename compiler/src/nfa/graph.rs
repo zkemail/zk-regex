@@ -1,8 +1,6 @@
 use super::NFAGraph;
 use std::collections::{HashMap, HashSet, VecDeque};
 
-impl NFAGraph {}
-
 impl NFAGraph {
     /// Remove epsilon transitions from the NFA
     pub fn remove_epsilon_transitions(&self) -> Self {

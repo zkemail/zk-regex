@@ -110,10 +110,13 @@ impl NFAGraph {
                         .push(next.as_usize());
 
                     // Add capture group information
-                    let is_start = slot.as_usize() % 2 == 0;
-                    graph.nodes[state_id_usize]
-                        .capture_groups
-                        .push((group_index.as_usize(), is_start));
+                    let group_index = group_index.as_usize();
+                    if group_index > 0 {
+                        let is_start = slot.as_usize() % 2 == 0;
+                        graph.nodes[state_id_usize]
+                            .capture_groups
+                            .push((group_index, is_start));
+                    }
                 }
                 State::Look { next, .. } => {
                     // For simplicity, treat look-arounds as epsilon transitions

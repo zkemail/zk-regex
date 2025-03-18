@@ -231,6 +231,79 @@ impl NFAGraph {
             accept_state_count: self.accept_states.len(),
         }
     }
+
+    /// Print transitions with capture group information
+    pub fn print_transitions_for_circom(&self) {
+        println!("NFA Transitions for Circom Template:");
+        println!("Start states: {:?}", self.start_states);
+        println!("Accept states: {:?}", self.accept_states);
+        println!(
+            "Transitions (curr_state, byte_start, byte_end, next_state, capture_group_id, capture_group_start):"
+        );
+
+        let transitions = self.get_transitions_with_capture_info();
+
+        for (curr_state, byte_start, byte_end, next_state, capture_info) in transitions {
+            let state_type = if self.start_states.contains(&curr_state) {
+                if self.accept_states.contains(&curr_state) {
+                    "start+accept"
+                } else {
+                    "start"
+                }
+            } else if self.accept_states.contains(&curr_state) {
+                "accept"
+            } else {
+                "normal"
+            };
+
+            let dest_type = if self.accept_states.contains(&next_state) {
+                "accept"
+            } else {
+                "normal"
+            };
+
+            if byte_start == byte_end {
+                // Single byte transition
+                if let Some((capture_id, is_start)) = capture_info {
+                    println!(
+                        "  ({} ({}), {}, {} ({}), {}, {})",
+                        curr_state,
+                        state_type,
+                        byte_start,
+                        next_state,
+                        dest_type,
+                        capture_id,
+                        is_start
+                    );
+                } else {
+                    println!(
+                        "  ({} ({}), {}, {} ({}), None)",
+                        curr_state, state_type, byte_start, next_state, dest_type
+                    );
+                }
+            } else {
+                // Byte range transition
+                if let Some((capture_id, is_start)) = capture_info {
+                    println!(
+                        "  ({} ({}), {}-{}, {} ({}), {}, {})",
+                        curr_state,
+                        state_type,
+                        byte_start,
+                        byte_end,
+                        next_state,
+                        dest_type,
+                        capture_id,
+                        is_start
+                    );
+                } else {
+                    println!(
+                        "  ({} ({}), {}-{}, {} ({}), None)",
+                        curr_state, state_type, byte_start, byte_end, next_state, dest_type
+                    );
+                }
+            }
+        }
+    }
 }
 
 /// Format a byte as a readable string
