@@ -38,6 +38,7 @@ mod tests {
     #[test]
     fn test_build() {
         let nfa = NFAGraph::build("a*b").unwrap();
+        println!("NFA: {:?}", nfa);
         let nfa_without_epsilon = nfa.remove_epsilon_transitions();
         println!("\nNFA without epsilon transitions:");
         nfa_without_epsilon.print_concise();
