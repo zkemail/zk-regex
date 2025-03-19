@@ -1,13 +1,11 @@
-use std::collections::{HashMap, HashSet};
-
 use regex_automata::{
     nfa::thompson::{State, pikevm::PikeVM},
     util::primitives::StateID,
 };
-
-use crate::error::Error;
+use std::collections::{HashMap, HashSet};
 
 use super::{NFAGraph, NFANode};
+use crate::error::Error;
 
 impl NFAGraph {
     /// Build an NFA from a regex pattern
@@ -133,6 +131,8 @@ impl NFAGraph {
         // Set the start states
         graph.start_states.insert(nfa.start_anchored().as_usize());
         graph.start_states.insert(nfa.start_unanchored().as_usize());
+
+        graph.remove_epsilon_transitions();
 
         Ok(graph)
     }

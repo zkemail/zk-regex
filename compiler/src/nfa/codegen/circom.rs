@@ -216,8 +216,9 @@ impl NFAGraph {
                 if start == end {
                     code.push_str(
                         format!(
-                            "        // Transition: {} -[{}]-> {} | Capture Group: ({}, {})\n",
+                            "        // Transition {}: {} -[{}]-> {} | Capture Group: ({}, {})\n",
                             transition_idx,
+                            curr_state,
                             start,
                             next_state,
                             capture_group_id,
@@ -239,15 +240,15 @@ impl NFAGraph {
                 } else {
                     code.push_str(
                         format!(
-                            "        // Transition: {} -[{}-{}]-> {} | Capture Group: ({}, {})\n",
+                            "        // Transition {}: {} -[{}-{}]-> {} | Capture Group: ({}, {})\n",
                             transition_idx,
+                            curr_state,
                             start,
                             end,
                             next_state,
                             capture_group_id,
                             capture_group_start
-                        )
-                        .as_str(),
+                        ).as_str()
                     );
                     code.push_str(
                         format!(
@@ -270,8 +271,8 @@ impl NFAGraph {
                 if start == end {
                     code.push_str(
                         format!(
-                            "        // Transition: {} -[{}]-> {}\n",
-                            transition_idx, start, next_state
+                            "        // Transition {}: {} -[{}]-> {}\n",
+                            transition_idx, curr_state, start, next_state
                         )
                         .as_str(),
                     );
@@ -287,8 +288,8 @@ impl NFAGraph {
                 } else {
                     code.push_str(
                         format!(
-                            "        // Transition: {} -[{}-{}]-> {}\n",
-                            transition_idx, start, end, next_state
+                            "        // Transition {}: {} -[{}-{}]-> {}\n",
+                            transition_idx, curr_state, start, end, next_state
                         )
                         .as_str(),
                     );
@@ -317,7 +318,7 @@ impl NFAGraph {
             "        // Check if any accept state has been reached at the last transition\n",
         );
         code.push_str(
-            "        reachedLastTransition[i] <== IsEqual()([i, traversalPathLength]);\n",
+            "        reachedLastTransition[i] <== IsEqual()([i, traversalPathLength-1]);\n",
         );
 
         if accept_states.len() > 1 {

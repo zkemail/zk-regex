@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 
 impl NFAGraph {
     /// Remove epsilon transitions from the NFA
-    pub fn remove_epsilon_transitions(&self) -> Self {
+    pub(crate) fn remove_epsilon_transitions(&mut self) {
         let mut new_graph = self.clone();
 
         // Step 1: Compute epsilon closure for all states
@@ -124,7 +124,7 @@ impl NFAGraph {
             }
         }
 
-        new_graph
+        *self = new_graph;
     }
 
     /// Compute epsilon closures for all states
@@ -190,5 +190,73 @@ impl NFAGraph {
         current_states
             .iter()
             .any(|&state| self.accept_states.contains(&state))
+    }
+
+    /// Check if the NFA accepts a string and returns the traversal path
+    pub fn accepts_with_path(
+        &self,
+        input: &[u8],
+    ) -> Option<Vec<(usize, u8, usize, Option<(usize, bool)>)>> {
+        println!("Searching in input: {:?}", String::from_utf8_lossy(input));
+
+        for start_pos in 0..input.len() {
+            println!("\nTrying start position {}", start_pos);
+            let mut current_states = self.start_states.clone();
+            println!("Starting states: {:?}", current_states);
+
+            let mut state_paths: HashMap<usize, Vec<(usize, u8, usize, Option<(usize, bool)>)>> =
+                HashMap::new();
+            for &state in &current_states {
+                state_paths.insert(state, Vec::new());
+            }
+
+            let mut last_accepting_path = None;
+
+            for (i, &byte) in input[start_pos..].iter().enumerate() {
+                println!(
+                    "\n  Processing byte '{}' at position {}",
+                    byte as char,
+                    start_pos + i
+                );
+                let mut next_states = HashSet::new();
+                let mut new_state_paths = HashMap::new();
+
+                for &curr_state in &current_states {
+                    if let Some(node) = self.nodes.get(curr_state) {
+                        if let Some(destinations) = node.byte_transitions.get(&byte) {
+                            for &next_state in destinations {
+                                next_states.insert(next_state);
+                                let capture_info = if !node.capture_groups.is_empty() {
+                                    Some(node.capture_groups[0])
+                                } else {
+                                    None
+                                };
+                                let mut new_path = state_paths[&curr_state].clone();
+                                new_path.push((curr_state, byte, next_state, capture_info));
+                                new_state_paths.insert(next_state, new_path.clone());
+
+                                // Update last accepting path if this is an accept state
+                                if self.accept_states.contains(&next_state) {
+                                    last_accepting_path = Some(new_path.clone());
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if next_states.is_empty() {
+                    break;
+                }
+
+                current_states = next_states;
+                state_paths = new_state_paths;
+            }
+
+            // Return the last accepting path found from this start position
+            if last_accepting_path.is_some() {
+                return last_accepting_path;
+            }
+        }
+        None
     }
 }

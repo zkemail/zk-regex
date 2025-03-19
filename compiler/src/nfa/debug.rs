@@ -304,6 +304,99 @@ impl NFAGraph {
             }
         }
     }
+
+    pub fn print_zkrepl_input(
+        &self,
+        path: &[(usize, u8, usize, Option<(usize, bool)>)],
+        max_bytes: usize,
+    ) {
+        let mut curr_states = Vec::new();
+        let mut next_states = Vec::new();
+        let mut haystack = Vec::new();
+        let mut capture_group_ids = Vec::new();
+        let mut capture_group_starts = Vec::new();
+
+        // First state is from start_states
+        curr_states.push(path[0].0);
+
+        for (curr, byte, next, capture) in path {
+            haystack.push(*byte);
+            next_states.push(*next);
+
+            if let Some((id, is_start)) = capture {
+                capture_group_ids.push(*id);
+                capture_group_starts.push(*is_start as u8);
+            } else {
+                capture_group_ids.push(0);
+                capture_group_starts.push(0);
+            }
+
+            if curr_states.len() < path.len() {
+                curr_states.push(*next);
+            }
+        }
+
+        // Pad all vectors to max_bytes with zeros
+        while curr_states.len() < max_bytes {
+            curr_states.push(69);
+        }
+        while next_states.len() < max_bytes {
+            next_states.push(420);
+        }
+        while haystack.len() < max_bytes {
+            haystack.push(69);
+        }
+        while capture_group_ids.len() < max_bytes {
+            capture_group_ids.push(69);
+        }
+        while capture_group_starts.len() < max_bytes {
+            capture_group_starts.push(69);
+        }
+
+        println!("{{");
+        println!(
+            "  \"currStates\": [{}],",
+            curr_states
+                .iter()
+                .map(|x| format!("\"{}\"", x))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+        println!(
+            "  \"haystack\": [{}],",
+            haystack
+                .iter()
+                .map(|x| format!("\"{}\"", x))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+        println!(
+            "  \"nextStates\": [{}],",
+            next_states
+                .iter()
+                .map(|x| format!("\"{}\"", x))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+        println!(
+            "  \"captureGroupIds\": [{}],",
+            capture_group_ids
+                .iter()
+                .map(|x| format!("\"{}\"", x))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+        println!(
+            "  \"captureGroupStarts\": [{}],",
+            capture_group_starts
+                .iter()
+                .map(|x| format!("\"{}\"", x))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+        println!("  \"traversalPathLength\": \"{}\"", path.len());
+        println!("}}");
+    }
 }
 
 /// Format a byte as a readable string
