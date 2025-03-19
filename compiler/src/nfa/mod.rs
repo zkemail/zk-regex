@@ -37,7 +37,7 @@ mod tests {
 
     #[test]
     fn test_build() {
-        let nfa = NFAGraph::build("a*b").unwrap();
+        let nfa = NFAGraph::build("Dkim(Signatu)re").unwrap();
         println!("NFA: {:?}", nfa);
         let nfa_without_epsilon = nfa.remove_epsilon_transitions();
         println!("\nNFA without epsilon transitions:");
@@ -47,7 +47,9 @@ mod tests {
         println!("NFA stats: {:?}", stats);
 
         nfa_without_epsilon.print_transitions_for_circom();
-        let circom_code = nfa_without_epsilon.generate_circom_code("Rando", "a*b");
+        let circom_code = nfa_without_epsilon
+            .generate_circom_code("Rando", "a*b", Some(&[5]))
+            .unwrap();
         // println!("Circom code:\n{}", circom_code);
 
         // Create the output directory directly

@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use crate::nfa::NFAGraph;
+use crate::{error::Error, nfa::NFAGraph};
 
 impl NFAGraph {
     /// Get all transitions with capture group information
@@ -88,13 +88,21 @@ impl NFAGraph {
     }
 
     /// Generate Circom code for the NFA
-    pub fn generate_circom_code(&self, regex_name: &str, regex_pattern: &str) -> String {
+    pub fn generate_circom_code(
+        &self,
+        regex_name: &str,
+        regex_pattern: &str,
+        max_substring_bytes: Option<&[usize]>,
+    ) -> Result<String, Error> {
         let (start_states, accept_states, transitions) = self.generate_circom_data();
 
         // Check if we have any capture groups
-        let has_capture_groups = transitions
+        let capture_group_set = transitions
             .iter()
-            .any(|(_, _, _, _, capture_info)| capture_info.is_some());
+            .filter(|(_, _, _, _, capture_info)| capture_info.is_some())
+            .map(|(_, _, _, _, capture_info)| capture_info.unwrap().0)
+            .collect::<HashSet<usize>>();
+        let has_capture_groups = !capture_group_set.is_empty();
 
         let mut code = String::new();
 
@@ -184,7 +192,9 @@ impl NFAGraph {
         }
 
         code.push_str("    for (var i = 0; i < maxBytes; i++) {\n");
-        code.push_str("        isWithinPathLength[i] <== LessThan(log2Ceil(maxBytes))([i, traversalPathLength]);\n\n");
+        code.push_str(
+            "        isWithinPathLength[i] <== LessThan(log2Ceil(maxBytes))([i, traversalPathLength]);\n\n"
+        );
 
         code.push_str("        // Check if the traversal is a valid path\n");
         code.push_str("        if (i != maxBytes - 1) {\n");
@@ -215,7 +225,17 @@ impl NFAGraph {
                         )
                         .as_str(),
                     );
-                    code.push_str(format!("        isValidTransition[{}][i] <== CheckByteTransitionWithCapture()({}, {}, {}, {}, {}, currStates[i], nextStates[i], haystack[i], captureGroupIds[i], captureGroupStarts[i]);\n", transition_idx, curr_state, next_state, start, capture_group_id, capture_group_start).as_str());
+                    code.push_str(
+                        format!(
+                            "        isValidTransition[{}][i] <== CheckByteTransitionWithCapture()({}, {}, {}, {}, {}, currStates[i], nextStates[i], haystack[i], captureGroupIds[i], captureGroupStarts[i]);\n",
+                            transition_idx,
+                            curr_state,
+                            next_state,
+                            start,
+                            capture_group_id,
+                            capture_group_start
+                        ).as_str()
+                    );
                 } else {
                     code.push_str(
                         format!(
@@ -229,7 +249,18 @@ impl NFAGraph {
                         )
                         .as_str(),
                     );
-                    code.push_str(format!("        isValidTransition[{}][i] <== CheckByteRangeTransitionWithCapture()({}, {}, {}, {}, {}, {}, currStates[i], nextStates[i], haystack[i], captureGroupIds[i], captureGroupStarts[i]);\n", transition_idx, curr_state, next_state, start, end, capture_group_id, capture_group_start).as_str());
+                    code.push_str(
+                        format!(
+                            "        isValidTransition[{}][i] <== CheckByteRangeTransitionWithCapture()({}, {}, {}, {}, {}, {}, currStates[i], nextStates[i], haystack[i], captureGroupIds[i], captureGroupStarts[i]);\n",
+                            transition_idx,
+                            curr_state,
+                            next_state,
+                            start,
+                            end,
+                            capture_group_id,
+                            capture_group_start
+                        ).as_str()
+                    );
                 }
             }
         } else {
@@ -240,20 +271,37 @@ impl NFAGraph {
                     code.push_str(
                         format!(
                             "        // Transition: {} -[{}]-> {}\n",
-                            transition_idx, start, next_state,
+                            transition_idx, start, next_state
                         )
                         .as_str(),
                     );
-                    code.push_str(format!("        isValidTransition[{}][i] <== CheckByteTransition()({}, {}, {}, currStates[i], nextStates[i], haystack[i]);\n", transition_idx, curr_state, next_state, start).as_str());
+                    code.push_str(
+                        format!(
+                            "        isValidTransition[{}][i] <== CheckByteTransition()({}, {}, {}, currStates[i], nextStates[i], haystack[i]);\n",
+                            transition_idx,
+                            curr_state,
+                            next_state,
+                            start
+                        ).as_str()
+                    );
                 } else {
                     code.push_str(
                         format!(
                             "        // Transition: {} -[{}-{}]-> {}\n",
-                            transition_idx, start, end, next_state,
+                            transition_idx, start, end, next_state
                         )
                         .as_str(),
                     );
-                    code.push_str(format!("        isValidTransition[{}][i] <== CheckByteRangeTransition()({}, {}, {}, {}, currStates[i], nextStates[i], haystack[i]);\n", transition_idx, curr_state, next_state, start, end).as_str());
+                    code.push_str(
+                        format!(
+                            "        isValidTransition[{}][i] <== CheckByteRangeTransition()({}, {}, {}, {}, currStates[i], nextStates[i], haystack[i]);\n",
+                            transition_idx,
+                            curr_state,
+                            next_state,
+                            start,
+                            end
+                        ).as_str()
+                    );
                 }
             }
         }
@@ -298,9 +346,38 @@ impl NFAGraph {
         code.push_str("            isValidRegex[i] <== isValidRegexTemp[i] + isValidRegex[i-1];\n");
         code.push_str("        }\n");
         code.push_str("    }\n");
-        code.push_str("    isValidRegex[maxBytes-1] === 1;\n");
+        code.push_str("    isValidRegex[maxBytes-1] === 1;\n\n");
+
+        if has_capture_groups {
+            for capture_group_id in capture_group_set {
+                let max_substring_bytes = if let Some(max_substring_bytes) = max_substring_bytes {
+                    max_substring_bytes[capture_group_id - 1]
+                } else {
+                    return Err(Error::CircomCodegenError(format!(
+                        "Max substring bytes not provided for capture group {}",
+                        capture_group_id
+                    )));
+                };
+
+                code.push_str(format!("    // Capture Group {}\n", capture_group_id).as_str());
+                code.push_str(
+                    format!("    signal input capture{}StartIndex;\n", capture_group_id).as_str(),
+                );
+                code.push_str(
+                    format!(
+                        "    signal output capture{}[{}] <== CaptureSubstring(maxBytes, {}, {})(capture{}StartIndex, haystack, captureGroupIds, captureGroupStarts);\n",
+                        capture_group_id,
+                        max_substring_bytes,
+                        max_substring_bytes,
+                        capture_group_id,
+                        capture_group_id
+                    ).as_str()
+                );
+            }
+        }
+
         code.push_str("}\n");
 
-        code
+        Ok(code)
     }
 }
