@@ -46,18 +46,13 @@ mod tests {
         let nfa_deserialized = NFAGraph::load_from_file("nfa.json").unwrap();
         assert_eq!(nfa, nfa_deserialized);
 
-        let path = nfa
-            .accepts_with_path(
-                b"dkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20230601; t=1694989812;"
-            )
-            .unwrap();
-        // println!("Circom code:\n{}", circom_code);
-
-        // Create the output directory directly
-        std::fs::create_dir_all("output").unwrap();
+        let noir_code = nfa.generate_noir_code(
+            "(?:\\r\\n|^)dkim-signature:(?:[a-z]+=[^;]+; )+t=([0-9]+);",
+            None
+        ).unwrap();
 
         // Write the code to the file
-        let mut file = File::create("output/Rando.circom").unwrap();
-        file.write_all(circom_code.as_bytes()).unwrap();
+        let mut file = File::create("output/noir/src/main.nr").unwrap();
+        file.write_all(noir_code.as_bytes()).unwrap();
     }
 }

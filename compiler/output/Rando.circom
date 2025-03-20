@@ -92,7 +92,8 @@ isValidTransition[10][i] <== CheckByteTransition()(6, 5, 97, currStates[i], next
             isAcceptState.in[j] <== IsEqual()([acceptStates[j], nextStates[i]]);
         }
         reachedAcceptState[i] <== isAcceptState.out;
-        isValidRegexTemp[i] <== AND()(reachedLastTransition[i], reachedAcceptState[i]);        if (i == 0) {
+        isValidRegexTemp[i] <== AND()(reachedLastTransition[i], reachedAcceptState[i]);
+        if (i == 0) {
             isValidRegex[i] <== isValidRegexTemp[i];
         } else {
             isValidRegex[i] <== isValidRegexTemp[i] + isValidRegex[i-1];
