@@ -1,17 +1,18 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::{error::Error, nfa::NFAGraph};
+use crate::nfa::{NFAGraph, error::{NFABuildError, NFAResult}};
 use comptime::{FieldElement, SparseArray};
 
 impl NFAGraph {
     /// Generate Circom code for the NFA
     pub fn generate_noir_code(
         &self,
+        regex_name: &str,
         regex_pattern: &str,
         max_substring_bytes: Option<&[usize]>,
-    ) -> Result<String, Error> {
+    ) -> NFAResult<String> {
         // get nfa graph data
-        let (start_states, accept_states, transitions) = self.generate_circuit_data();
+        let (start_states, accept_states, transitions) = self.generate_circuit_data()?;
 
         // build sparse array
         let transition_array = transition_sparse_array(&transitions);
@@ -55,9 +56,9 @@ impl NFAGraph {
         code.push_str(&format!("        let current_state = current_states[i];\n"));
         code.push_str(&format!("        let next_state = next_states[i];\n"));
         code.push_str(&format!("        let key = current_state + haystack_byte as Field * R as Field + next_state * R_SQUARED as Field;\n"));
-        code.push_str(&format!("        let transition_condition = TRANSITION_TABLE.get(key) == 1;\n"));
-        code.push_str(&format!("        let matched_condition = transition_condition | (reached_end_state == 0);\n"));
-        code.push_str(&format!("        assert(matched_condition, \"Invalid Transition\");\n"));
+        code.push_str(&format!("        let transition_condition = TRANSITION_TABLE.get(key) - 1;\n"));
+        code.push_str(&format!("        let matched_condition = transition_condition * reached_end_state;\n"));
+        code.push_str(&format!("        assert(matched_condition == 0, \"Invalid Transition\");\n"));
         code.push_str(&format!("        reached_end_state = reached_end_state * check_accept_state(next_state);\n"));
         code.push_str(&format!("    }}\n"));
         code.push_str(&format!("    assert(reached_end_state == 0, \"Did not reach a valid end state\");\n"));
@@ -130,6 +131,17 @@ fn transition_sparse_array(
 
 fn fn_test() -> String {
     format!(r#"
+
+global HAYSTACK_LENGTH: u32 = 1024;
+
+fn main(
+    haystack: [u8; HAYSTACK_LENGTH],
+    current_states: [Field; HAYSTACK_LENGTH],
+    next_states: [Field; HAYSTACK_LENGTH],
+    transition_length: u32,
+) {{
+    regex_match(haystack, current_states, next_states, transition_length);
+}}
 
 #[test]
 fn test_regex_match() {{

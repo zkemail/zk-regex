@@ -1,262 +1,176 @@
 use super::NFAGraph;
-use std::collections::{HashMap, HashSet, VecDeque};
+use crate::nfa::error::{ NFABuildError, NFAResult };
+use std::collections::{ HashMap, HashSet };
+
+// Each step in the path contains:
+// (current_state, next_state, byte, Option<(capture_group_id, capture_group_start)>)
+pub type PathStep = (usize, usize, u8, Option<(usize, bool)>);
+pub type PathTraversal = Vec<PathStep>;
 
 impl NFAGraph {
-    /// Remove epsilon transitions from the NFA
-    pub(crate) fn remove_epsilon_transitions(&mut self) {
-        let mut new_graph = self.clone();
-
-        // Step 1: Compute epsilon closure for all states
-        let epsilon_closures = self.compute_all_epsilon_closures();
-
-        // Step 2: Duplicate all moves from epsilon-reachable states and merge properties
-        for node_idx in 0..self.nodes.len() {
-            let closure = &epsilon_closures[node_idx];
-
-            // Create a new transitions map for this state
-            let mut new_transitions = HashMap::new();
-
-            // For each state in the epsilon closure
-            for &closure_state in closure {
-                // Skip the state itself (already handled)
-                if closure_state == node_idx {
-                    continue;
-                }
-
-                // Merge properties from epsilon-reachable states
-                if let Some(node) = self.nodes.get(closure_state) {
-                    // Merge capture groups
-                    for &capture_group in &node.capture_groups {
-                        if !new_graph.nodes[node_idx]
-                            .capture_groups
-                            .contains(&capture_group)
-                        {
-                            new_graph.nodes[node_idx].capture_groups.push(capture_group);
-                        }
-                    }
-
-                    // Add all byte transitions from the closure state
-                    for (&byte, destinations) in &node.byte_transitions {
-                        for &dest in destinations {
-                            new_transitions
-                                .entry(byte)
-                                .or_insert_with(Vec::new)
-                                .push(dest);
-                        }
-                    }
-                }
-            }
-
-            // Merge the new transitions with existing ones
-            for (byte, destinations) in new_transitions {
-                for dest in destinations {
-                    if !new_graph.nodes[node_idx]
-                        .byte_transitions
-                        .entry(byte)
-                        .or_insert_with(Vec::new)
-                        .contains(&dest)
-                    {
-                        new_graph.nodes[node_idx]
-                            .byte_transitions
-                            .get_mut(&byte)
-                            .unwrap()
-                            .push(dest);
-                    }
+    /// Get all transitions in the form (curr_state, byte, next_state)
+    pub fn get_all_transitions(&self) -> Vec<(usize, u8, usize)> {
+        let mut transitions = Vec::new();
+        for (state_idx, node) in self.nodes.iter().enumerate() {
+            for (&byte, destinations) in &node.byte_transitions {
+                for &next_state in destinations {
+                    transitions.push((state_idx, byte, next_state));
                 }
             }
         }
-
-        // Step 3: Make epsilon-reachable start states also start states
-        let mut new_start_states = self.start_states.clone();
-        for &start_state in &self.start_states {
-            for &reachable in &epsilon_closures[start_state] {
-                new_start_states.insert(reachable);
-            }
-        }
-        new_graph.start_states = new_start_states;
-
-        // Step 4: Make states with epsilon-reachable accept states also accept states
-        let mut new_accept_states = HashSet::new();
-        for node_idx in 0..self.nodes.len() {
-            for &reachable in &epsilon_closures[node_idx] {
-                if self.accept_states.contains(&reachable) {
-                    new_accept_states.insert(node_idx);
-                    break;
-                }
-            }
-        }
-        new_graph.accept_states = new_accept_states;
-
-        // Remove unreachable states from accept states
-        let mut reachable_states = HashSet::new();
-        // Add all start states
-        reachable_states.extend(&new_graph.start_states);
-
-        // Find all states reachable through byte transitions
-        let mut queue: VecDeque<usize> = new_graph.start_states.iter().cloned().collect();
-        while let Some(state) = queue.pop_front() {
-            if let Some(node) = new_graph.nodes.get(state) {
-                for destinations in node.byte_transitions.values() {
-                    for &dest in destinations {
-                        if reachable_states.insert(dest) {
-                            queue.push_back(dest);
-                        }
-                    }
-                }
-            }
-        }
-
-        // Keep only reachable states in accept states
-        new_graph
-            .accept_states
-            .retain(|&state| reachable_states.contains(&state));
-
-        // Clear all epsilon transitions
-        for node in &mut new_graph.nodes {
-            node.epsilon_transitions.clear();
-        }
-
-        // Remove duplicates in transition lists
-        for node in &mut new_graph.nodes {
-            for destinations in node.byte_transitions.values_mut() {
-                destinations.sort();
-                destinations.dedup();
-            }
-        }
-
-        *self = new_graph;
+        transitions
     }
 
-    /// Compute epsilon closures for all states
-    fn compute_all_epsilon_closures(&self) -> Vec<Vec<usize>> {
-        let mut closures = Vec::with_capacity(self.nodes.len());
-
-        for node_idx in 0..self.nodes.len() {
-            closures.push(self.compute_epsilon_closure(node_idx));
+    /// Get transitions with capture group information
+    pub fn get_transitions_with_capture_info(
+        &self
+    ) -> Vec<(usize, u8, usize, Option<(usize, bool)>)> {
+        let mut transitions = Vec::new();
+        for (state_idx, node) in self.nodes.iter().enumerate() {
+            for (&byte, destinations) in &node.byte_transitions {
+                for &next_state in destinations {
+                    // Get capture group for this transition if it exists
+                    let capture = node.capture_groups.first().copied();
+                    transitions.push((state_idx, byte, next_state, capture));
+                }
+            }
         }
-
-        closures
+        transitions
     }
 
-    /// Compute epsilon closure for a single state
-    fn compute_epsilon_closure(&self, start_idx: usize) -> Vec<usize> {
-        let mut closure = Vec::new();
+    /// Check if a state is reachable from any start state
+    pub fn is_state_reachable(&self, target: usize) -> bool {
         let mut visited = HashSet::new();
-        let mut queue = VecDeque::new();
+        let mut stack: Vec<usize> = Vec::new();
 
-        // Add the start state to the queue and mark it as visited
-        queue.push_back(start_idx);
-        visited.insert(start_idx);
-        closure.push(start_idx);
+        // Start from all start states
+        stack.extend(&self.start_states);
 
-        // BFS to find all epsilon-reachable states
-        while let Some(current) = queue.pop_front() {
-            if let Some(node) = self.nodes.get(current) {
-                for &epsilon_dest in &node.epsilon_transitions {
-                    if visited.insert(epsilon_dest) {
-                        closure.push(epsilon_dest);
-                        queue.push_back(epsilon_dest);
-                    }
+        while let Some(state) = stack.pop() {
+            if state == target {
+                return true;
+            }
+
+            if visited.insert(state) {
+                // Add all states reachable through byte transitions
+                for destinations in self.nodes[state].byte_transitions.values() {
+                    stack.extend(destinations.as_slice());
                 }
             }
         }
 
-        closure
+        false
     }
 
-    /// Check if the NFA accepts a string
-    pub fn accepts(&self, input: &[u8]) -> bool {
-        let mut current_states = self.start_states.clone();
+    /// Get all states that can reach accept states
+    pub fn get_states_reaching_accept(&self) -> HashSet<usize> {
+        let mut reaching_accept = HashSet::new();
+        let mut reverse_edges: HashMap<usize, Vec<usize>> = HashMap::new();
 
-        for &byte in input {
-            let mut next_states = HashSet::new();
-
-            for &state in &current_states {
-                if let Some(node) = self.nodes.get(state) {
-                    if let Some(destinations) = node.byte_transitions.get(&byte) {
-                        next_states.extend(destinations);
-                    }
+        // Build reverse graph
+        for (state_idx, node) in self.nodes.iter().enumerate() {
+            for destinations in node.byte_transitions.values() {
+                for &dest in destinations {
+                    reverse_edges.entry(dest).or_default().push(state_idx);
                 }
             }
-
-            if next_states.is_empty() {
-                return false;
-            }
-
-            current_states = next_states;
         }
 
-        // Check if any current state is an accept state
-        current_states
-            .iter()
-            .any(|&state| self.accept_states.contains(&state))
+        // Start from accept states
+        let mut stack: Vec<_> = self.accept_states.iter().copied().collect();
+        while let Some(state) = stack.pop() {
+            if reaching_accept.insert(state) {
+                if let Some(predecessors) = reverse_edges.get(&state) {
+                    stack.extend(predecessors);
+                }
+            }
+        }
+
+        reaching_accept
     }
 
-    /// Check if the NFA accepts a string and returns the traversal path
-    pub fn accepts_with_path(
-        &self,
-        input: &[u8],
-    ) -> Option<Vec<(usize, u8, usize, Option<(usize, bool)>)>> {
-        println!("Searching in input: {:?}", String::from_utf8_lossy(input));
-
-        for start_pos in 0..input.len() {
-            println!("\nTrying start position {}", start_pos);
-            let mut current_states = self.start_states.clone();
-            println!("Starting states: {:?}", current_states);
-
-            let mut state_paths: HashMap<usize, Vec<(usize, u8, usize, Option<(usize, bool)>)>> =
-                HashMap::new();
-            for &state in &current_states {
-                state_paths.insert(state, Vec::new());
-            }
-
-            let mut last_accepting_path = None;
-
-            for (i, &byte) in input[start_pos..].iter().enumerate() {
-                println!(
-                    "\n  Processing byte '{}' at position {}",
-                    byte as char,
-                    start_pos + i
+    /// Verify the NFA's structural integrity
+    pub fn verify(&self) -> NFAResult<()> {
+        // Check state indices
+        for (idx, node) in self.nodes.iter().enumerate() {
+            if node.state_id != idx {
+                return Err(
+                    NFABuildError::InvalidStateId(format!("State ID mismatch at index {}", idx))
                 );
-                let mut next_states = HashSet::new();
-                let mut new_state_paths = HashMap::new();
-
-                for &curr_state in &current_states {
-                    if let Some(node) = self.nodes.get(curr_state) {
-                        if let Some(destinations) = node.byte_transitions.get(&byte) {
-                            for &next_state in destinations {
-                                next_states.insert(next_state);
-                                let capture_info = if !node.capture_groups.is_empty() {
-                                    Some(node.capture_groups[0])
-                                } else {
-                                    None
-                                };
-                                let mut new_path = state_paths[&curr_state].clone();
-                                new_path.push((curr_state, byte, next_state, capture_info));
-                                new_state_paths.insert(next_state, new_path.clone());
-
-                                // Update last accepting path if this is an accept state
-                                if self.accept_states.contains(&next_state) {
-                                    last_accepting_path = Some(new_path.clone());
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if next_states.is_empty() {
-                    break;
-                }
-
-                current_states = next_states;
-                state_paths = new_state_paths;
-            }
-
-            // Return the last accepting path found from this start position
-            if last_accepting_path.is_some() {
-                return last_accepting_path;
             }
         }
-        None
+
+        // Check transition validity
+        for (state_idx, node) in self.nodes.iter().enumerate() {
+            for destinations in node.byte_transitions.values() {
+                for &dest in destinations {
+                    if dest >= self.nodes.len() {
+                        return Err(
+                            NFABuildError::InvalidTransition(
+                                format!(
+                                    "Invalid transition target {} from state {}",
+                                    dest,
+                                    state_idx
+                                )
+                            )
+                        );
+                    }
+                }
+            }
+        }
+
+        // Check start states validity
+        for &start in &self.start_states {
+            if start >= self.nodes.len() {
+                return Err(NFABuildError::InvalidStateId(format!("Invalid start state {}", start)));
+            }
+        }
+
+        // Check accept states validity
+        for &accept in &self.accept_states {
+            if accept >= self.nodes.len() {
+                return Err(
+                    NFABuildError::InvalidStateId(format!("Invalid accept state {}", accept))
+                );
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn generate_path_traversal(&self, haystack: &[u8]) -> NFAResult<PathTraversal> {
+        let mut path = Vec::with_capacity(haystack.len());
+        let mut current_state = *self.start_states
+            .iter()
+            .next()
+            .ok_or(NFABuildError::Build("No start state found".into()))?;
+
+        for (i, &byte) in haystack.iter().enumerate() {
+            if let Some(transitions) = self.nodes[current_state].byte_transitions.get(&byte) {
+                if let Some(&next_state) = transitions.first() {
+                    let capture_info = self.nodes[current_state].capture_groups.first().copied();
+
+                    path.push((current_state, next_state, byte, capture_info));
+
+                    current_state = next_state;
+                } else {
+                    return Err(
+                        NFABuildError::Build(format!("No valid transition found at position {}", i))
+                    );
+                }
+            } else {
+                return Err(
+                    NFABuildError::Build(
+                        format!("No transition found for byte {} at position {}", byte, i)
+                    )
+                );
+            }
+        }
+
+        if !self.accept_states.contains(&current_state) {
+            return Err(NFABuildError::Build("Path does not end in accept state".into()));
+        }
+
+        Ok(path)
     }
 }

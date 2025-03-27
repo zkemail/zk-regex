@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::{error::Error, nfa::NFAGraph};
+use crate::nfa::NFAGraph;
+use crate::nfa::error::{NFABuildError, NFAResult};
 
 impl NFAGraph {
 
@@ -10,15 +11,42 @@ impl NFAGraph {
         regex_name: &str,
         regex_pattern: &str,
         max_substring_bytes: Option<&[usize]>,
-    ) -> Result<String, Error> {
-        let (start_states, accept_states, transitions) = self.generate_circuit_data();
+    ) -> NFAResult<String> {
+        if regex_name.is_empty() {
+            return Err(NFABuildError::Build("Empty regex name".into()));
+        }
 
-        // Check if we have any capture groups
-        let capture_group_set = transitions
+        let (start_states, accept_states, transitions) = self.generate_circuit_data()?;
+
+        // Validate capture groups
+        let capture_group_set: HashSet<_> = transitions
             .iter()
-            .filter(|(_, _, _, _, capture_info)| capture_info.is_some())
-            .map(|(_, _, _, _, capture_info)| capture_info.unwrap().0)
-            .collect::<HashSet<usize>>();
+            .filter_map(|(_, _, _, _, cap)| cap.map(|(id, _)| id))
+            .collect();
+
+        if !capture_group_set.is_empty() {
+            if let Some(max_bytes) = max_substring_bytes {
+                if max_bytes.len() < capture_group_set.len() {
+                    return Err(NFABuildError::InvalidCapture(format!(
+                        "Insufficient max_substring_bytes: need {} but got {}",
+                        capture_group_set.len(),
+                        max_bytes.len()
+                    )));
+                }
+                for &bytes in max_bytes {
+                    if bytes == 0 {
+                        return Err(NFABuildError::InvalidCapture(
+                            "max_substring_bytes contains zero length".into(),
+                        ));
+                    }
+                }
+            } else {
+                return Err(NFABuildError::InvalidCapture(
+                    "max_substring_bytes required for capture groups".into(),
+                ));
+            }
+        }
+
         let has_capture_groups = !capture_group_set.is_empty();
 
         let mut code = String::new();
@@ -29,7 +57,8 @@ impl NFAGraph {
         code.push_str("include \"circomlib/gates.circom\";\n");
         code.push_str("include \"@zk-email/zk-regex-circom/circuits/regex_helpers.circom\";\n\n");
 
-        code.push_str(format!("// regex: {}\n", regex_pattern).as_str());
+        let display_pattern = Self::escape_regex_for_display(regex_pattern);
+        code.push_str(format!("// regex: {}\n", display_pattern).as_str());
         code.push_str(format!("template {}Regex(maxBytes) {{\n", regex_name).as_str());
 
         code.push_str("    signal input currStates[maxBytes];\n");
@@ -271,7 +300,7 @@ impl NFAGraph {
                 let max_substring_bytes = if let Some(max_substring_bytes) = max_substring_bytes {
                     max_substring_bytes[capture_group_id - 1]
                 } else {
-                    return Err(Error::CircomCodegenError(format!(
+                    return Err(NFABuildError::InvalidCapture(format!(
                         "Max substring bytes not provided for capture group {}",
                         capture_group_id
                     )));
