@@ -152,9 +152,12 @@ template Regex(maxBytes) {
     signal isValidCaptureStart1[maxBytes];
     signal isValidCaptureEnd1[maxBytes];
     for (var i = 0; i < maxBytes; i++) {
+        // checks if byte is in capture group
         isCaptureGroup1[i] <== IsEqual()([captureGroupIds[i], 1]);
+        // checks if start of capture group
         isCaptureGroupStart1[i] <== IsEqual()([captureGroupStarts[i], 1]);
         isCaptureGroupEnd1[i] <== IsEqual()([captureGroupStarts[i], 0]);
+        // checks if end of capture group
         if (i == 0) {
             isValidCaptureStart1[i] <== AND()(isCaptureGroup1[i], isCaptureGroupStart1[i]);
             isValidCaptureEnd1[i] <== AND()(isCaptureGroup1[i], isCaptureGroupEnd1[i]);

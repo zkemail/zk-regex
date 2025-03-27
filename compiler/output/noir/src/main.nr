@@ -20,6 +20,19 @@ fn check_accept_state(next_state: Field) -> Field {
     (next_state - 34)
 }
 
+
+fn check_transition(
+    haystack_byte: Field,
+    current_state: Field,
+    next_state: Field,
+    reached_end_state: Field
+) {
+    let key = current_state + haystack_byte as Field * R as Field + next_state * R_SQUARED as Field;
+    let transition_condition = TRANSITION_TABLE.get(key) - 1;
+    let matched_condition = transition_condition * reached_end_state;
+    assert(matched_condition == 0, "Invalid Transition");
+}
+
 pub fn regex_match<let N: u32>(
     haystack: [u8; N],
     current_states: [Field; N],
@@ -36,13 +49,12 @@ pub fn regex_match<let N: u32>(
         assert(in_range * matching_states == 0, "Invalid Transition Input");
     }
     for i in 0..N {
-        let haystack_byte = haystack[i];
-        let current_state = current_states[i];
-        let next_state = next_states[i];
-        let key = current_state + haystack_byte as Field * R as Field + next_state * R_SQUARED as Field;
-        let transition_condition = TRANSITION_TABLE.get(key) - 1;
-        let matched_condition = transition_condition * reached_end_state;
-        assert(matched_condition == 0, "Invalid Transition");
+        check_transition(
+            haystack[i] as Field,
+            current_states[i],
+            next_states[i],
+            reached_end_state,
+        );
         reached_end_state = reached_end_state * check_accept_state(next_state);
     }
     assert(reached_end_state == 0, "Did not reach a valid end state");

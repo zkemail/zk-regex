@@ -1,6 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::nfa::{NFAGraph, error::{NFABuildError, NFAResult}};
+use crate::nfa::{
+    NFAGraph,
+    error::{NFABuildError, NFAResult},
+};
 use comptime::{FieldElement, SparseArray};
 
 impl NFAGraph {
@@ -15,18 +18,21 @@ impl NFAGraph {
         let (start_states, accept_states, transitions) = self.generate_circuit_data()?;
 
         // build sparse array
-        let transition_array = transition_sparse_array(&transitions);
+        let transition_array = match max_substring_bytes.is_some() {
+            true => packed_transition_sparse_array(&transitions),
+            false => transition_sparse_array(&transitions),
+        };
 
         let mut code = String::new();
 
         // imports
         code.push_str("mod common;\n");
         code.push_str("use common::SparseArray;\n\n");
-        
+
         // codegen consts
         code.push_str(&format!("global R: u32 = 257;\n"));
         code.push_str(&format!("global R_SQUARED: u32 = R * R;\n\n"));
-        
+
         code.push_str(&format!(
             "global TRANSITION_TABLE: {}\n\n",
             transition_array.to_noir_string(None)
@@ -35,6 +41,12 @@ impl NFAGraph {
         // add check for valid start states
         code.push_str(start_state_fn(&start_states).as_str());
         code.push_str(accept_state_fn(&accept_states).as_str());
+        if max_substring_bytes.is_some() {
+            code.push_str(unpack_sparse_value_fn().as_str());
+            code.push_str(check_transition_with_captures_fn().as_str());
+        } else {
+            code.push_str(check_transition_fn().as_str());
+        }
 
         code.push_str(&format!("pub fn regex_match<let N: u32>(\n"));
         code.push_str(&format!("    haystack: [u8; N],\n"));
@@ -47,21 +59,41 @@ impl NFAGraph {
         code.push_str(&format!("    check_start_state(current_states[0]);\n"));
         code.push_str(&format!("    for i in 0..N-1 {{\n"));
         code.push_str(&format!("        // transition length - 1 since current states should be 1 less than next states\n"));
-        code.push_str(&format!("        let in_range = (i < transition_length - 1) as Field;\n"));
-        code.push_str(&format!("        let matching_states = current_states[i + 1] - next_states[i];\n"));
-        code.push_str(&format!("        assert(in_range * matching_states == 0, \"Invalid Transition Input\");\n"));
+        code.push_str(&format!(
+            "        let in_range = (i < transition_length - 1) as Field;\n"
+        ));
+        code.push_str(&format!(
+            "        let matching_states = current_states[i + 1] - next_states[i];\n"
+        ));
+        code.push_str(&format!(
+            "        assert(in_range * matching_states == 0, \"Invalid Transition Input\");\n"
+        ));
         code.push_str(&format!("    }}\n"));
         code.push_str(&format!("    for i in 0..N {{\n"));
-        code.push_str(&format!("        let haystack_byte = haystack[i];\n"));
-        code.push_str(&format!("        let current_state = current_states[i];\n"));
-        code.push_str(&format!("        let next_state = next_states[i];\n"));
-        code.push_str(&format!("        let key = current_state + haystack_byte as Field * R as Field + next_state * R_SQUARED as Field;\n"));
-        code.push_str(&format!("        let transition_condition = TRANSITION_TABLE.get(key) - 1;\n"));
-        code.push_str(&format!("        let matched_condition = transition_condition * reached_end_state;\n"));
-        code.push_str(&format!("        assert(matched_condition == 0, \"Invalid Transition\");\n"));
-        code.push_str(&format!("        reached_end_state = reached_end_state * check_accept_state(next_state);\n"));
+        if max_substring_bytes.is_some() {
+            code.push_str(&format!("        check_transition_with_captures(\n"));
+            code.push_str(&format!("            haystack[i] as Field,\n"));
+            code.push_str(&format!("            current_states[i],\n"));
+            code.push_str(&format!("            next_states[i],\n"));
+            code.push_str(&format!("            capture_ids[i],\n"));
+            code.push_str(&format!("            capture_starts[i],\n"));
+            code.push_str(&format!("            reached_end_state,\n"));
+            code.push_str(&format!("        );\n"));
+        } else {
+            code.push_str(&format!("        check_transition(\n"));
+            code.push_str(&format!("            haystack[i] as Field,\n"));
+            code.push_str(&format!("            current_states[i],\n"));
+            code.push_str(&format!("            next_states[i],\n"));
+            code.push_str(&format!("            reached_end_state,\n"));
+            code.push_str(&format!("        );\n"));
+        }
+        code.push_str(&format!(
+            "        reached_end_state = reached_end_state * check_accept_state(next_state);\n"
+        ));
         code.push_str(&format!("    }}\n"));
-        code.push_str(&format!("    assert(reached_end_state == 0, \"Did not reach a valid end state\");\n"));
+        code.push_str(&format!(
+            "    assert(reached_end_state == 0, \"Did not reach a valid end state\");\n"
+        ));
         code.push_str(&format!("}}\n\n"));
         code.push_str(&fn_test());
         Ok(code)
@@ -110,6 +142,49 @@ fn check_accept_state(next_state: Field) -> Field {{
     )
 }
 
+/**
+ * Unpacks a transition lookup value which includes:
+ *  - if the transition is valid
+ *  - if the transition is the start of a capture group
+ *  - the id of the capture group
+ *
+ * @return the noir function to unpack the transition lookup value
+ */
+fn unpack_sparse_value_fn() -> String {
+    format!(
+        r#"
+/**
+ * Unpacks a transition lookup value
+ * @dev 8 bit packed (0: valid transition, 1: start of capture group, 2-8: capture group id)
+ * 
+ * @return (valid, start_capture_group, capture_group_id)
+ */
+fn unpack_sparse_value(key: Field) -> (Field, Field, Field) {{
+    let value = TRANSITION_TABLE.get(key);
+    std::as_witness(value);
+    let (is_valid, is_capture_start, capture_id) = unsafe {{ __unpack_sparse_value(key) }};
+    is_valid.assert_max_bit_size::<1>();
+    is_capture_start.assert_max_bit_size::<1>();
+    capture_id.assert_max_bit_size::<6>();
+    (is_valid, is_capture_start, capture_id)
+}}
+
+fn __unpack_sparse_value(value: Field) -> (Field, Field, Field) {{
+    let x = value as u8;
+    let is_valid = x & 1;
+    let is_capture_start = x & 2;
+    let capture_id = x >> 2;
+    (is_valid as Field, is_capture_start as Field, capture_id as Field)
+}}
+        "#
+    )
+}
+
+/**
+ * Creates a sparse array for transitions
+ * @param transitions - The transitions to create the sparse array for
+ * @returns The sparse array for the transitions
+ */
 fn transition_sparse_array(
     transitions: &Vec<(usize, u8, u8, usize, Option<(usize, bool)>)>,
 ) -> SparseArray<FieldElement> {
@@ -129,8 +204,78 @@ fn transition_sparse_array(
     SparseArray::create(&entries, &values, max_size)
 }
 
+/**
+ * Creates a packed sparse array for transitions
+ *  byte 0: 1 if transition is valid, 0 if not
+ *  byte 1: if the transition is the start of the capture group 1, 0 otherwise
+ *  byte 2: if the transition is part of a capture group, the id of the capture group
+ */
+fn packed_transition_sparse_array(
+    transitions: &Vec<(usize, u8, u8, usize, Option<(usize, bool)>)>,
+) -> SparseArray<FieldElement> {
+    let r = 257;
+    let mut entries = Vec::new();
+    for (state_idx, start, end, dest, capture) in transitions {
+        let bytes = (*start..=*end).collect::<Vec<u8>>();
+        let (capture_id, capture_bool) = capture.unwrap_or((0, false));
+        for byte in bytes {
+            let key = state_idx + (byte as usize * r) + (r * r * dest);
+            let value = 1u32 | (capture_bool as u32) << 1 | (capture_id as u32) << 2;
+            entries.push([FieldElement::from(key), FieldElement::from(value)]);
+        }
+    }
+    // assume max byte = 256 and max transitions = 200
+    let max_size = FieldElement::from(transitions.len() + 256 * r + 200 * r * r);
+    SparseArray::create(&entries[0], &entries[1], max_size)
+}
+
+fn check_transition_fn() -> String {
+    format!(
+        r#"
+fn check_transition(
+    haystack_byte: Field,
+    current_state: Field,
+    next_state: Field,
+    reached_end_state: Field
+) {{
+    let key = current_state + haystack_byte as Field * R as Field + next_state * R_SQUARED as Field;
+    let transition_condition = TRANSITION_TABLE.get(key) - 1;
+    let matched_condition = transition_condition * reached_end_state;
+    assert(matched_condition == 0, "Invalid Transition");
+}}
+
+"#
+    )
+}
+
+fn check_transition_with_captures_fn() -> String {
+    format!(
+        r#"
+fn check_transition_with_captures(
+    haystack_byte: Field,
+    current_state: Field,
+    next_state: Field,
+    asserted_capture_id: Field,
+    asserted_capture_start: Field,
+    reached_end_state: Field
+) {{
+    let key = current_state + haystack_byte as Field * R as Field + next_state * R_SQUARED as Field;
+    let (is_valid, is_capture_start, capture_id) = unpack_sparse_value(key);
+    // check if the transition is valid
+    let matched_condition = ((is_valid - 1)
+        + ((asserted_capture_group - capture_id) * R)
+        + ((asserted_capture_start - is_capture_start) * R_SQUARED))
+        * reached_end_state;
+    assert(matched_condition == 0, "Invalid Transition");
+}}
+
+"#
+    )
+}
+
 fn fn_test() -> String {
-    format!(r#"
+    format!(
+        r#"
 
 global HAYSTACK_LENGTH: u32 = 1024;
 
@@ -182,5 +327,6 @@ fn test_regex_match() {{
     //     0, 0, 0, 0, 0, 0, 0, 0,
     // ];
 }}    
-    "#)
+    "#
+    )
 }
