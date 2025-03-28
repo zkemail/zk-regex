@@ -13,6 +13,8 @@ pub enum NFABuildError {
     InvalidCapture(String),
     #[error("NFA verification failed: {0}")]
     Verification(String),
+    #[error("Serialization failed: {0}")]
+    Serialization(String),
 }
 
 /// Result type for NFA operations

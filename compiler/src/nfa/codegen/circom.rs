@@ -15,8 +15,22 @@
 
 use std::collections::{HashMap, HashSet};
 
+use regex_automata::meta::Regex;
+use serde::Serialize;
+
 use crate::nfa::NFAGraph;
 use crate::nfa::error::{NFABuildError, NFAResult};
+
+#[derive(Serialize)]
+pub struct CircomInputs {
+    curr_states: Vec<usize>,
+    next_states: Vec<usize>,
+    haystack: Vec<u8>,
+    capture_group_ids: Option<Vec<usize>>,
+    capture_group_starts: Option<Vec<bool>>,
+    capture_group_start_indices: Option<Vec<usize>>,
+    traversal_path_length: usize,
+}
 
 impl NFAGraph {
     /// Generates the core data needed for Circom circuit generation.
@@ -275,12 +289,10 @@ impl NFAGraph {
         );
 
         code.push_str("        // Check if the traversal is a valid path\n");
-        code.push_str("        if (i != maxBytes - 1) {\n");
         code.push_str(
-            "            isTransitionLinked[i] <== IsEqual()([nextStates[i], currStates[i+1]]);\n",
+            "        isTransitionLinked[i] <== IsEqual()([nextStates[i], currStates[i+1]]);\n",
         );
-        code.push_str("            isTransitionLinked[i] === isWithinPathLength[i];\n");
-        code.push_str("        }\n\n");
+        code.push_str("        isTransitionLinked[i] === isWithinPathLength[i];\n\n");
 
         if has_capture_groups {
             for (transition_idx, (curr_state, start, end, next_state, capture_info)) in
@@ -458,5 +470,77 @@ impl NFAGraph {
         code.push_str("}\n");
 
         Ok(code)
+    }
+
+    pub fn generate_circom_inputs(
+        &self,
+        haystack: &str,
+        max_haystack_len: usize,
+    ) -> NFAResult<CircomInputs> {
+        let haystack_bytes = haystack.as_bytes();
+
+        if haystack_bytes.len() > max_haystack_len {
+            return Err(NFABuildError::Build(format!(
+                "Haystack length {} exceeds maximum length {}",
+                haystack_bytes.len(),
+                max_haystack_len
+            )));
+        }
+
+        // Generate path traversal
+        let path = self.generate_path_traversal(haystack_bytes)?;
+        let path_len = path.len();
+
+        // Extract and pad arrays to max_haystack_len
+        let mut curr_states = path.iter().map(|(curr, _, _, _)| *curr).collect::<Vec<_>>();
+        let mut next_states = path.iter().map(|(_, next, _, _)| *next).collect::<Vec<_>>();
+        let mut haystack = haystack_bytes.to_vec();
+
+        // Pad with zeros
+        curr_states.resize(max_haystack_len, 136279841);
+        next_states.resize(max_haystack_len, 136279842);
+        haystack.resize(max_haystack_len, 0);
+
+        // Handle capture groups if they exist
+        let (capture_group_ids, capture_group_starts, capture_group_start_indices) =
+            if path.iter().any(|(_, _, _, c)| c.is_some()) {
+                let mut ids = path
+                    .iter()
+                    .map(|(_, _, _, c)| c.map(|(id, _)| id).unwrap_or(0))
+                    .collect::<Vec<_>>();
+                let mut starts = path
+                    .iter()
+                    .map(|(_, _, _, c)| c.map(|(_, start)| start).unwrap_or(false))
+                    .collect::<Vec<_>>();
+
+                // Use regex_automata to get capture start indices
+                let re = Regex::new(&self.regex)
+                    .map_err(|e| NFABuildError::Build(format!("Failed to compile regex: {}", e)))?;
+                let mut captures = re.create_captures();
+                re.captures(&haystack, &mut captures);
+
+                let start_indices = (1..=captures.group_len())
+                    .filter_map(|i| captures.get_group(i))
+                    .map(|m| m.start)
+                    .collect();
+
+                // Pad arrays
+                ids.resize(max_haystack_len, 0);
+                starts.resize(max_haystack_len, false);
+
+                (Some(ids), Some(starts), Some(start_indices))
+            } else {
+                (None, None, None)
+            };
+
+        Ok(CircomInputs {
+            curr_states,
+            next_states,
+            haystack,
+            capture_group_ids,
+            capture_group_starts,
+            capture_group_start_indices,
+            traversal_path_length: path_len,
+        })
     }
 }

@@ -20,6 +20,7 @@ impl NFAGraph {
         let thompson_nfa = re.get_nfa();
 
         let mut graph = Self::default();
+        graph.regex = pattern.to_string();
         graph.initialize_nodes(thompson_nfa.states().len())?;
         graph.process_all_states(&thompson_nfa)?;
         graph.set_start_states(&thompson_nfa);

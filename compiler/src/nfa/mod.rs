@@ -1,4 +1,5 @@
 mod builder;
+mod cache;
 mod codegen;
 mod epsilon;
 mod error;
@@ -7,9 +8,10 @@ mod graph;
 use std::collections::{BTreeMap, BTreeSet};
 
 pub use error::NFAResult;
+use serde::{Deserialize, Serialize};
 
 /// A node in the NFA graph
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct NFANode {
     /// Unique identifier for this state
     pub state_id: usize,
@@ -25,8 +27,11 @@ pub struct NFANode {
 }
 
 /// Non-deterministic Finite Automaton representation
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct NFAGraph {
+    /// Regex string
+    pub regex: String,
+
     /// All nodes/states in the NFA
     pub nodes: Vec<NFANode>,
 
@@ -41,6 +46,7 @@ impl NFAGraph {
     /// Create a new empty NFA
     pub fn new() -> Self {
         Self {
+            regex: String::new(),
             nodes: Vec::new(),
             start_states: BTreeSet::new(),
             accept_states: BTreeSet::new(),
