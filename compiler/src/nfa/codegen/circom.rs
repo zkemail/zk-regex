@@ -1,9 +1,32 @@
+//! Circom circuit generation for NFAs.
+//!
+//! This module handles conversion of NFAs to Circom circuits for zero-knowledge proofs.
+//! The generated circuits can verify:
+//! - String matching against regex patterns
+//! - Capture group extraction
+//! - Path traversal through the NFA
+//!
+//! The circuit components include:
+//! - State transition validation
+//! - Byte range checks
+//! - Capture group tracking
+//! - Path length verification
+//! - Start/accept state validation
+
 use std::collections::{HashMap, HashSet};
 
 use crate::nfa::NFAGraph;
 use crate::nfa::error::{NFABuildError, NFAResult};
 
 impl NFAGraph {
+    /// Generates the core data needed for Circom circuit generation.
+    ///
+    /// Returns:
+    /// - Vector of start states
+    /// - Vector of accept states
+    /// - Vector of transitions: (from_state, min_byte, max_byte, to_state, capture_info)
+    ///
+    /// The transitions are compressed into byte ranges for efficiency.
     pub fn generate_circom_data(
         &self,
     ) -> NFAResult<(
@@ -67,6 +90,8 @@ impl NFAGraph {
         Ok((start_states, accept_states, range_transitions))
     }
 
+    /// Escapes special characters in regex patterns for display in Circom comments.
+    /// Handles newlines, quotes, control characters etc.
     fn escape_regex_for_display(pattern: &str) -> String {
         pattern
             .chars()
@@ -86,7 +111,33 @@ impl NFAGraph {
             .collect()
     }
 
-    /// Generate Circom code for the NFA
+    /// Generates complete Circom circuit code for the NFA.
+    ///
+    /// # Arguments
+    /// * `regex_name` - Name of the regex template
+    /// * `regex_pattern` - Original regex pattern (for documentation)
+    /// * `max_substring_bytes` - Maximum lengths for capture group substrings
+    ///
+    /// # Generated Circuit Features
+    /// - Input validation for state transitions
+    /// - Byte range checking
+    /// - Capture group extraction
+    /// - Path length verification
+    /// - Start/accept state validation
+    ///
+    /// # Example Circuit Structure
+    /// ```circom
+    /// template MyRegex(maxBytes) {
+    ///     signal input currStates[maxBytes];
+    ///     signal input haystack[maxBytes];
+    ///     signal input nextStates[maxBytes];
+    ///     // ... capture signals if needed ...
+    ///
+    ///     // State transition validation
+    ///     // Byte range checks
+    ///     // Path verification
+    /// }
+    /// ```
     pub fn generate_circom_code(
         &self,
         regex_name: &str,
@@ -349,7 +400,7 @@ impl NFAGraph {
         );
 
         if accept_states.len() > 1 {
-            code.push_str("        reachedAcceptState[i] <== MultiOR(numAcceptStates);\n");
+            code.push_str("        reachedAcceptState[i] = MultiOR(numAcceptStates);\n");
             code.push_str("        for (var j = 0; j < numAcceptStates; j++) {\n");
             code.push_str(
                 "            reachedAcceptState[i].in[j] <== IsEqual()([nextStates[i], acceptStates[j]]);\n"

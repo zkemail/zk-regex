@@ -1,6 +1,6 @@
 use super::NFAGraph;
-use crate::nfa::error::{ NFABuildError, NFAResult };
-use std::collections::{ HashMap, HashSet };
+use crate::nfa::error::{NFABuildError, NFAResult};
+use std::collections::{HashMap, HashSet};
 
 // Each step in the path contains:
 // (current_state, next_state, byte, Option<(capture_group_id, capture_group_start)>)
@@ -23,14 +23,18 @@ impl NFAGraph {
 
     /// Get transitions with capture group information
     pub fn get_transitions_with_capture_info(
-        &self
+        &self,
     ) -> Vec<(usize, u8, usize, Option<(usize, bool)>)> {
         let mut transitions = Vec::new();
         for (state_idx, node) in self.nodes.iter().enumerate() {
             for (&byte, destinations) in &node.byte_transitions {
                 for &next_state in destinations {
                     // Get capture group for this transition if it exists
-                    let capture = node.capture_groups.first().copied();
+                    let capture = if let Some(captures) = node.capture_groups.get(&next_state) {
+                        captures.first().copied()
+                    } else {
+                        None
+                    };
                     transitions.push((state_idx, byte, next_state, capture));
                 }
             }
@@ -54,7 +58,7 @@ impl NFAGraph {
             if visited.insert(state) {
                 // Add all states reachable through byte transitions
                 for destinations in self.nodes[state].byte_transitions.values() {
-                    stack.extend(destinations.as_slice());
+                    stack.extend(destinations.iter());
                 }
             }
         }
@@ -94,9 +98,10 @@ impl NFAGraph {
         // Check state indices
         for (idx, node) in self.nodes.iter().enumerate() {
             if node.state_id != idx {
-                return Err(
-                    NFABuildError::InvalidStateId(format!("State ID mismatch at index {}", idx))
-                );
+                return Err(NFABuildError::InvalidStateId(format!(
+                    "State ID mismatch at index {}",
+                    idx
+                )));
             }
         }
 
@@ -105,15 +110,10 @@ impl NFAGraph {
             for destinations in node.byte_transitions.values() {
                 for &dest in destinations {
                     if dest >= self.nodes.len() {
-                        return Err(
-                            NFABuildError::InvalidTransition(
-                                format!(
-                                    "Invalid transition target {} from state {}",
-                                    dest,
-                                    state_idx
-                                )
-                            )
-                        );
+                        return Err(NFABuildError::InvalidTransition(format!(
+                            "Invalid transition target {} from state {}",
+                            dest, state_idx
+                        )));
                     }
                 }
             }
@@ -122,16 +122,20 @@ impl NFAGraph {
         // Check start states validity
         for &start in &self.start_states {
             if start >= self.nodes.len() {
-                return Err(NFABuildError::InvalidStateId(format!("Invalid start state {}", start)));
+                return Err(NFABuildError::InvalidStateId(format!(
+                    "Invalid start state {}",
+                    start
+                )));
             }
         }
 
         // Check accept states validity
         for &accept in &self.accept_states {
             if accept >= self.nodes.len() {
-                return Err(
-                    NFABuildError::InvalidStateId(format!("Invalid accept state {}", accept))
-                );
+                return Err(NFABuildError::InvalidStateId(format!(
+                    "Invalid accept state {}",
+                    accept
+                )));
             }
         }
 
@@ -140,7 +144,8 @@ impl NFAGraph {
 
     pub fn generate_path_traversal(&self, haystack: &[u8]) -> NFAResult<PathTraversal> {
         let mut path = Vec::with_capacity(haystack.len());
-        let mut current_state = *self.start_states
+        let mut current_state = *self
+            .start_states
             .iter()
             .next()
             .ok_or(NFABuildError::Build("No start state found".into()))?;
@@ -148,27 +153,34 @@ impl NFAGraph {
         for (i, &byte) in haystack.iter().enumerate() {
             if let Some(transitions) = self.nodes[current_state].byte_transitions.get(&byte) {
                 if let Some(&next_state) = transitions.first() {
-                    let capture_info = self.nodes[current_state].capture_groups.first().copied();
-
+                    let capture_info = if let Some(captures) =
+                        self.nodes[current_state].capture_groups.get(&next_state)
+                    {
+                        captures.first().copied()
+                    } else {
+                        None
+                    };
                     path.push((current_state, next_state, byte, capture_info));
 
                     current_state = next_state;
                 } else {
-                    return Err(
-                        NFABuildError::Build(format!("No valid transition found at position {}", i))
-                    );
+                    return Err(NFABuildError::Build(format!(
+                        "No valid transition found at position {}",
+                        i
+                    )));
                 }
             } else {
-                return Err(
-                    NFABuildError::Build(
-                        format!("No transition found for byte {} at position {}", byte, i)
-                    )
-                );
+                return Err(NFABuildError::Build(format!(
+                    "No transition found for byte {} at position {}",
+                    byte, i
+                )));
             }
         }
 
         if !self.accept_states.contains(&current_state) {
-            return Err(NFABuildError::Build("Path does not end in accept state".into()));
+            return Err(NFABuildError::Build(
+                "Path does not end in accept state".into(),
+            ));
         }
 
         Ok(path)
