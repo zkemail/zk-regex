@@ -23,9 +23,11 @@ use crate::nfa::error::{NFABuildError, NFAResult};
 
 #[derive(Serialize)]
 pub struct CircomInputs {
+    haystack: Vec<u8>,
+    match_start: usize,
+    match_length: usize,
     curr_states: Vec<usize>,
     next_states: Vec<usize>,
-    haystack: Vec<u8>,
     capture_group_ids: Option<Vec<usize>>,
     capture_group_starts: Option<Vec<bool>>,
     capture_group_start_indices: Option<Vec<usize>>,
@@ -139,19 +141,6 @@ impl NFAGraph {
     /// - Path length verification
     /// - Start/accept state validation
     ///
-    /// # Example Circuit Structure
-    /// ```circom
-    /// template MyRegex(maxBytes) {
-    ///     signal input currStates[maxBytes];
-    ///     signal input haystack[maxBytes];
-    ///     signal input nextStates[maxBytes];
-    ///     // ... capture signals if needed ...
-    ///
-    ///     // State transition validation
-    ///     // Byte range checks
-    ///     // Path verification
-    /// }
-    /// ```
     pub fn generate_circom_code(
         &self,
         regex_name: &str,
@@ -201,20 +190,31 @@ impl NFAGraph {
 
         code.push_str("include \"circomlib/comparators.circom\";\n");
         code.push_str("include \"circomlib/gates.circom\";\n");
-        code.push_str("include \"@zk-email/zk-regex-circom/circuits/regex_helpers.circom\";\n\n");
+        code.push_str("include \"@zk-email/zk-regex-circom/circuits/regex_helpers.circom\";\n");
+        code.push_str("include \"@zk-email/circuits/utils/array.circom\";\n\n");
 
         let display_pattern = Self::escape_regex_for_display(regex_pattern);
         code.push_str(format!("// regex: {}\n", display_pattern).as_str());
-        code.push_str(format!("template {}Regex(maxBytes) {{\n", regex_name).as_str());
+        code.push_str(
+            format!(
+                "template {}Regex(maxHaystackBytes, maxMatchBytes) {{\n",
+                regex_name
+            )
+            .as_str(),
+        );
 
-        code.push_str("    signal input currStates[maxBytes];\n");
-        code.push_str("    signal input haystack[maxBytes];\n");
-        code.push_str("    signal input nextStates[maxBytes];\n");
+        code.push_str("    signal input in[maxHaystackBytes];\n");
+        code.push_str("    signal input matchStart;\n");
+        code.push_str("    signal input matchLength;\n\n");
+
+        code.push_str("    signal input currStates[maxMatchBytes];\n");
+        code.push_str("    signal input haystack[maxMatchBytes];\n");
+        code.push_str("    signal input nextStates[maxMatchBytes];\n");
 
         // Only add capture group signals if needed
         if has_capture_groups {
-            code.push_str("    signal input captureGroupIds[maxBytes];\n");
-            code.push_str("    signal input captureGroupStarts[maxBytes];\n");
+            code.push_str("    signal input captureGroupIds[maxMatchBytes];\n");
+            code.push_str("    signal input captureGroupStarts[maxMatchBytes];\n");
         }
 
         code.push_str("    signal input traversalPathLength;\n\n");
@@ -245,14 +245,15 @@ impl NFAGraph {
             .as_str(),
         );
 
-        code.push_str("    signal isCurrentState[numTransitions][maxBytes];\n");
-        code.push_str("    signal isNextState[numTransitions][maxBytes];\n");
-        code.push_str("    signal isValidTransition[numTransitions][maxBytes];\n");
-        code.push_str("    signal reachedLastTransition[maxBytes];\n");
-        code.push_str("    signal isValidRegex[maxBytes];\n");
-        code.push_str("    signal isValidRegexTemp[maxBytes];\n");
-        code.push_str("    signal isWithinPathLength[maxBytes];\n");
-        code.push_str("    signal isTransitionLinked[maxBytes];\n");
+        code.push_str("    signal isCurrentState[numTransitions][maxMatchBytes];\n");
+        code.push_str("    signal isNextState[numTransitions][maxMatchBytes];\n");
+        code.push_str("    signal isValidTransition[numTransitions][maxMatchBytes];\n");
+        code.push_str("    signal reachedLastTransition[maxMatchBytes];\n");
+        code.push_str("    signal isValidRegex[maxMatchBytes];\n");
+        code.push_str("    signal isValidRegexTemp[maxMatchBytes];\n");
+        code.push_str("    signal isWithinPathLength[maxMatchBytes];\n");
+        code.push_str("    signal isWithinPathLengthMinusOne[maxMatchBytes-2];\n");
+        code.push_str("    signal isTransitionLinked[maxMatchBytes];\n");
 
         if start_states.len() > 1 {
             code.push_str("\n    component isValidStartState;\n");
@@ -261,12 +262,15 @@ impl NFAGraph {
         }
 
         if accept_states.len() > 1 {
-            code.push_str("\n    component reachedAcceptState[maxBytes];\n");
+            code.push_str("\n    component reachedAcceptState[maxMatchBytes];\n");
         } else {
-            code.push_str("\n    signal reachedAcceptState[maxBytes];\n");
+            code.push_str("\n    signal reachedAcceptState[maxMatchBytes];\n");
         }
 
-        code.push_str("\n    component isValidTraversal[maxBytes];\n\n");
+        code.push_str("\n    component isValidTraversal[maxMatchBytes];\n\n");
+
+        code.push_str("    // Select the haystack from the input\n");
+        code.push_str("    signal haystack[maxMatchBytes] <== SelectSubArray(maxHaystackBytes, maxMatchBytes)(in, matchStart, matchLength);\n\n");
 
         code.push_str("    // Check if the first state in the haystack is a valid start state\n");
         if start_states.len() > 1 {
@@ -283,16 +287,21 @@ impl NFAGraph {
             );
         }
 
-        code.push_str("    for (var i = 0; i < maxBytes; i++) {\n");
+        code.push_str("    for (var i = 0; i < maxMatchBytes; i++) {\n");
         code.push_str(
-            "        isWithinPathLength[i] <== LessThan(log2Ceil(maxBytes))([i, traversalPathLength]);\n\n"
+            "        isWithinPathLength[i] <== LessThan(log2Ceil(maxMatchBytes))([i, traversalPathLength]);\n\n"
         );
 
         code.push_str("        // Check if the traversal is a valid path\n");
+        code.push_str("        if (i < maxMatchBytes-2) {\n");
         code.push_str(
-            "        isTransitionLinked[i] <== IsEqual()([nextStates[i], currStates[i+1]]);\n",
+            "            isWithinPathLengthMinusOne[i] <== LessThan(log2Ceil(maxMatchBytes))([i, traversalPathLength-1]);\n"
         );
-        code.push_str("        isTransitionLinked[i] === isWithinPathLength[i];\n\n");
+        code.push_str(
+            "            isTransitionLinked[i] <== IsEqual()([nextStates[i], currStates[i+1]]);\n",
+        );
+        code.push_str("            isTransitionLinked[i] === isWithinPathLengthMinusOne[i];\n");
+        code.push_str("        }\n\n");
 
         if has_capture_groups {
             for (transition_idx, (curr_state, start, end, next_state, capture_info)) in
@@ -418,7 +427,6 @@ impl NFAGraph {
                 "            reachedAcceptState[i].in[j] <== IsEqual()([nextStates[i], acceptStates[j]]);\n"
             );
             code.push_str("        }\n");
-            code.push_str("        reachedAcceptState[i].out === 1;\n");
             code.push_str(
                 "        isValidRegexTemp[i] <== AND()(reachedLastTransition[i], reachedAcceptState[i].out);\n"
             );
@@ -437,7 +445,7 @@ impl NFAGraph {
         code.push_str("            isValidRegex[i] <== isValidRegexTemp[i] + isValidRegex[i-1];\n");
         code.push_str("        }\n");
         code.push_str("    }\n");
-        code.push_str("    isValidRegex[maxBytes-1] === 1;\n\n");
+        code.push_str("    isValidRegex[maxMatchBytes-1] === 1;\n\n");
 
         if has_capture_groups {
             for capture_group_id in capture_group_set {
@@ -456,7 +464,7 @@ impl NFAGraph {
                 );
                 code.push_str(
                     format!(
-                        "    signal output capture{}[{}] <== CaptureSubstring(maxBytes, {}, {})(capture{}StartIndex, haystack, captureGroupIds, captureGroupStarts);\n",
+                        "    signal output capture{}[{}] <== CaptureSubstring(maxMatchBytes, {}, {})(capture{}StartIndex, haystack, captureGroupIds, captureGroupStarts);\n",
                         capture_group_id,
                         max_substring_bytes,
                         max_substring_bytes,
@@ -488,7 +496,9 @@ impl NFAGraph {
         }
 
         // Generate path traversal
-        let path = self.generate_path_traversal(haystack_bytes)?;
+        let result = self.get_path_to_accept(haystack_bytes)?;
+        let path = result.path;
+        let (match_start, match_length) = result.span;
         let path_len = path.len();
 
         // Extract and pad arrays to max_haystack_len
@@ -534,9 +544,11 @@ impl NFAGraph {
             };
 
         Ok(CircomInputs {
+            haystack,
+            match_start,
+            match_length,
             curr_states,
             next_states,
-            haystack,
             capture_group_ids,
             capture_group_starts,
             capture_group_start_indices,

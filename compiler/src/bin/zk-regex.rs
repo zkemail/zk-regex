@@ -100,7 +100,7 @@ fn save_outputs(
     let snake_case_name = template_name.to_snake_case();
 
     // Save Circom file
-    let circom_path = output_dir.join(format!("{}.circom", snake_case_name));
+    let circom_path = output_dir.join(format!("{}_regex.circom", snake_case_name));
     std::fs::write(&circom_path, circom_code)?;
 
     // Save graph JSON
