@@ -270,7 +270,9 @@ impl NFAGraph {
         code.push_str("\n    component isValidTraversal[maxMatchBytes];\n\n");
 
         code.push_str("    // Select the haystack from the input\n");
-        code.push_str("    signal haystack[maxMatchBytes] <== SelectSubArray(maxHaystackBytes, maxMatchBytes)(in, matchStart, matchLength);\n\n");
+        code.push_str(
+            "    signal haystack[maxMatchBytes] <== SelectSubArray(maxHaystackBytes, maxMatchBytes)(in, matchStart, matchLength);\n\n"
+        );
 
         code.push_str("    // Check if the first state in the haystack is a valid start state\n");
         if start_states.len() > 1 {

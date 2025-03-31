@@ -4,6 +4,7 @@ mod codegen;
 mod epsilon;
 mod error;
 mod graph;
+mod wasm;
 
 use std::collections::{BTreeMap, BTreeSet};
 

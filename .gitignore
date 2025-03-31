@@ -1,1 +1,3 @@
 /target
+/compiler/pkg
+/compiler/.yarn

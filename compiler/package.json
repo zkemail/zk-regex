@@ -1,0 +1,19 @@
+{
+    "name": "@zk-email/zk-regex-compiler",
+    "version": "2.0.0-alpha",
+    "description": "A compiler to generate a regex verification circuit in circom from a user-defined regex. Please check [zk-regex](https://github.com/zkemail/zk-regex/tree/main) for the detail.",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/zkemail/zk-regex.git"
+    },
+    "scripts": {
+        "build": "cargo build && cargo install --path . && wasm-pack build --target nodejs --out-dir ./pkg/",
+        "build-debug": "npm run build --",
+        "build-release": "npm run build -- --release",
+        "install": "npm run build-release",
+        "install-debug": "npm run build-debug",
+        "test": "cargo test && wasm-pack test --node",
+        "upload-binary": "wasm-pack publish -t nodejs"
+    },
+    "license": "MIT"
+}

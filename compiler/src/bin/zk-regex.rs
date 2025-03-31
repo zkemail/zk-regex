@@ -1,19 +1,7 @@
 use clap::{Parser, Subcommand};
-use compiler::{NFAGraph, compile};
+use compiler::{DecomposedRegexConfig, NFAGraph, compile, decomposed_to_composed_regex};
 use heck::{ToPascalCase, ToSnakeCase};
-use serde::Deserialize;
 use std::{fs::File, path::PathBuf};
-
-#[derive(Deserialize)]
-enum RegexPart {
-    Pattern(String),
-    PublicPattern((String, usize)), // (pattern, max_substring_bytes)
-}
-
-#[derive(Deserialize)]
-struct DecomposedRegexConfig {
-    parts: Vec<RegexPart>,
-}
 
 #[derive(Parser)]
 #[command(about = "ZK Regex Compiler CLI")]
@@ -127,22 +115,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let config: DecomposedRegexConfig =
                 serde_json::from_reader(File::open(decomposed_regex_path)?)?;
 
-            let mut combined_parts = Vec::new();
-            let mut max_bytes = Vec::new();
+            let (combined_pattern, max_bytes) = decomposed_to_composed_regex(&config);
 
-            for part in &config.parts {
-                match part {
-                    RegexPart::Pattern(pattern) => {
-                        combined_parts.push(pattern.clone());
-                    }
-                    RegexPart::PublicPattern((pattern, max_len)) => {
-                        combined_parts.push(format!("({})", pattern));
-                        max_bytes.push(*max_len);
-                    }
-                }
-            }
-
-            let combined_pattern = combined_parts.join("");
             let nfa = compile(&combined_pattern)?;
 
             let circom_code = if !max_bytes.is_empty() {
