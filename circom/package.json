@@ -1,0 +1,16 @@
+{
+  "name": "zk-regex-circom",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "circomlib": "^2.0.5",
+    "@zk-email/circuits": "6.3.3"
+  }
+}
