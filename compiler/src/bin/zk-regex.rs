@@ -53,8 +53,12 @@ enum Commands {
         input: String,
 
         /// Maximum haystack length
-        #[arg(short, long)]
-        max_len: usize,
+        #[arg(short = 'h', long)]
+        max_haystack_len: usize,
+
+        /// Maximum match length
+        #[arg(short = 'm', long)]
+        max_match_len: usize,
 
         /// Output JSON file for circuit inputs
         #[arg(short, long)]
@@ -142,7 +146,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::GenerateCircomInput {
             graph_path,
             input,
-            max_len,
+            max_haystack_len,
+            max_match_len,
             output,
         } => {
             // Load the cached graph

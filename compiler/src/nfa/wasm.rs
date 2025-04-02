@@ -63,6 +63,7 @@ pub fn genCircuitInputs(
     regexGraphJson: &str,
     haystack: &str,
     maxHaystackLength: usize,
+    maxMatchLength: usize,
     provingSystem: ProvingSystem,
 ) -> Result<String, JsValue> {
     let regex_graph: NFAGraph = serde_json::from_str(regexGraphJson)
@@ -70,7 +71,7 @@ pub fn genCircuitInputs(
 
     let inputs = match provingSystem {
         ProvingSystem::Circom => regex_graph
-            .generate_circom_inputs(haystack, maxHaystackLength)
+            .generate_circom_inputs(haystack, maxHaystackLength, maxMatchLength)
             .map_err(|e| JsValue::from_str(&format!("Failed to generate circom inputs: {}", e)))?,
         // TODO: Implement other proving systems
     };

@@ -23,14 +23,26 @@ use crate::nfa::error::{NFABuildError, NFAResult};
 
 #[derive(Serialize)]
 pub struct CircomInputs {
-    haystack: Vec<u8>,
+    #[serde(rename = "inHaystack")]
+    in_haystack: Vec<u8>,
+    #[serde(rename = "matchStart")]
     match_start: usize,
+    #[serde(rename = "matchLength")]
     match_length: usize,
+    #[serde(rename = "currStates")]
     curr_states: Vec<usize>,
+    #[serde(rename = "nextStates")]
     next_states: Vec<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "captureGroupIds")]
     capture_group_ids: Option<Vec<usize>>,
-    capture_group_starts: Option<Vec<bool>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "captureGroupStarts")]
+    capture_group_starts: Option<Vec<u8>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "captureGroupStartIndices")]
     capture_group_start_indices: Option<Vec<usize>>,
+    #[serde(rename = "traversalPathLength")]
     traversal_path_length: usize,
 }
 
@@ -188,8 +200,8 @@ impl NFAGraph {
 
         code.push_str("pragma circom 2.1.5;\n\n");
 
-        code.push_str("include \"circomlib/comparators.circom\";\n");
-        code.push_str("include \"circomlib/gates.circom\";\n");
+        code.push_str("include \"circomlib/circuits/comparators.circom\";\n");
+        code.push_str("include \"circomlib/circuits/gates.circom\";\n");
         code.push_str("include \"@zk-email/zk-regex-circom/circuits/regex_helpers.circom\";\n");
         code.push_str("include \"@zk-email/circuits/utils/array.circom\";\n\n");
 
@@ -203,12 +215,11 @@ impl NFAGraph {
             .as_str(),
         );
 
-        code.push_str("    signal input in[maxHaystackBytes];\n");
+        code.push_str("    signal input inHaystack[maxHaystackBytes];\n");
         code.push_str("    signal input matchStart;\n");
         code.push_str("    signal input matchLength;\n\n");
 
         code.push_str("    signal input currStates[maxMatchBytes];\n");
-        code.push_str("    signal input haystack[maxMatchBytes];\n");
         code.push_str("    signal input nextStates[maxMatchBytes];\n");
 
         // Only add capture group signals if needed
@@ -218,6 +229,8 @@ impl NFAGraph {
         }
 
         code.push_str("    signal input traversalPathLength;\n\n");
+
+        code.push_str("    signal output isValid;\n\n");
 
         code.push_str(format!("    var numStartStates = {};\n", start_states.len()).as_str());
         code.push_str(format!("    var numAcceptStates = {};\n", accept_states.len()).as_str());
@@ -271,7 +284,7 @@ impl NFAGraph {
 
         code.push_str("    // Select the haystack from the input\n");
         code.push_str(
-            "    signal haystack[maxMatchBytes] <== SelectSubArray(maxHaystackBytes, maxMatchBytes)(in, matchStart, matchLength);\n\n"
+            "    signal haystack[maxMatchBytes] <== SelectSubArray(maxHaystackBytes, maxMatchBytes)(inHaystack, matchStart, matchLength);\n\n"
         );
 
         code.push_str("    // Check if the first state in the haystack is a valid start state\n");
@@ -446,8 +459,8 @@ impl NFAGraph {
         code.push_str("        } else {\n");
         code.push_str("            isValidRegex[i] <== isValidRegexTemp[i] + isValidRegex[i-1];\n");
         code.push_str("        }\n");
-        code.push_str("    }\n");
-        code.push_str("    isValidRegex[maxMatchBytes-1] === 1;\n\n");
+        code.push_str("    }\n\n");
+        code.push_str("    isValid <== isValidRegex[maxMatchBytes-1];\n\n");
 
         if has_capture_groups {
             for capture_group_id in capture_group_set {
@@ -486,6 +499,7 @@ impl NFAGraph {
         &self,
         haystack: &str,
         max_haystack_len: usize,
+        max_match_len: usize,
     ) -> NFAResult<CircomInputs> {
         let haystack_bytes = haystack.as_bytes();
 
@@ -503,15 +517,22 @@ impl NFAGraph {
         let (match_start, match_length) = result.span;
         let path_len = path.len();
 
+        if path_len > max_match_len {
+            return Err(NFABuildError::Build(format!(
+                "Path length {} exceeds maximum length {}",
+                path_len, max_match_len
+            )));
+        }
+
         // Extract and pad arrays to max_haystack_len
         let mut curr_states = path.iter().map(|(curr, _, _, _)| *curr).collect::<Vec<_>>();
         let mut next_states = path.iter().map(|(_, next, _, _)| *next).collect::<Vec<_>>();
-        let mut haystack = haystack_bytes.to_vec();
+        let mut in_haystack = haystack_bytes.to_vec();
 
         // Pad with zeros
-        curr_states.resize(max_haystack_len, 136279841);
-        next_states.resize(max_haystack_len, 136279842);
-        haystack.resize(max_haystack_len, 0);
+        curr_states.resize(max_match_len, 136279841);
+        next_states.resize(max_match_len, 136279842);
+        in_haystack.resize(max_haystack_len, 0);
 
         // Handle capture groups if they exist
         let (capture_group_ids, capture_group_starts, capture_group_start_indices) =
@@ -522,7 +543,7 @@ impl NFAGraph {
                     .collect::<Vec<_>>();
                 let mut starts = path
                     .iter()
-                    .map(|(_, _, _, c)| c.map(|(_, start)| start).unwrap_or(false))
+                    .map(|(_, _, _, c)| c.map(|(_, start)| start as u8).unwrap_or(0))
                     .collect::<Vec<_>>();
 
                 // Use regex_automata to get capture start indices
@@ -537,8 +558,8 @@ impl NFAGraph {
                     .collect();
 
                 // Pad arrays
-                ids.resize(max_haystack_len, 0);
-                starts.resize(max_haystack_len, false);
+                ids.resize(max_match_len, 0);
+                starts.resize(max_match_len, 0);
 
                 (Some(ids), Some(starts), Some(start_indices))
             } else {
@@ -546,7 +567,7 @@ impl NFAGraph {
             };
 
         Ok(CircomInputs {
-            haystack,
+            in_haystack,
             match_start,
             match_length,
             curr_states,
