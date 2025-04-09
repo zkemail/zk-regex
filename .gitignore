@@ -1,2 +1,4 @@
-target
 nfa.json
+/target
+/compiler/pkg
+/compiler/.yarn

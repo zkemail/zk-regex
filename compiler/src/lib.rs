@@ -4,9 +4,23 @@
 //! Uses Thompson NFAs from regex-automata as an intermediate representation.
 
 mod nfa;
+mod utils;
 
-pub use nfa::NFAGraph;
-use nfa::NFAResult;
+pub use nfa::*;
+pub use utils::*;
+
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+enum RegexPart {
+    Pattern(String),
+    PublicPattern((String, usize)), // (pattern, max_substring_bytes)
+}
+
+#[derive(Deserialize)]
+pub struct DecomposedRegexConfig {
+    parts: Vec<RegexPart>,
+}
 
 /// Compile a regular expression pattern into a circuit-friendly NFA
 ///

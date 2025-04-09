@@ -1,11 +1,18 @@
+use regex_automata::{Input, nfa::thompson::pikevm::PikeVM};
+
 use super::NFAGraph;
-use crate::nfa::error::{ NFABuildError, NFAResult };
-use std::collections::{ HashMap, HashSet };
+use crate::nfa::error::{NFABuildError, NFAResult};
+use std::collections::{HashMap, HashSet};
 
 // Each step in the path contains:
 // (current_state, next_state, byte, Option<(capture_group_id, capture_group_start)>)
 pub type PathStep = (usize, usize, u8, Option<(usize, bool)>);
-pub type PathTraversal = Vec<PathStep>;
+pub type TraversalPath = Vec<PathStep>;
+
+pub struct PathWithMatchSpan {
+    pub path: TraversalPath,
+    pub span: (usize, usize), // (start, length)
+}
 
 impl NFAGraph {
     /// Get all transitions in the form (curr_state, byte, next_state)
@@ -23,14 +30,18 @@ impl NFAGraph {
 
     /// Get transitions with capture group information
     pub fn get_transitions_with_capture_info(
-        &self
+        &self,
     ) -> Vec<(usize, u8, usize, Option<(usize, bool)>)> {
         let mut transitions = Vec::new();
         for (state_idx, node) in self.nodes.iter().enumerate() {
             for (&byte, destinations) in &node.byte_transitions {
                 for &next_state in destinations {
                     // Get capture group for this transition if it exists
-                    let capture = node.capture_groups.first().copied();
+                    let capture = if let Some(captures) = node.capture_groups.get(&next_state) {
+                        captures.first().copied()
+                    } else {
+                        None
+                    };
                     transitions.push((state_idx, byte, next_state, capture));
                 }
             }
@@ -54,7 +65,7 @@ impl NFAGraph {
             if visited.insert(state) {
                 // Add all states reachable through byte transitions
                 for destinations in self.nodes[state].byte_transitions.values() {
-                    stack.extend(destinations.as_slice());
+                    stack.extend(destinations.iter());
                 }
             }
         }
@@ -94,9 +105,10 @@ impl NFAGraph {
         // Check state indices
         for (idx, node) in self.nodes.iter().enumerate() {
             if node.state_id != idx {
-                return Err(
-                    NFABuildError::InvalidStateId(format!("State ID mismatch at index {}", idx))
-                );
+                return Err(NFABuildError::InvalidStateId(format!(
+                    "State ID mismatch at index {}",
+                    idx
+                )));
             }
         }
 
@@ -105,15 +117,10 @@ impl NFAGraph {
             for destinations in node.byte_transitions.values() {
                 for &dest in destinations {
                     if dest >= self.nodes.len() {
-                        return Err(
-                            NFABuildError::InvalidTransition(
-                                format!(
-                                    "Invalid transition target {} from state {}",
-                                    dest,
-                                    state_idx
-                                )
-                            )
-                        );
+                        return Err(NFABuildError::InvalidTransition(format!(
+                            "Invalid transition target {} from state {}",
+                            dest, state_idx
+                        )));
                     }
                 }
             }
@@ -122,55 +129,84 @@ impl NFAGraph {
         // Check start states validity
         for &start in &self.start_states {
             if start >= self.nodes.len() {
-                return Err(NFABuildError::InvalidStateId(format!("Invalid start state {}", start)));
+                return Err(NFABuildError::InvalidStateId(format!(
+                    "Invalid start state {}",
+                    start
+                )));
             }
         }
 
         // Check accept states validity
         for &accept in &self.accept_states {
             if accept >= self.nodes.len() {
-                return Err(
-                    NFABuildError::InvalidStateId(format!("Invalid accept state {}", accept))
-                );
+                return Err(NFABuildError::InvalidStateId(format!(
+                    "Invalid accept state {}",
+                    accept
+                )));
             }
         }
 
         Ok(())
     }
 
-    pub fn generate_path_traversal(&self, haystack: &[u8]) -> NFAResult<PathTraversal> {
-        let mut path = Vec::with_capacity(haystack.len());
-        let mut current_state = *self.start_states
-            .iter()
-            .next()
-            .ok_or(NFABuildError::Build("No start state found".into()))?;
+    /// Get the path to the accept state for a given haystack
+    pub fn get_path_to_accept(&self, haystack: &[u8]) -> NFAResult<PathWithMatchSpan> {
+        let vm = PikeVM::new(&self.regex)
+            .map_err(|e| NFABuildError::Build(format!("Failed to build VM: {}", e)))?;
+        let mut cache = vm.create_cache();
+        let mat = vm
+            .find(&mut cache, Input::new(haystack))
+            .ok_or_else(|| NFABuildError::Build("No match found".into()))?;
 
-        for (i, &byte) in haystack.iter().enumerate() {
-            if let Some(transitions) = self.nodes[current_state].byte_transitions.get(&byte) {
-                if let Some(&next_state) = transitions.first() {
-                    let capture_info = self.nodes[current_state].capture_groups.first().copied();
+        let matched_bytes = &haystack[mat.range()];
+        let mut paths: HashMap<usize, TraversalPath> = HashMap::new();
 
-                    path.push((current_state, next_state, byte, capture_info));
+        // Start with state 0 (or 2 based on your regex)
+        if self.regex.starts_with("^") {
+            paths.insert(2, Vec::new());
+        } else {
+            paths.insert(0, Vec::new());
+        }
 
-                    current_state = next_state;
-                } else {
-                    return Err(
-                        NFABuildError::Build(format!("No valid transition found at position {}", i))
-                    );
+        for &byte in matched_bytes {
+            let mut new_paths = HashMap::new();
+
+            // For each current path
+            for (state, path) in paths {
+                // Get all possible transitions for this byte
+                if let Some(transitions) = self.nodes[state].byte_transitions.get(&byte) {
+                    // Branch out to each possible next state
+                    for &next_state in transitions {
+                        let mut new_path = path.clone();
+                        let capture = self.nodes[state]
+                            .capture_groups
+                            .get(&next_state)
+                            .and_then(|caps| caps.first().copied());
+
+                        new_path.push((state, next_state, byte, capture));
+                        new_paths.insert(next_state, new_path);
+                    }
                 }
-            } else {
-                return Err(
-                    NFABuildError::Build(
-                        format!("No transition found for byte {} at position {}", byte, i)
-                    )
-                );
+            }
+
+            // If no valid transitions found
+            if new_paths.is_empty() {
+                return Err(NFABuildError::Build("No valid transitions found".into()));
+            }
+
+            paths = new_paths;
+        }
+
+        // Find any path that reached an accept state
+        for (state, path) in paths {
+            if self.accept_states.contains(&state) {
+                return Ok(PathWithMatchSpan {
+                    path,
+                    span: (mat.start(), mat.end() - mat.start()),
+                });
             }
         }
 
-        if !self.accept_states.contains(&current_state) {
-            return Err(NFABuildError::Build("Path does not end in accept state".into()));
-        }
-
-        Ok(path)
+        Err(NFABuildError::Build("No path reached accept state".into()))
     }
 }

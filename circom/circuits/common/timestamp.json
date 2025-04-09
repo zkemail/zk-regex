@@ -1,0 +1,8 @@
+{
+    "parts": [
+        { "Pattern": "(?:\r\n|^)dkim-signature:" },
+        { "Pattern": "(?:[a-z]+=[^;]+; )+t=" },
+        { "PublicPattern": ["[0-9]+", 10] },
+        { "Pattern": ";" }
+    ]
+}

@@ -1,18 +1,7 @@
 use clap::{Parser, Subcommand};
-use compiler::compile;
-use serde::Deserialize;
+use compiler::{DecomposedRegexConfig, NFAGraph, compile, decomposed_to_composed_regex};
+use heck::{ToPascalCase, ToSnakeCase};
 use std::{fs::File, path::PathBuf};
-
-#[derive(Deserialize)]
-enum RegexPart {
-    Pattern(String),
-    PublicPattern((String, usize)), // (pattern, max_substring_bytes)
-}
-
-#[derive(Deserialize)]
-struct DecomposedRegexConfig {
-    parts: Vec<RegexPart>,
-}
 
 #[derive(Parser)]
 #[command(about = "ZK Regex Compiler CLI")]
@@ -29,12 +18,12 @@ enum Commands {
         #[arg(short, long)]
         decomposed_regex_path: PathBuf,
 
-        /// File path for circuit output
+        /// Directory path for output files
         #[arg(short, long)]
         output_file_path: PathBuf,
 
-        /// Template name
-        #[arg(short, long, default_value = "Regex")]
+        /// Template name in PascalCase (e.g., TimestampRegex)
+        #[arg(short, long, value_parser = validate_cli_template_name)]
         template_name: String,
 
         /// Noir boolean
@@ -48,18 +37,83 @@ enum Commands {
         #[arg(short, long)]
         raw_regex: String,
 
-        /// File path for Circom output
+        /// Directory path for output files
         #[arg(short, long)]
         output_file_path: PathBuf,
 
-        /// Template name
-        #[arg(short, long, default_value = "Regex")]
+        /// Template name in PascalCase (e.g., TimestampRegex)
+        #[arg(short, long, value_parser = validate_cli_template_name)]
         template_name: String,
 
         /// Noir boolean
         #[arg(long)]
         noir: bool,
     },
+
+    /// Generate circuit inputs from a cached graph
+    GenerateCircomInput {
+        /// Path to the graph JSON file
+        #[arg(short, long)]
+        graph_path: PathBuf,
+
+        /// Input string to match
+        #[arg(short, long)]
+        input: String,
+
+        /// Maximum haystack length
+        #[arg(short = 'h', long)]
+        max_haystack_len: usize,
+
+        /// Maximum match length
+        #[arg(short = 'm', long)]
+        max_match_len: usize,
+
+        /// Output JSON file for circuit inputs
+        #[arg(short, long)]
+        output: PathBuf,
+    },
+}
+
+fn validate_cli_template_name(name: &str) -> Result<String, String> {
+    // Convert to PascalCase to normalize
+    let pascal_name = name.to_pascal_case();
+
+    // Verify it's valid PascalCase
+    if pascal_name != name {
+        return Err("Template name must be in PascalCase (e.g., ThisIsATemplate)".into());
+    }
+
+    Ok(name.to_string())
+}
+
+fn save_outputs(
+    nfa: &NFAGraph,
+    circom_code: String,
+    output_dir: &PathBuf,
+    template_name: &str,
+    file_extension: &str
+) -> Result<(), Box<dyn std::error::Error>> {
+    validate_cli_template_name(template_name)?;
+
+    // Create output directory if it doesn't exist
+    std::fs::create_dir_all(output_dir)?;
+
+    let snake_case_name = template_name.to_snake_case();
+
+    // Save circuit file
+    let circuit_path = output_dir.join(format!("{}_regex.{}", snake_case_name, file_extension));
+    std::fs::write(&circuit_path, circom_code)?;
+
+    // Save graph JSON
+    let graph_json = nfa.to_json()?;
+    let graph_path = output_dir.join(format!("{}_graph.json", snake_case_name));
+    std::fs::write(&graph_path, graph_json)?;
+
+    println!("Generated files:");
+    println!("  Circuit: {}", circuit_path.display());
+    println!("  Graph: {}", graph_path.display());
+
+    Ok(())
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -75,41 +129,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let config: DecomposedRegexConfig =
                 serde_json::from_reader(File::open(decomposed_regex_path)?)?;
 
-            // Build combined pattern and collect max_bytes for public parts
-            let mut combined_parts = Vec::new();
-            let mut max_bytes = Vec::new();
+            let (combined_pattern, max_bytes) = decomposed_to_composed_regex(&config);
 
-            for part in &config.parts {
-                match part {
-                    RegexPart::Pattern(pattern) => {
-                        combined_parts.push(pattern.clone());
-                    }
-                    RegexPart::PublicPattern((pattern, max_len)) => {
-                        combined_parts.push(format!("({})", pattern));
-                        max_bytes.push(*max_len);
-                    }
-                }
-            }
-
-            let combined_pattern = combined_parts.join("");
             let nfa = compile(&combined_pattern)?;
 
-            // Generate Circom code
-            let max_substring_bytes = if !max_bytes.is_empty() {
-                Some(max_bytes.as_slice())
+            let code = !max_bytes.is_empty() {
+                if noir {
+                    nfa.generate_noir_code(&template_name, &combined_pattern, Some(&max_bytes))?
+                } else {
+                    nfa.generate_circom_code(&template_name, &combined_pattern, Some(max_bytes))?
+                };
             } else {
                 None
-            };
-            let code = if noir {
-                nfa.generate_noir_code(&template_name, &combined_pattern, max_substring_bytes)?
-            } else {
-                nfa.generate_circom_code(&template_name, &combined_pattern, max_substring_bytes)?
-            };
+            }
 
             // Create output file path by combining directory and template name
             let file_extension = if noir { ".nr" } else { ".circom" };
-            let output_file = output_file_path.join(format!("{template_name}.{file_extension}"));
-            std::fs::write(output_file, code)?;
+            save_outputs(&nfa, code, &output_file_path, &template_name, &file_extension)?;
         }
 
         Commands::Raw {
@@ -127,8 +163,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // Create output file path by combining directory and template name
             let file_extension = if noir { ".nr" } else { ".circom" };
-            let output_file = output_file_path.join(format!("{template_name}.{file_extension}"));
-            std::fs::write(output_file, code)?;
+            save_outputs(&nfa, code, &output_file_path, &template_name, &file_extension)?;
+        }
+
+        Commands::GenerateCircomInput {
+            graph_path,
+            input,
+            max_haystack_len,
+            max_match_len,
+            output,
+        } => {
+            // Load the cached graph
+            let graph_json = std::fs::read_to_string(graph_path)?;
+            let nfa = NFAGraph::from_json(&graph_json)?;
+
+            // Generate circuit inputs
+            let inputs = nfa.generate_circom_inputs(&input, max_len)?;
+
+            // Save inputs
+            let input_json = serde_json::to_string_pretty(&inputs)?;
+            std::fs::write(&output, input_json)?;
+
+            println!("Generated circuit inputs: {}", output.display());
         }
     }
 
