@@ -3,12 +3,39 @@
 mod circom;
 mod noir;
 
+use regex_automata::meta::Regex;
+use serde::Serialize;
 use std::collections::HashMap;
 
 use crate::nfa::{
     NFAGraph,
     error::{NFABuildError, NFAResult},
 };
+
+#[derive(Serialize)]
+pub struct CircuitInputs {
+    #[serde(rename = "inHaystack")]
+    in_haystack: Vec<u8>,
+    #[serde(rename = "matchStart")]
+    match_start: usize,
+    #[serde(rename = "matchLength")]
+    match_length: usize,
+    #[serde(rename = "currStates")]
+    curr_states: Vec<usize>,
+    #[serde(rename = "nextStates")]
+    next_states: Vec<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "captureGroupIds")]
+    capture_group_ids: Option<Vec<usize>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "captureGroupStarts")]
+    capture_group_starts: Option<Vec<u8>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "captureGroupStartIndices")]
+    capture_group_start_indices: Option<Vec<usize>>,
+    #[serde(rename = "traversalPathLength")]
+    traversal_path_length: usize,
+}
 
 impl NFAGraph {
     pub fn generate_circuit_data(
@@ -72,6 +99,92 @@ impl NFAGraph {
         }
 
         Ok((start_states, accept_states, range_transitions))
+    }
+
+    pub fn generate_circuit_inputs(
+        &self,
+        haystack: &str,
+        max_haystack_len: usize,
+        max_match_len: usize,
+    ) -> NFAResult<CircuitInputs> {
+        let haystack_bytes = haystack.as_bytes();
+        println!("Data: {:?}", haystack_bytes);
+
+        if haystack_bytes.len() > max_haystack_len {
+            return Err(NFABuildError::Build(format!(
+                "Haystack length {} exceeds maximum length {}",
+                haystack_bytes.len(),
+                max_haystack_len
+            )));
+        }
+
+        // Generate path traversal
+        let result = self.get_path_to_accept(haystack_bytes)?;
+        let path = result.path;
+        let (match_start, match_length) = result.span;
+        let path_len = path.len();
+
+        if path_len > max_match_len {
+            return Err(NFABuildError::Build(format!(
+                "Path length {} exceeds maximum length {}",
+                path_len, max_match_len
+            )));
+        }
+
+        // Extract and pad arrays to max_haystack_len
+        let mut curr_states = path.iter().map(|(curr, _, _, _)| *curr).collect::<Vec<_>>();
+        let mut next_states = path.iter().map(|(_, next, _, _)| *next).collect::<Vec<_>>();
+        let mut in_haystack = haystack_bytes.to_vec();
+
+        // Pad with zeros
+        // todo: why 136279841? (Noir breaks needs 0 value)
+        curr_states.resize(max_match_len, 0);
+        next_states.resize(max_match_len, 0);
+        in_haystack.resize(max_haystack_len, 0);
+
+        // Handle capture groups if they exist
+        let (capture_group_ids, capture_group_starts, capture_group_start_indices) =
+            if path.iter().any(|(_, _, _, c)| c.is_some()) {
+                let mut ids = path
+                    .iter()
+                    .map(|(_, _, _, c)| c.map(|(id, _)| id).unwrap_or(0))
+                    .collect::<Vec<_>>();
+                let mut starts = path
+                    .iter()
+                    .map(|(_, _, _, c)| c.map(|(_, start)| start as u8).unwrap_or(0))
+                    .collect::<Vec<_>>();
+
+                // Use regex_automata to get capture start indices
+                let re = Regex::new(&self.regex)
+                    .map_err(|e| NFABuildError::Build(format!("Failed to compile regex: {}", e)))?;
+                let mut captures = re.create_captures();
+                re.captures(&haystack, &mut captures);
+
+                let start_indices = (1..=captures.group_len())
+                    .filter_map(|i| captures.get_group(i))
+                    .map(|m| m.start)
+                    .collect();
+
+                // Pad arrays
+                ids.resize(max_match_len, 0);
+                starts.resize(max_match_len, 0);
+
+                (Some(ids), Some(starts), Some(start_indices))
+            } else {
+                (None, None, None)
+            };
+
+        Ok(CircuitInputs {
+            in_haystack,
+            match_start,
+            match_length,
+            curr_states,
+            next_states,
+            capture_group_ids,
+            capture_group_starts,
+            capture_group_start_indices,
+            traversal_path_length: path_len,
+        })
     }
 
     pub fn escape_regex_for_display(pattern: &str) -> String {

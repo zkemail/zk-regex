@@ -71,7 +71,7 @@ pub fn genCircuitInputs(
 
     let inputs = match provingSystem {
         ProvingSystem::Circom => regex_graph
-            .generate_circom_inputs(haystack, maxHaystackLength, maxMatchLength)
+            .generate_circuit_inputs(haystack, maxHaystackLength, maxMatchLength)
             .map_err(|e| JsValue::from_str(&format!("Failed to generate circom inputs: {}", e)))?,
         // TODO: Implement other proving systems
     };

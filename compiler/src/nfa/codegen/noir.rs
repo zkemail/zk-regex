@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::nfa::{
     NFAGraph,
+    codegen::CircuitInputs,
     error::{NFABuildError, NFAResult},
 };
 use comptime::{FieldElement, SparseArray};
@@ -26,13 +27,10 @@ impl NFAGraph {
         let mut code = String::new();
 
         // imports
-        code.push_str("mod common;\n");
-        code.push_str("use common::SparseArray;\n\n");
+        // todo: ability to change import path
+        code.push_str("use crate::common::{SparseArray, R, R_SQUARED};\n\n");
 
         // codegen consts
-        code.push_str(&format!("global R: u32 = 257;\n"));
-        code.push_str(&format!("global R_SQUARED: u32 = R * R;\n\n"));
-
         code.push_str(&format!(
             "global TRANSITION_TABLE: {}\n\n",
             transition_array.to_noir_string(None)
@@ -54,7 +52,7 @@ impl NFAGraph {
         code.push_str(&format!("    next_states: [Field; N],\n"));
         code.push_str(&format!("    transition_length: u32,\n"));
         code.push_str(&format!(") {{\n"));
-        code.push_str(&format!("    // regex:{regex_pattern}\n"));
+        code.push_str(&format!("    // regex:{:?}\n", regex_pattern));
         code.push_str(&format!("    let mut reached_end_state = 1;\n"));
         code.push_str(&format!("    check_start_state(current_states[0]);\n"));
         code.push_str(&format!("    for i in 0..N-1 {{\n"));
@@ -88,15 +86,82 @@ impl NFAGraph {
             code.push_str(&format!("        );\n"));
         }
         code.push_str(&format!(
-            "        reached_end_state = reached_end_state * check_accept_state(next_state);\n"
+            "        reached_end_state = reached_end_state * check_accept_state(next_states[i]);\n"
         ));
         code.push_str(&format!("    }}\n"));
         code.push_str(&format!(
             "    assert(reached_end_state == 0, \"Did not reach a valid end state\");\n"
         ));
         code.push_str(&format!("}}\n\n"));
-        code.push_str(&fn_test());
         Ok(code)
+    }
+
+    pub fn to_prover_toml(inputs: &CircuitInputs) -> String {
+        let mut toml = String::new();
+
+        // regex match inputs
+        let haystack = inputs
+            .in_haystack
+            .iter()
+            .map(|num| format!("\"{num}\""))
+            .collect::<Vec<_>>()
+            .join(", ");
+        toml.push_str(&format!("haystack = [{}]\n", haystack));
+        let curr_states = inputs
+            .curr_states
+            .iter()
+            .map(|num| format!("\"{num}\""))
+            .collect::<Vec<_>>()
+            .join(", ");
+        toml.push_str(&format!("curr_states = [{}]\n", curr_states));
+        let next_states = inputs
+            .next_states
+            .iter()
+            .map(|num| format!("\"{num}\""))
+            .collect::<Vec<_>>()
+            .join(", ");
+        toml.push_str(&format!("next_states = [{}]\n", next_states));
+        toml.push_str(&format!(
+            "traversal_path_length = \"{}\"\n",
+            inputs.traversal_path_length
+        ));
+        // substring capture inputs
+        if inputs.capture_group_ids.is_some() {
+            let capture_group_ids = inputs
+                .capture_group_ids
+                .as_ref()
+                .unwrap()
+                .iter()
+                .map(|num| format!("\"{num}\""))
+                .collect::<Vec<_>>()
+                .join(", ");
+            toml.push_str(&format!("capture_group_ids = [{}]\n", capture_group_ids));
+            let capture_group_starts = inputs
+                .capture_group_starts
+                .as_ref()
+                .unwrap()
+                .iter()
+                .map(|num| format!("\"{num}\""))
+                .collect::<Vec<_>>()
+                .join(", ");
+            toml.push_str(&format!(
+                "capture_group_starts = [{}]\n",
+                capture_group_starts
+            ));
+            let capture_group_start_indices = inputs
+                .capture_group_start_indices
+                .as_ref()
+                .unwrap()
+                .iter()
+                .map(|num| format!("\"{num}\""))
+                .collect::<Vec<_>>()
+                .join(", ");
+            toml.push_str(&format!(
+                "capture_group_start_indices = [{}]\n",
+                capture_group_start_indices
+            ));
+        };
+        toml
     }
 }
 
@@ -270,63 +335,5 @@ fn check_transition_with_captures(
 }}
 
 "#
-    )
-}
-
-fn fn_test() -> String {
-    format!(
-        r#"
-
-global HAYSTACK_LENGTH: u32 = 1024;
-
-fn main(
-    haystack: [u8; HAYSTACK_LENGTH],
-    current_states: [Field; HAYSTACK_LENGTH],
-    next_states: [Field; HAYSTACK_LENGTH],
-    transition_length: u32,
-) {{
-    regex_match(haystack, current_states, next_states, transition_length);
-}}
-
-#[test]
-fn test_regex_match() {{
-    let haystack = [
-        100, 107, 105, 109, 45, 115, 105, 103, 110, 97, 116, 117, 114, 101, 58, 118, 61, 49, 59, 32,
-        97, 61, 114, 115, 97, 45, 115, 104, 97, 50, 53, 54, 59, 32, 99, 61, 114, 101, 108, 97, 120,
-        101, 100, 47, 114, 101, 108, 97, 120, 101, 100, 59, 32, 100, 61, 103, 109, 97, 105, 108, 46,
-        99, 111, 109, 59, 32, 115, 61, 50, 48, 50, 51, 48, 54, 48, 49, 59, 32, 116, 61, 49, 54, 57,
-        52, 57, 56, 57, 56, 49, 50, 59, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    ];
-    let current_states = [
-        5, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 32, 33, 35, 36, 23, 32, 33,
-        33, 33, 33, 33, 33, 33, 33, 33, 33, 35, 36, 23, 32, 33, 33, 33, 33, 33, 33, 33, 33, 33, 33,
-        33, 33, 33, 33, 33, 35, 36, 23, 32, 33, 33, 33, 33, 33, 33, 33, 33, 33, 35, 36, 23, 32, 33,
-        33, 33, 33, 33, 33, 33, 33, 35, 36, 38, 39, 41, 41, 41, 41, 41, 41, 41, 41, 41, 41, 0, 0,
-        0, 0, 0, 0, 0, 0, 0,
-    ];
-    let next_states = [
-        8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 32, 33, 35, 36, 23, 32, 33,
-        33, 33, 33, 33, 33, 33, 33, 33, 33, 35, 36, 23, 32, 33, 33, 33, 33, 33, 33, 33, 33, 33, 33,
-        33, 33, 33, 33, 33, 35, 36, 23, 32, 33, 33, 33, 33, 33, 33, 33, 33, 33, 35, 36, 23, 32, 33,
-        33, 33, 33, 33, 33, 33, 33, 35, 36, 38, 39, 41, 41, 41, 41, 41, 41, 41, 41, 41, 41, 44, 0,
-        0, 0, 0, 0, 0, 0, 0, 0,
-    ];
-    let transition_length: u32 = 91;
-    regex_match(haystack, current_states, next_states, transition_length);
-    // let capture_1_start_index = 80;
-    // let capture_group_ids = [
-    //     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    //     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    //     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-    //     0, 0, 0, 0, 0, 0, 0, 0,
-    // ];
-    // let capture_group_starts = [
-    //     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    //     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    //     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    //     0, 0, 0, 0, 0, 0, 0, 0,
-    // ];
-}}    
-    "#
     )
 }

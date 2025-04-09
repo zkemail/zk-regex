@@ -51,7 +51,7 @@ enum Commands {
     },
 
     /// Generate circuit inputs from a cached graph
-    GenerateCircomInput {
+    GenerateCircuitInput {
         /// Path to the graph JSON file
         #[arg(short, long)]
         graph_path: PathBuf,
@@ -61,7 +61,7 @@ enum Commands {
         input: String,
 
         /// Maximum haystack length
-        #[arg(short = 'h', long)]
+        #[arg(short = 'l', long)]
         max_haystack_len: usize,
 
         /// Maximum match length
@@ -71,6 +71,10 @@ enum Commands {
         /// Output JSON file for circuit inputs
         #[arg(short, long)]
         output: PathBuf,
+
+        /// Generate inputs for Noir
+        #[arg(short, long)]
+        noir: Option<bool>
     },
 }
 
@@ -91,7 +95,7 @@ fn save_outputs(
     circom_code: String,
     output_dir: &PathBuf,
     template_name: &str,
-    file_extension: &str
+    file_extension: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     validate_cli_template_name(template_name)?;
 
@@ -132,20 +136,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let (combined_pattern, max_bytes) = decomposed_to_composed_regex(&config);
 
             let nfa = compile(&combined_pattern)?;
+            let max_bytes = match max_bytes.is_empty() {
+                true => None,
+                false => Some(&max_bytes[..]),
+            };
+            let code = match noir {
+                true => nfa.generate_noir_code(&template_name, &combined_pattern, max_bytes)?,
+                false => nfa.generate_circom_code(&template_name, &combined_pattern, max_bytes)?,
+            };
 
-            let code = !max_bytes.is_empty() {
-                if noir {
-                    nfa.generate_noir_code(&template_name, &combined_pattern, Some(&max_bytes))?
-                } else {
-                    nfa.generate_circom_code(&template_name, &combined_pattern, Some(max_bytes))?
-                };
-            } else {
-                None
-            }
-
-            // Create output file path by combining directory and template name
-            let file_extension = if noir { ".nr" } else { ".circom" };
-            save_outputs(&nfa, code, &output_file_path, &template_name, &file_extension)?;
+            let file_extension = if noir { "nr" } else { "circom" };
+            save_outputs(
+                &nfa,
+                code,
+                &output_file_path,
+                &template_name,
+                &file_extension,
+            )?;
         }
 
         Commands::Raw {
@@ -163,26 +170,38 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // Create output file path by combining directory and template name
             let file_extension = if noir { ".nr" } else { ".circom" };
-            save_outputs(&nfa, code, &output_file_path, &template_name, &file_extension)?;
+            save_outputs(
+                &nfa,
+                code,
+                &output_file_path,
+                &template_name,
+                &file_extension,
+            )?;
         }
 
-        Commands::GenerateCircomInput {
+        Commands::GenerateCircuitInput {
             graph_path,
             input,
             max_haystack_len,
             max_match_len,
             output,
+            noir
         } => {
             // Load the cached graph
             let graph_json = std::fs::read_to_string(graph_path)?;
             let nfa = NFAGraph::from_json(&graph_json)?;
 
             // Generate circuit inputs
-            let inputs = nfa.generate_circom_inputs(&input, max_len)?;
+            let inputs = nfa.generate_circuit_inputs(&input, max_haystack_len, max_match_len)?;
 
             // Save inputs
-            let input_json = serde_json::to_string_pretty(&inputs)?;
-            std::fs::write(&output, input_json)?;
+            if noir.is_none_or(|x| !x ) {
+                let input_json = serde_json::to_string_pretty(&inputs)?;
+                std::fs::write(&output, input_json)?;
+            } else {
+                let input_toml = NFAGraph::to_prover_toml(&inputs);
+                std::fs::write(&output, input_toml)?;
+            }
 
             println!("Generated circuit inputs: {}", output.display());
         }
