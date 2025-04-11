@@ -40,37 +40,56 @@ impl NFAGraph {
         let mut new_start_states = BTreeSet::new();
         let mut new_accept_states = BTreeSet::new();
 
-        // Handle start states
-        for &start in &self.start_states {
-            new_start_states.insert(start);
-            new_start_states.extend(&closures[start].states);
-        }
+        // Track states with byte transitions (to determine which states to keep)
+        let mut has_byte_transitions = vec![false; self.nodes.len()];
 
+        // First pass: process epsilon closures and set up new transitions
         for (state, closure) in closures.iter().enumerate() {
+            // Mark states with byte transitions
+            if !self.nodes[state].byte_transitions.is_empty() {
+                has_byte_transitions[state] = true;
+            }
+
+            // If any state in the closure is an accept state, this state becomes accept
             if closure.is_accept {
                 new_accept_states.insert(state);
             }
 
-            // For each reachable state via epsilon
+            // For each reachable state via epsilon that has byte transitions
             for &r_state in &closure.states {
-                for (&byte, targets) in &self.nodes[r_state].byte_transitions {
-                    // Add the transition
-                    new_transitions[state]
-                        .entry(byte)
-                        .or_insert_with(BTreeSet::new)
-                        .extend(targets);
+                if !self.nodes[r_state].byte_transitions.is_empty() {
+                    has_byte_transitions[r_state] = true;
 
-                    // If r_state had captures, they belong to the target states
-                    for &target in targets {
-                        for &(capture_state, capture) in &closure.captures {
-                            if capture_state == r_state {
-                                new_captures[state]
-                                    .entry(target)
-                                    .or_insert_with(BTreeSet::new)
-                                    .insert(capture);
+                    // Add byte transitions from r_state to the source state
+                    for (&byte, targets) in &self.nodes[r_state].byte_transitions {
+                        new_transitions[state]
+                            .entry(byte)
+                            .or_insert_with(BTreeSet::new)
+                            .extend(targets);
+
+                        // If r_state had captures, they belong to the target states
+                        for &target in targets {
+                            for &(capture_state, capture) in &closure.captures {
+                                if capture_state == r_state {
+                                    new_captures[state]
+                                        .entry(target)
+                                        .or_insert_with(BTreeSet::new)
+                                        .insert(capture);
+                                }
                             }
                         }
                     }
+                }
+            }
+        }
+
+        // Handle start states - only make byte transition states reachable via epsilon into start states
+        for &start in &self.start_states {
+            new_start_states.insert(start);
+
+            for &r_state in &closures[start].states {
+                if has_byte_transitions[r_state] {
+                    new_start_states.insert(r_state);
                 }
             }
         }
@@ -87,6 +106,9 @@ impl NFAGraph {
             self.nodes[state].capture_groups = captures;
             self.nodes[state].epsilon_transitions.clear();
         }
+
+        // Remove unreachable states
+        self.remove_unreachable_states();
 
         Ok(())
     }
@@ -151,5 +173,92 @@ impl NFAGraph {
         dfs(self, start, &mut closure, &mut visited)?;
 
         Ok(closure)
+    }
+
+    // New helper method to remove unreachable states
+    fn remove_unreachable_states(&mut self) {
+        // Find all reachable states through BFS
+        let mut reachable = BTreeSet::new();
+        let mut queue = Vec::new();
+
+        // Start from all start states
+        for &start in &self.start_states {
+            queue.push(start);
+            reachable.insert(start);
+        }
+
+        // BFS to find all reachable states
+        while let Some(state) = queue.pop() {
+            for targets in self.nodes[state].byte_transitions.values() {
+                for &target in targets {
+                    if reachable.insert(target) {
+                        queue.push(target);
+                    }
+                }
+            }
+        }
+
+        // If some states are unreachable, remove them
+        if reachable.len() < self.nodes.len() {
+            let mut old_to_new = BTreeMap::new();
+            let mut new_nodes = Vec::with_capacity(reachable.len());
+
+            // Create mapping from old indices to new indices
+            let mut new_idx = 0;
+            for state in 0..self.nodes.len() {
+                if reachable.contains(&state) {
+                    old_to_new.insert(state, new_idx);
+                    new_idx += 1;
+                }
+            }
+
+            // Create new nodes array with only reachable states
+            for &old_idx in &reachable {
+                let mut node = self.nodes[old_idx].clone();
+
+                // Update transitions to use new indices
+                let mut new_transitions = BTreeMap::new();
+                for (byte, targets) in node.byte_transitions {
+                    let new_targets = targets
+                        .into_iter()
+                        .filter_map(|target| old_to_new.get(&target).copied())
+                        .collect();
+
+                    new_transitions.insert(byte, new_targets);
+                }
+                node.byte_transitions = new_transitions;
+
+                // Update capture groups
+                let mut new_captures = BTreeMap::new();
+                for (target, captures) in node.capture_groups {
+                    if let Some(&new_target) = old_to_new.get(&target) {
+                        new_captures.insert(new_target, captures);
+                    }
+                }
+                node.capture_groups = new_captures;
+
+                new_nodes.push(node);
+            }
+
+            // Update start and accept states
+            let mut new_start_states = BTreeSet::new();
+            for &state in &self.start_states {
+                if let Some(&new_state) = old_to_new.get(&state) {
+                    new_start_states.insert(new_state);
+                }
+            }
+
+            let mut new_accept_states = BTreeSet::new();
+            for &state in &self.accept_states {
+                if let Some(&new_state) = old_to_new.get(&state) {
+                    new_accept_states.insert(new_state);
+                }
+            }
+
+            // Replace with new data
+            self.nodes = new_nodes;
+            self.start_states = new_start_states;
+            self.accept_states = new_accept_states;
+        }
     }
 }
