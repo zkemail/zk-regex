@@ -5,19 +5,26 @@ mod common;
 
 global MAX_HAYSTACK_LEN: u32 = 300;
 global MAX_MATCH_LEN: u32 = 20;
+global NUM_CAPTURES: u32 = 1;
 
 fn main(
     haystack: [u8; MAX_HAYSTACK_LEN],
     curr_states: [Field; MAX_HAYSTACK_LEN],
     next_states: [Field; MAX_HAYSTACK_LEN],
     traversal_path_length: u32,
-) {
-    // regex::regex_match(
-    //     haystack,
-    //     curr_states,
-    //     next_states,
-    //     traversal_path_length,
-    // )
+    capture_group_ids: [Field; MAX_HAYSTACK_LEN],
+    capture_group_starts: [Field; MAX_HAYSTACK_LEN],
+    capture_group_start_indices: [Field; NUM_CAPTURES],
+) -> pub [BoundedVec<u8, MAX_MATCH_LEN>; NUM_CAPTURES]  {
+    regex_match(
+        haystack,
+        curr_states,
+        next_states,
+        traversal_path_length,
+        capture_group_ids,
+        capture_group_starts,
+        capture_group_start_indices
+    )
 }
 
 #[test]

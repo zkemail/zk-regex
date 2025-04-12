@@ -1,5 +1,4 @@
-use crate::common::{R, R_SQUARED, SparseArray};
-use super::{MAX_HAYSTACK_LEN, MAX_MATCH_LEN};
+use crate::common::{R, R_SQUARED, SparseArray, capture_substring};
 
 global TRANSITION_TABLE: SparseArray<1331, Field> = SparseArray {
     keys: [
@@ -452,25 +451,25 @@ fn check_transition_with_captures(
     assert(matched_condition == 0, "Invalid Transition");
 }
 
-pub fn regex_match<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
-    haystack: [u8; MAX_HAYSTACK_LEN],
-    current_states: [Field; MAX_HAYSTACK_LEN],
-    next_states: [Field; MAX_HAYSTACK_LEN],
+pub fn regex_match<let MAX_HAYSTACK_LENTH: u32, let MAX_MATCH_LENGTH: u32>(
+    haystack: [u8; MAX_HAYSTACK_LENTH],
+    current_states: [Field; MAX_HAYSTACK_LENTH],
+    next_states: [Field; MAX_HAYSTACK_LENTH],
     transition_length: u32,
-    capture_ids: [Field; MAX_HAYSTACK_LEN],
-    capture_starts: [Field; MAX_HAYSTACK_LEN],
+    capture_ids: [Field; MAX_HAYSTACK_LENTH],
+    capture_starts: [Field; MAX_HAYSTACK_LENTH],
     capture_start_indexes: [Field; 1],
-) -> [BoundedVec<u8, MAX_MATCH_LEN>; 1] {
+) -> [BoundedVec<u8, MAX_MATCH_LENGTH>; 1] {
     // regex:"(?:\r\n|^)dkim-signature:(?:[a-z]+=[^;]+; )+t=([0-9]+);"
     let mut reached_end_state = 1;
     check_start_state(current_states[0]);
-    for i in 0..MAX_HAYSTACK_LEN - 1 {
+    for i in 0..MAX_HAYSTACK_LENTH - 1 {
         // transition length - 1 since current states should be 1 less than next states
         let in_range = (i < transition_length - 1) as Field;
         let matching_states = current_states[i + 1] - next_states[i];
         assert(in_range * matching_states == 0, "Invalid Transition Input");
     }
-    for i in 0..MAX_HAYSTACK_LEN {
+    for i in 0..MAX_HAYSTACK_LENTH {
         check_transition_with_captures(
             haystack[i] as Field,
             current_states[i],
@@ -483,200 +482,11 @@ pub fn regex_match<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
     }
     assert(reached_end_state == 0, "Did not reach a valid end state");
     // capture substring 0
-    let capture_0 = capture_substring::<MAX_HAYSTACK_LEN, MAX_MATCH_LEN, 1>(
+    let capture_0 = capture_substring::<MAX_HAYSTACK_LENTH, MAX_MATCH_LENGTH, 1>(
         haystack,
         capture_ids,
         capture_starts,
         capture_start_indexes[0],
     );
     [capture_0]
-}
-
-pub fn capture_substring<let HAYSTACK_MAX_LENGTH: u32, let MATCH_MAX_LEN: u32, let CAPTURE_GROUP: Field>(
-    haystack: [u8; HAYSTACK_MAX_LENGTH],
-    capture_ids: [Field; HAYSTACK_MAX_LENGTH],
-    capture_starts: [Field; HAYSTACK_MAX_LENGTH],
-    capture_start_index: Field,
-) -> BoundedVec<u8, MATCH_MAX_LEN> {
-    // capture substring
-    let mut is_capture_start = [0; HAYSTACK_MAX_LENGTH];
-    let mut is_capture_end = [0; HAYSTACK_MAX_LENGTH];
-
-    // determine if an index is the start or end of the capture group
-    let is_capture = build_is_capture::<HAYSTACK_MAX_LENGTH, CAPTURE_GROUP>(capture_ids);
-    // build start and end masks
-    let (is_capture_start, is_capture_end) =
-        unsafe { __build_capture_start_end_mask(is_capture, capture_starts) };
-
-    let mut x = [0; HAYSTACK_MAX_LENGTH];
-    let mut y = [0; HAYSTACK_MAX_LENGTH];
-    for i in 0..HAYSTACK_MAX_LENGTH {
-        x[i] = is_capture_start[i] as u8;
-        y[i] = is_capture_end[i] as u8;
-    }
-    println(f"is_capture_start: {x}");
-    println(f"is_capture_end: {y}");
-    
-    // build capture mask
-    let capture_mask = unsafe { __build_capture_mask(is_capture_start, is_capture_end) };
-    for i in 0..HAYSTACK_MAX_LENGTH {
-        let expected_mask = is_capture_start[i] * is_capture_end[i];
-        assert(capture_mask[i] == expected_mask, "Invalid Capture Mask");
-    }
-    // extract the substring
-    substring_from_mask(haystack, capture_mask, capture_start_index)
-}
-
-/**
- * Build a capture mask for the capture group
- *
- * @param capture_start_mask - The mask of capture starts for the group
- * @return - a mask representing the capture group
- */
-fn build_is_capture<let HAYSTACK_MAX_LENGTH: u32, let CAPTURE_GROUP: Field>(
-    capture_ids: [Field; HAYSTACK_MAX_LENGTH],
-) -> [Field; HAYSTACK_MAX_LENGTH] {
-    let is_capture =
-        unsafe { __build_is_capture::<HAYSTACK_MAX_LENGTH, CAPTURE_GROUP>(capture_ids) };
-    for i in 0..HAYSTACK_MAX_LENGTH {
-        // check is_capture is binary
-        let is_capture_temp = is_capture[i];
-        is_capture_temp.assert_max_bit_size::<1>();
-
-        // check if the capture group is targeted at index
-        let capture_id = capture_ids[i];
-        std::as_witness(capture_id);
-        let index_selector = (capture_id - CAPTURE_GROUP == 0) as Field;
-
-        // if the index is part of the capture group, check mask
-        assert(index_selector * (capture_id - CAPTURE_GROUP) == 0, "Invalid Capture Group Mask");
-    }
-    is_capture
-}
-
-/**
- * Helper function to build a is_capture bitmask without dynamic arrays
- * @dev HELPER FOR `build_is_capture_mask` - DO NOT CALL OUTSIDE OF THIS FUNCTION
- *
- * @param capture_ids - The (previously constrained) capture group ids for the haystack
- * @return - a mask representing the capture group
- */
-unconstrained fn __build_is_capture<let HAYSTACK_MAX_LENGTH: u32, let CAPTURE_GROUP: Field>(
-    capture_ids: [Field; HAYSTACK_MAX_LENGTH],
-) -> [Field; HAYSTACK_MAX_LENGTH] {
-    let mut is_capture = [0; HAYSTACK_MAX_LENGTH];
-    for i in 0..HAYSTACK_MAX_LENGTH {
-        is_capture[i] = (capture_ids[i] - CAPTURE_GROUP == 0) as Field;
-    }
-    is_capture
-}
-
-/**
- * Helper function to build a capture mask without dynamic arrays
- * @dev HELPER FOR `capture_substring` - DO NOT CALL OUTSIDE OF THIS FUNCTION
- *
- * @param capture_start_mask - The mask of capture starts for the group
- * @param capture_end_mask - The mask of capture ends for the group
- * @return - a mask representing the union of the two masks
- */
-unconstrained fn __build_capture_mask<let HAYSTACK_MAX_LENGTH: u32>(
-    capture_start_mask: [Field; HAYSTACK_MAX_LENGTH],
-    capture_end_mask: [Field; HAYSTACK_MAX_LENGTH],
-) -> [Field; HAYSTACK_MAX_LENGTH] {
-    let mut capture_mask = [0; HAYSTACK_MAX_LENGTH];
-    for i in 0..HAYSTACK_MAX_LENGTH {
-        capture_mask[i] = capture_start_mask[i] * capture_end_mask[i];
-    }
-
-    capture_mask
-}
-
-/**
- * Extracts a substring from the haystack using a mask created from capture group ids
- *
- * @param haystack - The haystack of bytes to reveal substring from
- * @param mask - the capture group mask constructed to extract the substring
- * @param start_index - the asserted start index of the substring
- * @return - the substring extracted as a bounded vec
- */
-fn substring_from_mask<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
-    haystack: [u8; MAX_HAYSTACK_LEN],
-    mask: [Field; MAX_HAYSTACK_LEN],
-    start_index: Field,
-) -> BoundedVec<u8, MAX_MATCH_LEN> {
-    let substring = unsafe { __substring_from_mask(haystack, mask, start_index) };
-    let mut length = 0;
-    for i in 0..MAX_MATCH_LEN {
-        let index = start_index + i as Field;
-        let mask_value = mask[index];
-        let haystack_value = haystack[index] as Field;
-        let substring_value = substring.get_unchecked(i) as Field;
-        println(f"index: {index}, substring: {substring_value}, haystack: {haystack_value}, mask: {mask_value}");
-        assert(mask_value * haystack_value == substring_value, "Invalid substring extraction");
-        length += mask_value;
-    }
-    assert(substring.len() as Field == length, "Invalid substring length");
-    substring
-}
-
-/**
- * Unconstrained construction of substring bounded vec
- * @dev HELPER FOR `substring_from_mask` - DO NOT CALL OUTSIDE OF THIS FUNCTION
- * @todo: check the asserted index is correct?
- *
- * @param haystack - The haystack of bytes to reveal substring from
- * @param mask - the capture group mask constructed to extract the substring
- * @param start_index - the asserted start index of the substring
- * @return - the substring extracted as a bounded vec
- */
-unconstrained fn __substring_from_mask<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
-    haystack: [u8; MAX_HAYSTACK_LEN],
-    mask: [Field; MAX_HAYSTACK_LEN],
-    start_index: Field,
-) -> BoundedVec<u8, MAX_MATCH_LEN> {
-    let mut substring = BoundedVec::new();
-    for i in 0..MAX_MATCH_LEN {
-        let index = start_index + i as Field;
-        let mask_value = mask[index];
-        if mask_value == 1 {
-            substring.push(haystack[index]);
-        }
-    }
-    substring
-}
-
-unconstrained fn __build_capture_start_end_mask<let HAYSTACK_MAX_LENGTH: u32>(
-    is_capture: [Field; HAYSTACK_MAX_LENGTH],
-    capture_starts: [Field; HAYSTACK_MAX_LENGTH],
-) -> ([Field; HAYSTACK_MAX_LENGTH], [Field; HAYSTACK_MAX_LENGTH]) {
-    let mut capture_start_mask = [0; HAYSTACK_MAX_LENGTH];
-    let mut capture_end_mask = [0; HAYSTACK_MAX_LENGTH];
-    // first capture group start
-    let is_capture_start_temp = (capture_starts[0] - 1 == 0) as Field;
-    capture_start_mask[0] = ((is_capture[0] * is_capture_start_temp) == 1) as Field;
-
-    // last capture group end
-    let is_capture_end_temp = (capture_starts[HAYSTACK_MAX_LENGTH - 1] == 0) as Field;
-    capture_end_mask[HAYSTACK_MAX_LENGTH - 1] =
-        (is_capture[HAYSTACK_MAX_LENGTH - 1] * is_capture_end_temp == 1) as Field;
-
-    for i in 1..HAYSTACK_MAX_LENGTH {
-        // capture group start
-        let is_capture_start_temp = (capture_starts[i] - 1 == 0) as Field;
-        let is_capture_start_valid_temp = ((is_capture[i] * is_capture_start_temp) == 1) as Field;
-        capture_start_mask[i] =
-            (1 - (1 - is_capture_start_valid_temp) * (1 - capture_start_mask[i - 1]) == 1) as Field;
-
-        // capture group end
-        let j = HAYSTACK_MAX_LENGTH - 1 - i;
-        let is_capture_end_temp = (capture_starts[j] == 0) as Field;
-        let is_capture_end_valid_temp = (is_capture[j] * is_capture_end_temp == 1) as Field;
-        capture_end_mask[j] =
-            (1 - (1 - is_capture_end_valid_temp) * (1 - capture_end_mask[j + 1]) == 1) as Field;
-            let x = is_capture_end_temp;
-            let y = capture_end_mask[j + 1];
-            let z = is_capture_end_valid_temp;
-            let q = is_capture[j];
-    }
-    (capture_start_mask, capture_end_mask)
 }
