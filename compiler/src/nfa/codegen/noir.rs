@@ -51,6 +51,10 @@ impl NFAGraph {
         code.push_str(&format!("    current_states: [Field; N],\n"));
         code.push_str(&format!("    next_states: [Field; N],\n"));
         code.push_str(&format!("    transition_length: u32,\n"));
+        if (max_substring_bytes.is_some()) {
+            code.push_str(&format!("    capture_ids: [Field; N],\n"));
+            code.push_str(&format!("    capture_starts: [Field; N],\n"));
+        }
         code.push_str(&format!(") {{\n"));
         code.push_str(&format!("    // regex:{:?}\n", regex_pattern));
         code.push_str(&format!("    let mut reached_end_state = 1;\n"));
@@ -227,7 +231,7 @@ fn unpack_sparse_value_fn() -> String {
 fn unpack_sparse_value(key: Field) -> (Field, Field, Field) {{
     let value = TRANSITION_TABLE.get(key);
     std::as_witness(value);
-    let (is_valid, is_capture_start, capture_id) = unsafe {{ __unpack_sparse_value(key) }};
+    let (is_valid, is_capture_start, capture_id) = unsafe {{ __unpack_sparse_value(value) }};
     is_valid.assert_max_bit_size::<1>();
     is_capture_start.assert_max_bit_size::<1>();
     capture_id.assert_max_bit_size::<6>();
@@ -237,7 +241,7 @@ fn unpack_sparse_value(key: Field) -> (Field, Field, Field) {{
 fn __unpack_sparse_value(value: Field) -> (Field, Field, Field) {{
     let x = value as u8;
     let is_valid = x & 1;
-    let is_capture_start = x & 2;
+    let is_capture_start = (x & 2) >> 1;
     let capture_id = x >> 2;
     (is_valid as Field, is_capture_start as Field, capture_id as Field)
 }}
@@ -279,19 +283,26 @@ fn packed_transition_sparse_array(
     transitions: &Vec<(usize, u8, u8, usize, Option<(usize, bool)>)>,
 ) -> SparseArray<FieldElement> {
     let r = 257;
-    let mut entries = Vec::new();
+    let mut keys = Vec::new();
+    let mut values = Vec::new();
     for (state_idx, start, end, dest, capture) in transitions {
         let bytes = (*start..=*end).collect::<Vec<u8>>();
         let (capture_id, capture_bool) = capture.unwrap_or((0, false));
         for byte in bytes {
             let key = state_idx + (byte as usize * r) + (r * r * dest);
             let value = 1u32 | (capture_bool as u32) << 1 | (capture_id as u32) << 2;
-            entries.push([FieldElement::from(key), FieldElement::from(value)]);
+            if capture_bool {
+                println!("========");
+                println!("key: {key}, state_idx: {state_idx}, byte: {byte}, dest: {dest}");
+                println!("value: {value}, capture_bool: {capture_bool}, capture_id: {capture_id}");
+            }
+            keys.push(FieldElement::from(key));
+            values.push(FieldElement::from(value));
         }
     }
     // assume max byte = 256 and max transitions = 200
     let max_size = FieldElement::from(transitions.len() + 256 * r + 200 * r * r);
-    SparseArray::create(&entries[0], &entries[1], max_size)
+    SparseArray::create(&keys, &values, max_size)
 }
 
 fn check_transition_fn() -> String {
@@ -320,7 +331,7 @@ fn check_transition_with_captures(
     haystack_byte: Field,
     current_state: Field,
     next_state: Field,
-    asserted_capture_id: Field,
+    asserted_capture_group: Field,
     asserted_capture_start: Field,
     reached_end_state: Field
 ) {{
@@ -328,8 +339,8 @@ fn check_transition_with_captures(
     let (is_valid, is_capture_start, capture_id) = unpack_sparse_value(key);
     // check if the transition is valid
     let matched_condition = ((is_valid - 1)
-        + ((asserted_capture_group - capture_id) * R)
-        + ((asserted_capture_start - is_capture_start) * R_SQUARED))
+        + ((asserted_capture_group - capture_id) * R as Field)
+        + ((asserted_capture_start - is_capture_start) * R_SQUARED as Field))
         * reached_end_state;
     assert(matched_condition == 0, "Invalid Transition");
 }}

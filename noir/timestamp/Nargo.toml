@@ -1,5 +1,5 @@
 [package]
-name = "subject_all"
+name = "timestamp"
 type = "bin"
 authors = [""]
 compiler_version = ">=1.0.0"
