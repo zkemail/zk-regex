@@ -4,7 +4,7 @@ mod regex;
 mod common;
 
 global MAX_HAYSTACK_LEN: u32 = 300;
-global MAX_MATCH_LEN: u32 = 20;
+global MAX_MATCH_LEN: u32 = 10;
 global NUM_CAPTURES: u32 = 1;
 
 fn main(
@@ -15,7 +15,7 @@ fn main(
     capture_group_ids: [Field; MAX_HAYSTACK_LEN],
     capture_group_starts: [Field; MAX_HAYSTACK_LEN],
     capture_group_start_indices: [Field; NUM_CAPTURES],
-) -> pub [BoundedVec<u8, MAX_MATCH_LEN>; NUM_CAPTURES]  {
+) -> pub (BoundedVec<u8, MAX_MATCH_LEN>)  {
     regex_match(
         haystack,
         curr_states,
@@ -99,7 +99,7 @@ fn test_regex_match() {
     ];
     let capture_group_start_indices = [80];
 
-    let substrings: [BoundedVec<u8, MAX_MATCH_LEN>; 1] = regex_match(
+    let substrings: (BoundedVec<u8, MAX_MATCH_LEN>) = regex_match(
         haystack,
         curr_states,
         next_states,
@@ -108,6 +108,5 @@ fn test_regex_match() {
         capture_group_starts,
         capture_group_start_indices
     );
-    let capture_0 = substrings[0];
-    println(f"mask: {capture_0}");
+    println(f"mask: {substrings}");
 }

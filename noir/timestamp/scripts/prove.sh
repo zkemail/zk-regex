@@ -15,7 +15,7 @@ cargo run \
     --output ./noir/timestamp/Prover.toml \
     --noir true
 
-# echo "Simulating witness for timestamp regex match"
-# cd ./noir/timestamp
-# nargo execute
+echo "Simulating witness for timestamp regex match"
+cd ./noir/timestamp
+nargo execute
 
