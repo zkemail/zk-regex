@@ -1,4 +1,5 @@
 use sort::sort_advanced;
+
 pub global R: u32 = 257;
 pub global R_SQUARED: u32 = R * R;
 
@@ -166,6 +167,63 @@ pub fn capture_substring<let HAYSTACK_MAX_LENGTH: u32, let MATCH_MAX_LEN: u32, l
     }
     // extract the substring
     substring_from_mask(haystack, capture_mask, capture_start_index)
+}
+
+
+/**
+ * Unpacks a transition lookup value
+ * @dev 8 bit packed (0: valid transition, 1: start of capture group, 2-8: capture group id)
+ * 
+ * @return (valid, start_capture_group, capture_group_id)
+ */
+fn unpack_sparse_value<let TABLE_SIZE: u32>(key: Field, table: SparseArray<TABLE_SIZE, Field>) -> (Field, Field, Field) {
+    let value = table.get(key);
+    std::as_witness(value);
+    let (is_valid, is_capture_start, capture_id) = unsafe { __unpack_sparse_value(value) };
+    is_valid.assert_max_bit_size::<1>();
+    is_capture_start.assert_max_bit_size::<1>();
+    capture_id.assert_max_bit_size::<6>();
+    (is_valid, is_capture_start, capture_id)
+}
+
+fn __unpack_sparse_value(value: Field) -> (Field, Field, Field) {
+    let x = value as u8;
+    let is_valid = x & 1;
+    let is_capture_start = (x & 2) >> 1;
+    let capture_id = x >> 2;
+    (is_valid as Field, is_capture_start as Field, capture_id as Field)
+}
+        
+pub fn check_transition_with_captures<let TABLE_SIZE: u32>(
+    haystack_byte: Field,
+    current_state: Field,
+    next_state: Field,
+    asserted_capture_group: Field,
+    asserted_capture_start: Field,
+    reached_end_state: Field,
+    table: SparseArray<TABLE_SIZE, Field>
+) {
+    let key = current_state + haystack_byte as Field * R as Field + next_state * R_SQUARED as Field;
+    let (is_valid, is_capture_start, capture_id) = unpack_sparse_value(key, table);
+    // check if the transition is valid
+    let matched_condition = ((is_valid - 1)
+        + ((asserted_capture_group - capture_id) * R as Field)
+        + ((asserted_capture_start - is_capture_start) * R_SQUARED as Field))
+        * reached_end_state;
+    assert(matched_condition == 0, "Invalid Transition");
+}
+
+pub fn check_transition<let TABLE_LENGTH: u32>(
+    haystack_byte: Field,
+    current_state: Field,
+    next_state: Field,
+    reached_end_state: Field,
+    table: SparseArray<TABLE_LENGTH, Field>
+) {
+    let key = current_state + haystack_byte as Field * R as Field + next_state * R_SQUARED as Field;
+    let transition_condition = table.get(key) - 1;
+    let matched_condition = transition_condition * reached_end_state;
+    assert(matched_condition == 0, "Invalid Transition");
 }
 
 /**

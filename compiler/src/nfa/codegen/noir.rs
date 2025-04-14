@@ -57,7 +57,12 @@ impl NFAGraph {
 
         // imports
         // todo: ability to change import path
-        code.push_str("use crate::common::{capture_substring, check_transition_with_captures, SparseArray};\n\n");
+        if has_capture_groups {
+            code.push_str("use crate::common::{capture_substring, check_transition_with_captures, SparseArray};\n\n");
+        } else {
+            code.push_str("use crate::common::{check_transition, SparseArray};\n\n");
+
+        }
 
         // codegen consts
         code.push_str(&format!(
@@ -80,11 +85,8 @@ impl NFAGraph {
         // add check for valid start states
         code.push_str(start_state_fn(&start_states).as_str());
         code.push_str(accept_state_fn(&accept_states).as_str());
-        if max_substring_bytes.is_some() {
-        } else {
-            code.push_str(check_transition_fn().as_str());
-        }
 
+        // regex match fn
         code.push_str(&format!("pub fn regex_match<let MAX_HAYSTACK_LENTH: u32>(\n"));
         code.push_str(&format!("    haystack: [u8; MAX_HAYSTACK_LENTH],\n"));
         code.push_str(&format!("    current_states: [Field; MAX_HAYSTACK_LENTH],\n"));
@@ -130,7 +132,7 @@ impl NFAGraph {
             code.push_str(&format!("            capture_ids[i],\n"));
             code.push_str(&format!("            capture_starts[i],\n"));
             code.push_str(&format!("            reached_end_state,\n"));
-            code.push_str(&format!("            TRANSITION_TABLE,\n"));
+            code.push_str(&format!("            TRANSITION_TABLE\n"));
             code.push_str(&format!("        );\n"));
         } else {
             code.push_str(&format!("        check_transition(\n"));
@@ -138,6 +140,7 @@ impl NFAGraph {
             code.push_str(&format!("            current_states[i],\n"));
             code.push_str(&format!("            next_states[i],\n"));
             code.push_str(&format!("            reached_end_state,\n"));
+            code.push_str(&format!("            TRANSITION_TABLE\n"));
             code.push_str(&format!("        );\n"));
         }
         code.push_str(&format!(

@@ -213,6 +213,19 @@ pub fn check_transition_with_captures<let TABLE_SIZE: u32>(
     assert(matched_condition == 0, "Invalid Transition");
 }
 
+pub fn check_transition<let TABLE_LENGTH: u32>(
+    haystack_byte: Field,
+    current_state: Field,
+    next_state: Field,
+    reached_end_state: Field,
+    table: SparseArray<TABLE_LENGTH, Field>
+) {
+    let key = current_state + haystack_byte as Field * R as Field + next_state * R_SQUARED as Field;
+    let transition_condition = table.get(key) - 1;
+    let matched_condition = transition_condition * reached_end_state;
+    assert(matched_condition == 0, "Invalid Transition");
+}
+
 /**
  * Build a capture mask for the capture group
  *

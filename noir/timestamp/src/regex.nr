@@ -44,7 +44,7 @@ pub fn regex_match<let MAX_HAYSTACK_LENTH: u32>(
             capture_ids[i],
             capture_starts[i],
             reached_end_state,
-            TRANSITION_TABLE,
+            TRANSITION_TABLE
         );
         reached_end_state = reached_end_state * check_accept_state(next_states[i]);
     }
