@@ -156,8 +156,7 @@ pub fn capture_substring<let HAYSTACK_MAX_LENGTH: u32, let MATCH_MAX_LEN: u32, l
     // determine if an index is the start or end of the capture group
     let is_capture = build_is_capture::<HAYSTACK_MAX_LENGTH, CAPTURE_GROUP>(capture_ids);
     // build start and end masks
-    let (is_capture_start, is_capture_end) =
-        unsafe { __build_capture_start_end_mask(is_capture, capture_starts) };
+    let (is_capture_start, is_capture_end) = build_capture_start_end_mask(is_capture, capture_starts);
     
     // build capture mask
     let capture_mask = unsafe { __build_capture_mask(is_capture_start, is_capture_end) };
@@ -341,6 +340,39 @@ unconstrained fn __substring_from_mask<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_
         }
     }
     substring
+}
+
+fn build_capture_start_end_mask<let HAYSTACK_MAX_LENGTH: u32>(
+    is_capture: [Field; HAYSTACK_MAX_LENGTH],
+    capture_starts: [Field; HAYSTACK_MAX_LENGTH],
+) -> ([Field; HAYSTACK_MAX_LENGTH], [Field; HAYSTACK_MAX_LENGTH]) {
+    let (start_mask, end_mask) = unsafe { __build_capture_start_end_mask(is_capture, capture_starts) };
+
+    // check first byte of capture start mask
+    let is_capture_start_temp = (capture_starts[0] - 1 == 0) as Field;
+    let expected_start_mask = ((is_capture[0] * is_capture_start_temp) == 1) as Field;
+    assert(start_mask[0] == expected_start_mask, "Invalid Capture Start Mask");
+
+    // check last byte of capture end mask
+    let is_capture_end_temp = (capture_starts[HAYSTACK_MAX_LENGTH - 1] == 0) as Field;
+    let expected_end_mask = (is_capture[HAYSTACK_MAX_LENGTH - 1] * is_capture_end_temp == 1) as Field;
+    assert(end_mask[HAYSTACK_MAX_LENGTH - 1] == expected_end_mask, "Invalid Capture End Mask");
+    
+    for i in 1..HAYSTACK_MAX_LENGTH {
+        // capture group start
+        let is_capture_start_temp = (capture_starts[i] - 1 == 0) as Field;
+        let is_capture_start_valid_temp = ((is_capture[i] * is_capture_start_temp) == 1) as Field;
+        let expected_start_mask = (1 - (1 - is_capture_start_valid_temp) * (1 - start_mask[i - 1]) == 1) as Field;
+        assert(start_mask[i] == expected_start_mask, "Invalid Capture Start Mask");
+
+        // capture group end
+        let j = HAYSTACK_MAX_LENGTH - 1 - i;
+        let is_capture_end_temp = (capture_starts[j] == 0) as Field;
+        let is_capture_end_valid_temp = (is_capture[j] * is_capture_end_temp == 1) as Field;
+        let expected_end_mask = (1 - (1 - is_capture_end_valid_temp) * (1 - end_mask[j + 1]) == 1) as Field;
+        assert(end_mask[j] == expected_end_mask, "Invalid Capture End Mask");
+    }
+    (start_mask, end_mask)
 }
 
 unconstrained fn __build_capture_start_end_mask<let HAYSTACK_MAX_LENGTH: u32>(
