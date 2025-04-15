@@ -1,0 +1,37 @@
+{
+    "regex": "a*b",
+    "nodes": [
+        {
+            "state_id": 0,
+            "byte_transitions": { "97": [1], "98": [4] },
+            "epsilon_transitions": [],
+            "capture_groups": {}
+        },
+        {
+            "state_id": 1,
+            "byte_transitions": { "97": [1], "98": [4] },
+            "epsilon_transitions": [],
+            "capture_groups": {}
+        },
+        {
+            "state_id": 2,
+            "byte_transitions": { "97": [1] },
+            "epsilon_transitions": [],
+            "capture_groups": {}
+        },
+        {
+            "state_id": 3,
+            "byte_transitions": { "98": [4] },
+            "epsilon_transitions": [],
+            "capture_groups": {}
+        },
+        {
+            "state_id": 4,
+            "byte_transitions": {},
+            "epsilon_transitions": [],
+            "capture_groups": {}
+        }
+    ],
+    "start_states": [0, 2, 3],
+    "accept_states": [4]
+}

@@ -45,11 +45,6 @@ impl NFAGraph {
 
         // First pass: process epsilon closures and set up new transitions
         for (state, closure) in closures.iter().enumerate() {
-            // Mark states with byte transitions
-            if !self.nodes[state].byte_transitions.is_empty() {
-                has_byte_transitions[state] = true;
-            }
-
             // If any state in the closure is an accept state, this state becomes accept
             if closure.is_accept {
                 new_accept_states.insert(state);
@@ -181,7 +176,7 @@ impl NFAGraph {
         let mut reachable = BTreeSet::new();
         let mut queue = Vec::new();
 
-        // Start from all start states
+        // Start from the start state(s)
         for &start in &self.start_states {
             queue.push(start);
             reachable.insert(start);
@@ -215,6 +210,9 @@ impl NFAGraph {
             // Create new nodes array with only reachable states
             for &old_idx in &reachable {
                 let mut node = self.nodes[old_idx].clone();
+
+                // Update the state_id to match its new index in the array
+                node.state_id = old_to_new[&old_idx];
 
                 // Update transitions to use new indices
                 let mut new_transitions = BTreeMap::new();
