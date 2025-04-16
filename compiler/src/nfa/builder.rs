@@ -19,9 +19,11 @@ impl NFAGraph {
         let re = PikeVM::new(pattern).map_err(|e| NFABuildError::Build(e.to_string()))?;
         let thompson_nfa = re.get_nfa();
 
+        let state_len = thompson_nfa.states().len() - 2;
+
         let mut graph = Self::default();
         graph.regex = pattern.to_string();
-        graph.initialize_nodes(thompson_nfa.states().len())?;
+        graph.initialize_nodes(state_len)?;
         graph.process_all_states(&thompson_nfa)?;
         graph.set_start_states(&thompson_nfa);
         graph.remove_epsilon_transitions()?;
@@ -47,28 +49,28 @@ impl NFAGraph {
 
     /// Processes all states from the Thompson NFA
     fn process_all_states(&mut self, nfa: &NFA) -> NFAResult<()> {
-        for state_id in 0..nfa.states().len() {
+        for state_idx in 0..self.nodes.len() {
             let state_id =
-                StateID::new(state_id).map_err(|e| NFABuildError::Build(e.to_string()))?;
+                StateID::new(state_idx + 2).map_err(|e| NFABuildError::Build(e.to_string()))?;
 
             match nfa.state(state_id) {
                 State::Match { .. } => {
-                    self.accept_states.insert(state_id.as_usize());
+                    self.accept_states.insert(state_idx);
                 }
                 State::ByteRange { trans } => {
-                    self.add_byte_range_transition(state_id.as_usize(), trans)?;
+                    self.add_byte_range_transition(state_idx, trans)?;
                 }
                 State::Sparse(sparse) => {
-                    self.add_sparse_transitions(state_id.as_usize(), &sparse.transitions)?;
+                    self.add_sparse_transitions(state_idx, &sparse.transitions)?;
                 }
                 State::Dense(dense) => {
-                    self.add_dense_transitions(state_id.as_usize(), &dense.transitions)?;
+                    self.add_dense_transitions(state_idx, &dense.transitions)?;
                 }
                 State::Union { alternates } => {
-                    self.add_union_transitions(state_id.as_usize(), alternates)?;
+                    self.add_union_transitions(state_idx, alternates)?;
                 }
                 State::BinaryUnion { alt1, alt2 } => {
-                    self.add_binary_union_transitions(state_id.as_usize(), alt1, alt2)?;
+                    self.add_binary_union_transitions(state_idx, alt1, alt2)?;
                 }
                 State::Capture {
                     next,
@@ -76,10 +78,10 @@ impl NFAGraph {
                     slot,
                     ..
                 } => {
-                    self.add_capture_transition(state_id.as_usize(), next, group_index, slot)?;
+                    self.add_capture_transition(state_idx, next, group_index, slot)?;
                 }
                 State::Look { next, .. } => {
-                    self.add_look_transition(state_id.as_usize(), next)?;
+                    self.add_look_transition(state_idx, next)?;
                 }
                 State::Fail => {} // No transitions needed
             }
@@ -94,7 +96,7 @@ impl NFAGraph {
                 .byte_transitions
                 .entry(byte)
                 .or_insert_with(BTreeSet::new)
-                .insert(trans.next.as_usize());
+                .insert(trans.next.as_usize() - 2);
         }
         Ok(())
     }
@@ -119,7 +121,7 @@ impl NFAGraph {
                     .byte_transitions
                     .entry(byte as u8)
                     .or_insert_with(BTreeSet::new)
-                    .insert(next.as_usize());
+                    .insert(next.as_usize() - 2);
             }
         }
         Ok(())
@@ -129,7 +131,7 @@ impl NFAGraph {
     fn add_union_transitions(&mut self, state_id: usize, alternates: &[StateID]) -> NFAResult<()> {
         self.nodes[state_id]
             .epsilon_transitions
-            .extend(alternates.iter().map(|id| id.as_usize()));
+            .extend(alternates.iter().map(|id| id.as_usize() - 2));
         Ok(())
     }
 
@@ -141,8 +143,8 @@ impl NFAGraph {
         alt2: &StateID,
     ) -> NFAResult<()> {
         let node = &mut self.nodes[state_id];
-        node.epsilon_transitions.insert(alt1.as_usize());
-        node.epsilon_transitions.insert(alt2.as_usize());
+        node.epsilon_transitions.insert(alt1.as_usize() - 2);
+        node.epsilon_transitions.insert(alt2.as_usize() - 2);
         Ok(())
     }
 
@@ -155,13 +157,13 @@ impl NFAGraph {
         slot: &SmallIndex,
     ) -> NFAResult<()> {
         let node = &mut self.nodes[state_id];
-        node.epsilon_transitions.insert(next.as_usize());
+        node.epsilon_transitions.insert(next.as_usize() - 2);
 
         let group_idx = group_index.as_usize();
         if group_idx > 0 {
             let is_start = slot.as_usize() % 2 == 0;
             node.capture_groups
-                .entry(next.as_usize())
+                .entry(next.as_usize() - 2)
                 .or_insert_with(BTreeSet::new)
                 .insert((group_idx, is_start));
         }
@@ -172,13 +174,58 @@ impl NFAGraph {
     fn add_look_transition(&mut self, state_id: usize, next: &StateID) -> NFAResult<()> {
         self.nodes[state_id]
             .epsilon_transitions
-            .insert(next.as_usize());
+            .insert(next.as_usize() - 2);
         Ok(())
     }
 
     /// Sets the start states for the NFA
     fn set_start_states(&mut self, nfa: &NFA) {
-        self.start_states.insert(nfa.start_anchored().as_usize());
-        self.start_states.insert(nfa.start_unanchored().as_usize());
+        self.start_states
+            .insert(nfa.start_anchored().as_usize() - 2);
+    }
+
+    pub fn pretty_print(&self) {
+        println!("\n=== NFA Graph ===");
+        println!("Regex: {}", self.regex);
+        println!("Start states: {:?}", self.start_states);
+        println!("Accept states: {:?}", self.accept_states);
+        println!("\nStates:");
+
+        for (idx, node) in self.nodes.iter().enumerate() {
+            println!("\nState {}: ", idx);
+
+            // Print byte transitions
+            if !node.byte_transitions.is_empty() {
+                println!("  Byte transitions:");
+                for (&byte, destinations) in &node.byte_transitions {
+                    println!(
+                        "    '{}' ({:#04x}) -> {:?}",
+                        if byte.is_ascii_graphic() {
+                            byte as char
+                        } else {
+                            '.'
+                        },
+                        byte,
+                        destinations
+                    );
+                }
+            }
+
+            // Print capture groups
+            if !node.capture_groups.is_empty() {
+                println!("  Capture groups:");
+                for (target, captures) in &node.capture_groups {
+                    for &(group_id, is_start) in captures {
+                        println!(
+                            "    -> state {}: group {} {}",
+                            target,
+                            group_id,
+                            if is_start { "start" } else { "end" }
+                        );
+                    }
+                }
+            }
+        }
+        println!("\n=== End of Graph ===\n");
     }
 }
