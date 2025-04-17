@@ -1,4 +1,4 @@
-use super::{NFAGraph, NFANode, NFAResult, error::NFABuildError};
+use super::{NFAGraph, NFANode, NFAResult, error::NFAError};
 
 use regex_automata::{
     nfa::thompson::{NFA, State, Transition, pikevm::PikeVM},
@@ -16,7 +16,7 @@ impl NFAGraph {
     /// 4. Handles capture groups and lookups
     /// 5. Removes epsilon transitions for circuit compatibility
     pub fn build(pattern: &str) -> NFAResult<Self> {
-        let re = PikeVM::new(pattern).map_err(|e| NFABuildError::Build(e.to_string()))?;
+        let re = PikeVM::new(pattern).map_err(|e| NFAError::RegexCompilation(e.to_string()))?;
         let thompson_nfa = re.get_nfa();
 
         let state_len = thompson_nfa.states().len() - 2;
@@ -51,7 +51,7 @@ impl NFAGraph {
     fn process_all_states(&mut self, nfa: &NFA) -> NFAResult<()> {
         for state_idx in 0..self.nodes.len() {
             let state_id =
-                StateID::new(state_idx + 2).map_err(|e| NFABuildError::Build(e.to_string()))?;
+                StateID::new(state_idx + 2).map_err(|e| NFAError::InvalidStateId(e.to_string()))?;
 
             match nfa.state(state_id) {
                 State::Match { .. } => {

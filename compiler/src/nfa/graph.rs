@@ -1,7 +1,7 @@
 use regex_automata::{Input, nfa::thompson::pikevm::PikeVM};
 
 use super::NFAGraph;
-use crate::nfa::error::{NFABuildError, NFAResult};
+use crate::nfa::error::{NFAError, NFAResult};
 use std::collections::{HashMap, HashSet};
 
 // Each step in the path contains:
@@ -105,7 +105,7 @@ impl NFAGraph {
         // Check state indices
         for (idx, node) in self.nodes.iter().enumerate() {
             if node.state_id != idx {
-                return Err(NFABuildError::InvalidStateId(format!(
+                return Err(NFAError::InvalidStateId(format!(
                     "State ID mismatch at index {}",
                     idx
                 )));
@@ -117,7 +117,7 @@ impl NFAGraph {
             for destinations in node.byte_transitions.values() {
                 for &dest in destinations {
                     if dest >= self.nodes.len() {
-                        return Err(NFABuildError::InvalidTransition(format!(
+                        return Err(NFAError::InvalidTransition(format!(
                             "Invalid transition target {} from state {}",
                             dest, state_idx
                         )));
@@ -129,7 +129,7 @@ impl NFAGraph {
         // Check start states validity
         for &start in &self.start_states {
             if start >= self.nodes.len() {
-                return Err(NFABuildError::InvalidStateId(format!(
+                return Err(NFAError::InvalidStateId(format!(
                     "Invalid start state {}",
                     start
                 )));
@@ -139,7 +139,7 @@ impl NFAGraph {
         // Check accept states validity
         for &accept in &self.accept_states {
             if accept >= self.nodes.len() {
-                return Err(NFABuildError::InvalidStateId(format!(
+                return Err(NFAError::InvalidStateId(format!(
                     "Invalid accept state {}",
                     accept
                 )));
@@ -152,11 +152,11 @@ impl NFAGraph {
     /// Get the path to the accept state for a given haystack
     pub fn get_path_to_accept(&self, haystack: &[u8]) -> NFAResult<PathWithMatchSpan> {
         let vm = PikeVM::new(&self.regex)
-            .map_err(|e| NFABuildError::Build(format!("Failed to build VM: {}", e)))?;
+            .map_err(|e| NFAError::RegexCompilation(format!("Failed to build VM: {}", e)))?;
         let mut cache = vm.create_cache();
         let mat = vm
             .find(&mut cache, Input::new(haystack))
-            .ok_or_else(|| NFABuildError::Build("No match found".into()))?;
+            .ok_or_else(|| NFAError::NoMatch("No match found".into()))?;
 
         let matched_bytes = &haystack[mat.range()];
         let mut paths: HashMap<usize, TraversalPath> = HashMap::new();
@@ -167,7 +167,7 @@ impl NFAGraph {
         }
 
         if paths.is_empty() {
-            return Err(NFABuildError::Build(
+            return Err(NFAError::NoMatch(
                 "No start states defined in the NFA".into(),
             ));
         }
@@ -195,7 +195,7 @@ impl NFAGraph {
 
             // If no valid transitions found
             if new_paths.is_empty() {
-                return Err(NFABuildError::Build("No valid transitions found".into()));
+                return Err(NFAError::NoValidPath("No valid transitions found".into()));
             }
 
             paths = new_paths;
@@ -211,6 +211,6 @@ impl NFAGraph {
             }
         }
 
-        Err(NFABuildError::Build("No path reached accept state".into()))
+        Err(NFAError::NoValidPath("No path reached accept state".into()))
     }
 }

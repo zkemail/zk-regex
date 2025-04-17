@@ -1,4 +1,4 @@
-use super::{NFAGraph, NFAResult, error::NFABuildError};
+use super::{NFAGraph, NFAResult, error::NFAError};
 
 impl NFAGraph {
     /// Serialize the graph to JSON string
@@ -10,13 +10,13 @@ impl NFAGraph {
             accept_states: self.accept_states.clone(),
         };
 
-        serde_json::to_string(&serialized).map_err(|e| NFABuildError::Serialization(e.to_string()))
+        serde_json::to_string(&serialized).map_err(|e| NFAError::Serialization(e.to_string()))
     }
 
     /// Create graph from JSON string
     pub fn from_json(json: &str) -> NFAResult<Self> {
         let serialized: NFAGraph =
-            serde_json::from_str(json).map_err(|e| NFABuildError::Serialization(e.to_string()))?;
+            serde_json::from_str(json).map_err(|e| NFAError::Serialization(e.to_string()))?;
 
         // Verify the loaded graph
         let graph = Self {
