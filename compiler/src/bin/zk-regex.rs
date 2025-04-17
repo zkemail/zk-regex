@@ -155,7 +155,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let nfa = NFAGraph::from_json(&graph_json)?;
 
             // Generate circuit inputs
-            let inputs = nfa.generate_circom_inputs(&input, max_len)?;
+            let inputs = nfa.generate_circom_inputs(&input, max_haystack_len, max_match_len)?;
 
             // Save inputs
             let input_json = serde_json::to_string_pretty(&inputs)?;

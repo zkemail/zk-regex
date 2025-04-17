@@ -161,11 +161,15 @@ impl NFAGraph {
         let matched_bytes = &haystack[mat.range()];
         let mut paths: HashMap<usize, TraversalPath> = HashMap::new();
 
-        // Start with state 0 (or 2 based on your regex)
-        if self.regex.starts_with("^") {
-            paths.insert(2, Vec::new());
-        } else {
-            paths.insert(0, Vec::new());
+        // Start with all defined start states
+        for &start_state in &self.start_states {
+            paths.insert(start_state, Vec::new());
+        }
+
+        if paths.is_empty() {
+            return Err(NFABuildError::Build(
+                "No start states defined in the NFA".into(),
+            ));
         }
 
         for &byte in matched_bytes {

@@ -42,8 +42,6 @@ pub struct CircomInputs {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "captureGroupStartIndices")]
     capture_group_start_indices: Option<Vec<usize>>,
-    #[serde(rename = "traversalPathLength")]
-    traversal_path_length: usize,
 }
 
 impl NFAGraph {
@@ -225,10 +223,8 @@ impl NFAGraph {
         // Only add capture group signals if needed
         if has_capture_groups {
             code.push_str("    signal input captureGroupIds[maxMatchBytes];\n");
-            code.push_str("    signal input captureGroupStarts[maxMatchBytes];\n");
+            code.push_str("    signal input captureGroupStarts[maxMatchBytes];\n\n");
         }
-
-        code.push_str("    signal input traversalPathLength;\n\n");
 
         code.push_str("    signal output isValid;\n\n");
 
@@ -304,13 +300,13 @@ impl NFAGraph {
 
         code.push_str("    for (var i = 0; i < maxMatchBytes; i++) {\n");
         code.push_str(
-            "        isWithinPathLength[i] <== LessThan(log2Ceil(maxMatchBytes))([i, traversalPathLength]);\n\n"
+            "        isWithinPathLength[i] <== LessThan(log2Ceil(maxMatchBytes))([i, matchLength]);\n\n"
         );
 
         code.push_str("        // Check if the traversal is a valid path\n");
         code.push_str("        if (i < maxMatchBytes-2) {\n");
         code.push_str(
-            "            isWithinPathLengthMinusOne[i] <== LessThan(log2Ceil(maxMatchBytes))([i, traversalPathLength-1]);\n"
+            "            isWithinPathLengthMinusOne[i] <== LessThan(log2Ceil(maxMatchBytes))([i, matchLength-1]);\n"
         );
         code.push_str(
             "            isTransitionLinked[i] <== IsEqual()([nextStates[i], currStates[i+1]]);\n",
@@ -431,9 +427,7 @@ impl NFAGraph {
         code.push_str(
             "        // Check if any accept state has been reached at the last transition\n",
         );
-        code.push_str(
-            "        reachedLastTransition[i] <== IsEqual()([i, traversalPathLength-1]);\n",
-        );
+        code.push_str("        reachedLastTransition[i] <== IsEqual()([i, matchLength-1]);\n");
 
         if accept_states.len() > 1 {
             code.push_str("        reachedAcceptState[i] = MultiOR(numAcceptStates);\n");
@@ -463,6 +457,13 @@ impl NFAGraph {
         code.push_str("    isValid <== isValidRegex[maxMatchBytes-1];\n\n");
 
         if has_capture_groups {
+            code.push_str(
+                format!(
+                    "    signal input captureGroupStartIndices[{}];\n\n",
+                    capture_group_set.len()
+                )
+                .as_str(),
+            );
             for capture_group_id in capture_group_set {
                 let max_substring_bytes = if let Some(max_substring_bytes) = max_substring_bytes {
                     max_substring_bytes[capture_group_id - 1]
@@ -475,16 +476,13 @@ impl NFAGraph {
 
                 code.push_str(format!("    // Capture Group {}\n", capture_group_id).as_str());
                 code.push_str(
-                    format!("    signal input capture{}StartIndex;\n", capture_group_id).as_str(),
-                );
-                code.push_str(
                     format!(
-                        "    signal output capture{}[{}] <== CaptureSubstring(maxMatchBytes, {}, {})(capture{}StartIndex, haystack, captureGroupIds, captureGroupStarts);\n",
+                        "    signal output capture{}[{}] <== CaptureSubstring(maxMatchBytes, {}, {})(captureGroupStartIndices[{}], haystack, captureGroupIds, captureGroupStarts);\n",
                         capture_group_id,
                         max_substring_bytes,
                         max_substring_bytes,
                         capture_group_id,
-                        capture_group_id
+                        capture_group_id - 1
                     ).as_str()
                 );
             }
@@ -575,7 +573,6 @@ impl NFAGraph {
             capture_group_ids,
             capture_group_starts,
             capture_group_start_indices,
-            traversal_path_length: path_len,
         })
     }
 }
