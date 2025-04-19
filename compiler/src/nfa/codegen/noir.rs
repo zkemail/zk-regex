@@ -8,7 +8,7 @@ use crate::nfa::{
 use comptime::{FieldElement, SparseArray};
 
 impl NFAGraph {
-    /// Generate Circom code for the NFA
+    /// Generate Noir code for the NFA
     pub fn generate_noir_code(
         &self,
         regex_name: &str,
@@ -58,9 +58,16 @@ impl NFAGraph {
         // imports
         // todo: ability to change import path
         if has_capture_groups {
-            code.push_str("use crate::common::{capture_substring, check_transition_with_captures, SparseArray};\n\n");
+            code.push_str("use zkregex::utils::{\n");
+            code.push_str("   captures::capture_substring,\n");
+            code.push_str("   sparse_array::SparseArray,\n");
+            code.push_str("   transitions::check_transition_with_captures\n");
+            code.push_str("};\n\n");
         } else {
-            code.push_str("use crate::common::{check_transition, SparseArray};\n\n");
+            code.push_str("use zkregex::utils::{\n");
+            code.push_str("   sparse_array::SparseArray,\n");
+            code.push_str("   transitions::check_transition\n");
+            code.push_str("};\n\n");
         }
 
         // codegen consts
@@ -135,24 +142,26 @@ impl NFAGraph {
         code.push_str(&format!("    for i in 0..MAX_HAYSTACK_LENTH {{\n"));
         if max_substring_bytes.is_some() {
             code.push_str(&format!("        check_transition_with_captures(\n"));
+            code.push_str(&format!("            TRANSITION_TABLE,\n"));
             code.push_str(&format!("            haystack[i] as Field,\n"));
             code.push_str(&format!("            current_states[i],\n"));
             code.push_str(&format!("            next_states[i],\n"));
             code.push_str(&format!("            capture_ids[i],\n"));
             code.push_str(&format!("            capture_starts[i],\n"));
-            code.push_str(&format!("            reached_end_state,\n"));
-            code.push_str(&format!("            TRANSITION_TABLE\n"));
+            code.push_str(&format!("            reached_end_state\n"));
             code.push_str(&format!("        );\n"));
         } else {
             code.push_str(&format!("        check_transition(\n"));
+            code.push_str(&format!("            TRANSITION_TABLE,\n"));
             code.push_str(&format!("            haystack[i] as Field,\n"));
             code.push_str(&format!("            current_states[i],\n"));
             code.push_str(&format!("            next_states[i],\n"));
-            code.push_str(&format!("            reached_end_state,\n"));
-            code.push_str(&format!("            TRANSITION_TABLE\n"));
+            code.push_str(&format!("            reached_end_state\n"));
             code.push_str(&format!("        );\n"));
         }
-        code.push_str(&format!("        reached_end_state = reached_end_state * check_accept_state(\n"));
+        code.push_str(&format!(
+            "        reached_end_state = reached_end_state * check_accept_state(\n"
+        ));
         code.push_str(&format!("            next_states[i],\n"));
         code.push_str(&format!("            i as Field,\n"));
         code.push_str(&format!("            transition_length as Field,\n"));
@@ -196,6 +205,7 @@ impl NFAGraph {
         Ok(code)
     }
 
+    /// Generate Prover.toml from circuit inputs
     pub fn to_prover_toml(inputs: &CircuitInputs) -> String {
         let mut toml = String::new();
 
@@ -346,44 +356,6 @@ fn check_accept_state(
 }
 
 /**
- * Unpacks a transition lookup value which includes:
- *  - if the transition is valid
- *  - if the transition is the start of a capture group
- *  - the id of the capture group
- *
- * @return the noir function to unpack the transition lookup value
- */
-fn unpack_sparse_value_fn() -> String {
-    format!(
-        r#"
-/**
- * Unpacks a transition lookup value
- * @dev 8 bit packed (0: valid transition, 1: start of capture group, 2-8: capture group id)
- * 
- * @return (valid, start_capture_group, capture_group_id)
- */
-fn unpack_sparse_value(key: Field) -> (Field, Field, Field) {{
-    let value = TRANSITION_TABLE.get(key);
-    std::as_witness(value);
-    let (is_valid, is_capture_start, capture_id) = unsafe {{ __unpack_sparse_value(value) }};
-    is_valid.assert_max_bit_size::<1>();
-    is_capture_start.assert_max_bit_size::<1>();
-    capture_id.assert_max_bit_size::<6>();
-    (is_valid, is_capture_start, capture_id)
-}}
-
-fn __unpack_sparse_value(value: Field) -> (Field, Field, Field) {{
-    let x = value as u8;
-    let is_valid = x & 1;
-    let is_capture_start = (x & 2) >> 1;
-    let capture_id = x >> 2;
-    (is_valid as Field, is_capture_start as Field, capture_id as Field)
-}}
-        "#
-    )
-}
-
-/**
  * Creates a sparse array for transitions
  * @param transitions - The transitions to create the sparse array for
  * @returns The sparse array for the transitions
@@ -432,48 +404,4 @@ fn packed_transition_sparse_array(
     // assume max byte = 256 and max transitions = 200
     let max_size = FieldElement::from(transitions.len() + 256 * r + 200 * r * r);
     SparseArray::create(&keys, &values, max_size)
-}
-
-fn check_transition_fn() -> String {
-    format!(
-        r#"
-fn check_transition(
-    haystack_byte: Field,
-    current_state: Field,
-    next_state: Field,
-    reached_end_state: Field
-) {{
-    let key = current_state + haystack_byte as Field * R as Field + next_state * R_SQUARED as Field;
-    let transition_condition = TRANSITION_TABLE.get(key) - 1;
-    let matched_condition = transition_condition * reached_end_state;
-    assert(matched_condition == 0, "Invalid Transition");
-}}
-
-"#
-    )
-}
-
-fn check_transition_with_captures_fn() -> String {
-    format!(
-        r#"
-fn check_transition_with_captures(
-    haystack_byte: Field,
-    current_state: Field,
-    next_state: Field,
-    asserted_capture_group: Field,
-    asserted_capture_start: Field,
-    reached_end_state: Field
-) {{
-    let key = current_state + haystack_byte as Field * R as Field + next_state * R_SQUARED as Field;
-    let (is_valid, is_capture_start, capture_id) = unpack_sparse_value(key);
-    // check if the transition is valid
-    let matched_condition = ((is_valid - 1)
-        + ((asserted_capture_group - capture_id) * R as Field)
-        + ((asserted_capture_start - is_capture_start) * R_SQUARED as Field))
-        * reached_end_state;
-    assert(matched_condition == 0, "Invalid Transition");
-}}
-
-"#
-    )
 }

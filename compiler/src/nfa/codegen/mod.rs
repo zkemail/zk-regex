@@ -108,7 +108,6 @@ impl NFAGraph {
         max_match_len: usize,
     ) -> NFAResult<CircuitInputs> {
         let haystack_bytes = haystack.as_bytes();
-        println!("Data: {:?}", haystack_bytes);
 
         if haystack_bytes.len() > max_haystack_len {
             return Err(NFABuildError::Build(format!(

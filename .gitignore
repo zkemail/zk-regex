@@ -2,3 +2,7 @@ nfa.json
 target
 /compiler/pkg
 /compiler/.yarn
+
+Prover.toml
+prover.toml
+inputs.txt

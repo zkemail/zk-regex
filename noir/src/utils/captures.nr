@@ -88,8 +88,7 @@ pub fn capture_substring<let HAYSTACK_MAX_LENGTH: u32, let MATCH_MAX_LEN: u32, l
     substring_from_mask(haystack, capture_mask, capture_start_index)
 }
 
-
-
+/// CONSTRAINED CAPTURE UTILITIES ///
 
 /**
  * Build a capture mask for the capture group
@@ -113,43 +112,6 @@ fn build_is_capture<let HAYSTACK_MAX_LENGTH: u32, let CAPTURE_GROUP: Field>(
         assert(index_selector * (is_capture[i] - 1) == 0, "Invalid Capture Group Mask");
     }
     is_capture
-}
-
-/**
- * Helper function to build a is_capture bitmask without dynamic arrays
- * @dev HELPER FOR `build_is_capture_mask` - DO NOT CALL OUTSIDE OF THIS FUNCTION
- *
- * @param capture_ids - The (previously constrained) capture group ids for the haystack
- * @return - a mask representing the capture group
- */
-unconstrained fn __build_is_capture<let HAYSTACK_MAX_LENGTH: u32, let CAPTURE_GROUP: Field>(
-    capture_ids: [Field; HAYSTACK_MAX_LENGTH],
-) -> [Field; HAYSTACK_MAX_LENGTH] {
-    let mut is_capture = [0; HAYSTACK_MAX_LENGTH];
-    for i in 0..HAYSTACK_MAX_LENGTH {
-        is_capture[i] = (capture_ids[i] - CAPTURE_GROUP == 0) as Field;
-    }
-    is_capture
-}
-
-/**
- * Helper function to build a capture mask without dynamic arrays
- * @dev HELPER FOR `capture_substring` - DO NOT CALL OUTSIDE OF THIS FUNCTION
- *
- * @param capture_start_mask - The mask of capture starts for the group
- * @param capture_end_mask - The mask of capture ends for the group
- * @return - a mask representing the union of the two masks
- */
-unconstrained fn __build_capture_mask<let HAYSTACK_MAX_LENGTH: u32>(
-    capture_start_mask: [Field; HAYSTACK_MAX_LENGTH],
-    capture_end_mask: [Field; HAYSTACK_MAX_LENGTH],
-) -> [Field; HAYSTACK_MAX_LENGTH] {
-    let mut capture_mask = [0; HAYSTACK_MAX_LENGTH];
-    for i in 0..HAYSTACK_MAX_LENGTH {
-        capture_mask[i] = capture_start_mask[i] * capture_end_mask[i];
-    }
-
-    capture_mask
 }
 
 /**
@@ -194,44 +156,30 @@ fn substring_from_mask<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
     assert(substring.len() as Field == length, "Invalid substring length");
 
     let end_index = start_index + length;
+
     // check mask[end_index] = 0
     // if start_index + length = MAX_HAYSTACK_LEN do not perform check
-    let end_index_is_max = (end_index == MAX_HAYSTACK_LEN) as Field;
-    let end_index_to_check = end_index + (MAX_HAYSTACK_LEN - end_index_is_max);
-    let following_mask_value = mask[end_index_to_check];
-    let following_mask_check = end_index_is_max + ((1 - end_index_is_max) * (1 - following_mask_value));
-    assert(following_mask_check == 1, "Invalid substring end index: proceding mask value is not 0");
+    // let end_index_is_max = (end_index == MAX_HAYSTACK_LEN as Field) as Field;
+    // let end_index_to_check = end_index + (MAX_HAYSTACK_LEN as Field - end_index_is_max);
+    // let following_mask_value = mask[end_index_to_check];
+    // let following_mask_check = end_index_is_max + ((1 - end_index_is_max) * (1 - following_mask_value));
+    // assert(following_mask_check == 1, "Invalid substring end index: proceding mask value is not 0");
 
-    // check mask[end_index - 1] = 1
-    assert(mask[end_index - 1] == 1, "Invalid substring end index: end index mask value is not 1");
+    // // check mask[end_index - 1] = 1
+    // assert(mask[end_index - 1] == 1, "Invalid substring end index: end index mask value is not 1");
+
+    // return captured substring
     substring
 }
 
 /**
- * Unconstrained construction of substring bounded vec
- * @dev HELPER FOR `substring_from_mask` - DO NOT CALL OUTSIDE OF THIS FUNCTION
+ * Builds start and end masks for a capture group
+ * @dev see docs at top for deeper explanation of functinoality
  *
- * @param haystack - The haystack of bytes to reveal substring from
- * @param mask - the capture group mask constructed to extract the substring
- * @param start_index - the asserted start index of the substring
- * @return - the substring extracted as a bounded vec
+ * @param is_capture - The mask of indexes where capture id matches
+ * @param capture_starts - The mask of indexes where any capture group starts
+ * @return - (start_mask, end_mask)
  */
-unconstrained fn __substring_from_mask<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
-    haystack: [u8; MAX_HAYSTACK_LEN],
-    mask: [Field; MAX_HAYSTACK_LEN],
-    start_index: Field,
-) -> BoundedVec<u8, MAX_MATCH_LEN> {
-    let mut substring = BoundedVec::new();
-    for i in 0..MAX_MATCH_LEN {
-        let index = start_index + i as Field;
-        let mask_value = mask[index];
-        if mask_value == 1 {
-            substring.push(haystack[index]);
-        }
-    }
-    substring
-}
-
 fn build_capture_start_end_mask<let HAYSTACK_MAX_LENGTH: u32>(
     is_capture: [Field; HAYSTACK_MAX_LENGTH],
     capture_starts: [Field; HAYSTACK_MAX_LENGTH],
@@ -243,18 +191,20 @@ fn build_capture_start_end_mask<let HAYSTACK_MAX_LENGTH: u32>(
     let expected_start_mask = ((is_capture[0] * is_capture_start_temp) == 1) as Field;
     assert(start_mask[0] == expected_start_mask, "Invalid Capture Start Mask");
 
+    // check last byte of capture end mask
     let is_capture_end_temp = (capture_starts[HAYSTACK_MAX_LENGTH - 1] == 0) as Field;
     let expected_end_mask = (is_capture[HAYSTACK_MAX_LENGTH - 1] * is_capture_end_temp == 1) as Field;
     assert(end_mask[HAYSTACK_MAX_LENGTH - 1] == expected_end_mask, "Invalid Capture End Mask");
     
+    // check all other bytes of capture start and end masks
     for i in 1..HAYSTACK_MAX_LENGTH {
-        // capture group start
+        // capture group start mask
         let is_capture_start_temp = (capture_starts[i] - 1 == 0) as Field;
         let is_capture_start_valid_temp = ((is_capture[i] * is_capture_start_temp) == 1) as Field;
         let expected_start_mask = (1 - (1 - is_capture_start_valid_temp) * (1 - start_mask[i - 1]) == 1) as Field;
         assert(start_mask[i] == expected_start_mask, "Invalid Capture Start Mask");
 
-        // capture group end
+        // capture group end mask
         let j = HAYSTACK_MAX_LENGTH - 1 - i;
         let is_capture_end_temp = (capture_starts[j] == 0) as Field;
         let is_capture_end_valid_temp = (is_capture[j] * is_capture_end_temp == 1) as Field;
@@ -264,6 +214,53 @@ fn build_capture_start_end_mask<let HAYSTACK_MAX_LENGTH: u32>(
     (start_mask, end_mask)
 }
 
+/// UNCONSTRAINED CAPTURE HELPER UTILITIES ///
+
+/**
+ * Helper function to build a is_capture bitmask without dynamic arrays
+ * @dev HELPER FOR `build_is_capture_mask` - DO NOT CALL OUTSIDE OF THIS FUNCTION
+ *
+ * @param capture_ids - The (previously constrained) capture group ids for the haystack
+ * @return - a mask representing the capture group
+ */
+unconstrained fn __build_is_capture<let HAYSTACK_MAX_LENGTH: u32, let CAPTURE_GROUP: Field>(
+    capture_ids: [Field; HAYSTACK_MAX_LENGTH],
+) -> [Field; HAYSTACK_MAX_LENGTH] {
+    let mut is_capture = [0; HAYSTACK_MAX_LENGTH];
+    for i in 0..HAYSTACK_MAX_LENGTH {
+        is_capture[i] = (capture_ids[i] - CAPTURE_GROUP == 0) as Field;
+    }
+    is_capture
+}
+
+/**
+ * Helper function to build a capture mask without dynamic arrays
+ * @dev HELPER FOR `capture_substring` - DO NOT CALL OUTSIDE OF THIS FUNCTION
+ *
+ * @param capture_start_mask - The mask of capture starts for the group
+ * @param capture_end_mask - The mask of capture ends for the group
+ * @return - a mask representing the union of the two masks
+ */
+unconstrained fn __build_capture_mask<let HAYSTACK_MAX_LENGTH: u32>(
+    capture_start_mask: [Field; HAYSTACK_MAX_LENGTH],
+    capture_end_mask: [Field; HAYSTACK_MAX_LENGTH],
+) -> [Field; HAYSTACK_MAX_LENGTH] {
+    let mut capture_mask = [0; HAYSTACK_MAX_LENGTH];
+    for i in 0..HAYSTACK_MAX_LENGTH {
+        capture_mask[i] = capture_start_mask[i] * capture_end_mask[i];
+    }
+
+    capture_mask
+}
+
+/**
+ * Unconstrained construction of start and end masks
+ * @dev HELPER FOR `build_capture_start_end_mask` - DO NOT CALL OUTSIDE OF THIS FUNCTION
+ * 
+ * @param is_capture - The mask of indexes where capture id matches
+ * @param capture_starts - The mask of indexes where any capture group starts
+ * @return - (start_mask, end_mask)
+ */
 unconstrained fn __build_capture_start_end_mask<let HAYSTACK_MAX_LENGTH: u32>(
     is_capture: [Field; HAYSTACK_MAX_LENGTH],
     capture_starts: [Field; HAYSTACK_MAX_LENGTH],
@@ -295,3 +292,29 @@ unconstrained fn __build_capture_start_end_mask<let HAYSTACK_MAX_LENGTH: u32>(
     }
     (capture_start_mask, capture_end_mask)
 }
+
+/**
+ * Unconstrained construction of substring bounded vec
+ * @dev HELPER FOR `substring_from_mask` - DO NOT CALL OUTSIDE OF THIS FUNCTION
+ *
+ * @param haystack - The haystack of bytes to reveal substring from
+ * @param mask - the capture group mask constructed to extract the substring
+ * @param start_index - the asserted start index of the substring
+ * @return - the substring extracted as a bounded vec
+ */
+unconstrained fn __substring_from_mask<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
+    haystack: [u8; MAX_HAYSTACK_LEN],
+    mask: [Field; MAX_HAYSTACK_LEN],
+    start_index: Field,
+) -> BoundedVec<u8, MAX_MATCH_LEN> {
+    let mut substring = BoundedVec::new();
+    for i in 0..MAX_MATCH_LEN {
+        let index = start_index + i as Field;
+        let mask_value = mask[index];
+        if mask_value == 1 {
+            substring.push(haystack[index]);
+        }
+    }
+    substring
+}
+

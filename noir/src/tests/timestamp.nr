@@ -1,35 +1,8 @@
-use regex::regex_match;
-
-mod regex;
-mod common;
-
-global MAX_HAYSTACK_LEN: u32 = 300;
-global MAX_MATCH_LEN: u32 = 10;
-global NUM_CAPTURES: u32 = 1;
-
-fn main(
-    haystack: [u8; MAX_HAYSTACK_LEN],
-    curr_states: [Field; MAX_HAYSTACK_LEN],
-    next_states: [Field; MAX_HAYSTACK_LEN],
-    traversal_path_length: u32,
-    capture_group_ids: [Field; MAX_HAYSTACK_LEN],
-    capture_group_starts: [Field; MAX_HAYSTACK_LEN],
-    capture_group_start_indices: [Field; NUM_CAPTURES],
-) -> pub (BoundedVec<u8, MAX_MATCH_LEN>) {
-    regex_match(
-        haystack,
-        curr_states,
-        next_states,
-        traversal_path_length,
-        capture_group_ids,
-        capture_group_starts,
-        capture_group_start_indices,
-    )
-}
+use crate::common::timestamp_regex::{CAPTURE_1_MAX_LENGTH, regex_match};
 
 #[test]
 fn test_regex_match() {
-    // inputs (copied from cli codegen'd Prover.toml)
+    // inputs (use `./scripts/gen_inputs.sh timestamp`)
     let haystack = [
         100, 107, 105, 109, 45, 115, 105, 103, 110, 97, 116, 117, 114, 101, 58, 118, 61, 49, 59, 32,
         97, 61, 114, 115, 97, 45, 115, 104, 97, 50, 53, 54, 59, 32, 99, 61, 114, 101, 108, 97, 120,
@@ -101,7 +74,7 @@ fn test_regex_match() {
     let capture_group_start_indices = [80];
 
     // execute regex match
-    let substring: (BoundedVec<u8, MAX_MATCH_LEN>) = main(
+    let substring: (BoundedVec<u8, CAPTURE_1_MAX_LENGTH>) = regex_match(
         haystack,
         curr_states,
         next_states,
@@ -113,7 +86,7 @@ fn test_regex_match() {
 
     // check expected output
     let expected_substring = "1694989812".as_bytes();
-    for i in 0..MAX_MATCH_LEN {
+    for i in 0..CAPTURE_1_MAX_LENGTH {
         assert(expected_substring[i] == substring.get(i));
     }
     assert(substring.len() == 10);
