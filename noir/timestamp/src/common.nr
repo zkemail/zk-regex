@@ -149,10 +149,6 @@ pub fn capture_substring<let HAYSTACK_MAX_LENGTH: u32, let MATCH_MAX_LEN: u32, l
     capture_starts: [Field; HAYSTACK_MAX_LENGTH],
     capture_start_index: Field,
 ) -> BoundedVec<u8, MATCH_MAX_LEN> {
-    // capture substring
-    let mut is_capture_start = [0; HAYSTACK_MAX_LENGTH];
-    let mut is_capture_end = [0; HAYSTACK_MAX_LENGTH];
-
     // determine if an index is the start or end of the capture group
     let is_capture = build_is_capture::<HAYSTACK_MAX_LENGTH, CAPTURE_GROUP>(capture_ids);
     // build start and end masks
