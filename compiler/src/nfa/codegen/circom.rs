@@ -16,7 +16,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::nfa::NFAGraph;
-use crate::nfa::error::{NFABuildError, NFAResult};
+use crate::nfa::error::{NFAError, NFAResult};
 
 impl NFAGraph {
     /// Generates complete Circom circuit code for the NFA.
@@ -40,7 +40,7 @@ impl NFAGraph {
         max_substring_bytes: Option<&[usize]>,
     ) -> NFAResult<String> {
         if regex_name.is_empty() {
-            return Err(NFABuildError::Build("Empty regex name".into()));
+            return Err(NFAError::InvalidInput("Empty regex name".into()));
         }
 
         let (start_states, accept_states, transitions) = self.generate_circuit_data()?;
@@ -54,7 +54,7 @@ impl NFAGraph {
         if !capture_group_set.is_empty() {
             if let Some(max_bytes) = max_substring_bytes {
                 if max_bytes.len() < capture_group_set.len() {
-                    return Err(NFABuildError::InvalidCapture(format!(
+                    return Err(NFAError::InvalidCapture(format!(
                         "Insufficient max_substring_bytes: need {} but got {}",
                         capture_group_set.len(),
                         max_bytes.len()
@@ -62,13 +62,13 @@ impl NFAGraph {
                 }
                 for &bytes in max_bytes {
                     if bytes == 0 {
-                        return Err(NFABuildError::InvalidCapture(
+                        return Err(NFAError::InvalidCapture(
                             "max_substring_bytes contains zero length".into(),
                         ));
                     }
                 }
             } else {
-                return Err(NFABuildError::InvalidCapture(
+                return Err(NFAError::InvalidCapture(
                     "max_substring_bytes required for capture groups".into(),
                 ));
             }
@@ -105,10 +105,8 @@ impl NFAGraph {
         // Only add capture group signals if needed
         if has_capture_groups {
             code.push_str("    signal input captureGroupIds[maxMatchBytes];\n");
-            code.push_str("    signal input captureGroupStarts[maxMatchBytes];\n");
+            code.push_str("    signal input captureGroupStarts[maxMatchBytes];\n\n");
         }
-
-        code.push_str("    signal input traversalPathLength;\n\n");
 
         code.push_str("    signal output isValid;\n\n");
 
@@ -184,13 +182,13 @@ impl NFAGraph {
 
         code.push_str("    for (var i = 0; i < maxMatchBytes; i++) {\n");
         code.push_str(
-            "        isWithinPathLength[i] <== LessThan(log2Ceil(maxMatchBytes))([i, traversalPathLength]);\n\n"
+            "        isWithinPathLength[i] <== LessThan(log2Ceil(maxMatchBytes))([i, matchLength]);\n\n"
         );
 
         code.push_str("        // Check if the traversal is a valid path\n");
         code.push_str("        if (i < maxMatchBytes-2) {\n");
         code.push_str(
-            "            isWithinPathLengthMinusOne[i] <== LessThan(log2Ceil(maxMatchBytes))([i, traversalPathLength-1]);\n"
+            "            isWithinPathLengthMinusOne[i] <== LessThan(log2Ceil(maxMatchBytes))([i, matchLength-1]);\n"
         );
         code.push_str(
             "            isTransitionLinked[i] <== IsEqual()([nextStates[i], currStates[i+1]]);\n",
@@ -311,9 +309,7 @@ impl NFAGraph {
         code.push_str(
             "        // Check if any accept state has been reached at the last transition\n",
         );
-        code.push_str(
-            "        reachedLastTransition[i] <== IsEqual()([i, traversalPathLength-1]);\n",
-        );
+        code.push_str("        reachedLastTransition[i] <== IsEqual()([i, matchLength-1]);\n");
 
         if accept_states.len() > 1 {
             code.push_str("        reachedAcceptState[i] = MultiOR(numAcceptStates);\n");
@@ -343,11 +339,18 @@ impl NFAGraph {
         code.push_str("    isValid <== isValidRegex[maxMatchBytes-1];\n\n");
 
         if has_capture_groups {
+            code.push_str(
+                format!(
+                    "    signal input captureGroupStartIndices[{}];\n\n",
+                    capture_group_set.len()
+                )
+                .as_str(),
+            );
             for capture_group_id in capture_group_set {
                 let max_substring_bytes = if let Some(max_substring_bytes) = max_substring_bytes {
                     max_substring_bytes[capture_group_id - 1]
                 } else {
-                    return Err(NFABuildError::InvalidCapture(format!(
+                    return Err(NFAError::InvalidCapture(format!(
                         "Max substring bytes not provided for capture group {}",
                         capture_group_id
                     )));
@@ -355,16 +358,13 @@ impl NFAGraph {
 
                 code.push_str(format!("    // Capture Group {}\n", capture_group_id).as_str());
                 code.push_str(
-                    format!("    signal input capture{}StartIndex;\n", capture_group_id).as_str(),
-                );
-                code.push_str(
                     format!(
-                        "    signal output capture{}[{}] <== CaptureSubstring(maxMatchBytes, {}, {})(capture{}StartIndex, haystack, captureGroupIds, captureGroupStarts);\n",
+                        "    signal output capture{}[{}] <== CaptureSubstring(maxMatchBytes, {}, {})(captureGroupStartIndices[{}], haystack, captureGroupIds, captureGroupStarts);\n",
                         capture_group_id,
                         max_substring_bytes,
                         max_substring_bytes,
                         capture_group_id,
-                        capture_group_id
+                        capture_group_id - 1
                     ).as_str()
                 );
             }

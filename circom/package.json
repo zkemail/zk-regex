@@ -1,16 +1,33 @@
 {
-  "name": "zk-regex-circom",
-  "module": "index.ts",
-  "type": "module",
-  "private": true,
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  },
-  "dependencies": {
-    "circomlib": "^2.0.5",
-    "@zk-email/circuits": "6.3.3"
-  }
+    "name": "zk-regex-circom",
+    "version": "0.0.1",
+    "license": "MIT",
+    "description": "regex verification circuits in circom for common regexes, generated with the compiler in [zk-regex](https://github.com/zkemail/zk-regex/tree/main).",
+    "scripts": {
+        "test": "jest"
+    },
+    "dependencies": {
+        "circomlib": "^2.0.5",
+        "@zk-email/circuits": "6.3.3"
+    },
+    "devDependencies": {
+        "@types/bun": "latest",
+        "@types/jest": "^29.5.4",
+        "chai": "^4.3.7",
+        "circom_tester": "^0.0.20",
+        "circomlibjs": "^0.1.2",
+        "ffjavascript": "^0.3.1",
+        "jest": "^29.5.0",
+        "mocha": "^10.2.0"
+    },
+    "babel": {
+        "presets": [
+            [
+                "@babel/preset-env"
+            ]
+        ]
+    },
+    "peerDependencies": {
+        "typescript": "^5"
+    }
 }
