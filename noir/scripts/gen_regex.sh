@@ -8,11 +8,11 @@ codegen_regex() {
     echo "Generating regex circuit for $template_name"
     
     cargo run \
-    --bin zk-regex decomposed \
-    --decomposed-regex-path "./noir/templates/${template_name}/${template_name}.json" \
-    --output-file-path ./noir/templates/${template_name} \
-    --template-name "$template_name_pascal" \
-    --noir
+        --bin zk-regex decomposed \
+        --decomposed-regex-path "./noir/templates/${template_name}/${template_name}.json" \
+        --output-file-path ./noir/templates/${template_name} \
+        --template-name "$template_name_pascal" \
+        --noir
     
     mv ./noir/templates/${template_name}/${template_name}_regex.nr ./noir/src/common/${template_name}_regex.nr
     sed -i 's/zkregex/crate/g' ./noir/src/common/${template_name}_regex.nr

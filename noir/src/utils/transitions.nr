@@ -69,7 +69,6 @@ fn unpack_sparse_value<let TABLE_SIZE: u32>(key: Field, table: SparseArray<TABLE
 
     // Safety: unpack value (unconstrained)
     let (is_valid, is_capture_start, capture_id) = unsafe { __unpack_sparse_value(value) };
-
     // check correct decomposition
     let recomposed_value = is_valid + is_capture_start * 2 + capture_id * 4;
     assert(recomposed_value == value, "Invalid Table Unpacking");

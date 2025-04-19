@@ -9,31 +9,22 @@ use std::collections::HashMap;
 
 use crate::nfa::{
     NFAGraph,
-    error::{NFABuildError, NFAResult},
+    error::{NFAError, NFAResult},
 };
 
 #[derive(Serialize)]
 pub struct CircuitInputs {
-    #[serde(rename = "inHaystack")]
     in_haystack: Vec<u8>,
-    #[serde(rename = "matchStart")]
     match_start: usize,
-    #[serde(rename = "matchLength")]
     match_length: usize,
-    #[serde(rename = "currStates")]
     curr_states: Vec<usize>,
-    #[serde(rename = "nextStates")]
     next_states: Vec<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "captureGroupIds")]
     capture_group_ids: Option<Vec<usize>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "captureGroupStarts")]
     capture_group_starts: Option<Vec<u8>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "captureGroupStartIndices")]
     capture_group_start_indices: Option<Vec<usize>>,
-    #[serde(rename = "traversalPathLength")]
     traversal_path_length: usize,
 }
 
@@ -46,14 +37,10 @@ impl NFAGraph {
         Vec<(usize, u8, u8, usize, Option<(usize, bool)>)>,
     )> {
         if self.start_states.is_empty() {
-            return Err(NFABuildError::Verification(
-                "NFA has no start states".into(),
-            ));
+            return Err(NFAError::Verification("NFA has no start states".into()));
         }
         if self.accept_states.is_empty() {
-            return Err(NFABuildError::Verification(
-                "NFA has no accept states".into(),
-            ));
+            return Err(NFAError::Verification("NFA has no accept states".into()));
         }
 
         let start_states = self.start_states.iter().copied().collect();
@@ -61,7 +48,7 @@ impl NFAGraph {
 
         let transitions = self.get_transitions_with_capture_info();
         if transitions.is_empty() {
-            return Err(NFABuildError::Verification("NFA has no transitions".into()));
+            return Err(NFAError::Verification("NFA has no transitions".into()));
         }
 
         // Group and convert to ranges
@@ -70,7 +57,7 @@ impl NFAGraph {
 
         for (src, byte, dst, capture) in transitions {
             if src >= self.nodes.len() || dst >= self.nodes.len() {
-                return Err(NFABuildError::InvalidStateId(format!(
+                return Err(NFAError::InvalidStateId(format!(
                     "State {}->{} out of bounds",
                     src, dst
                 )));
@@ -110,7 +97,7 @@ impl NFAGraph {
         let haystack_bytes = haystack.as_bytes();
 
         if haystack_bytes.len() > max_haystack_len {
-            return Err(NFABuildError::Build(format!(
+            return Err(NFAError::InvalidInput(format!(
                 "Haystack length {} exceeds maximum length {}",
                 haystack_bytes.len(),
                 max_haystack_len
@@ -124,7 +111,7 @@ impl NFAGraph {
         let path_len = path.len();
 
         if path_len > max_match_len {
-            return Err(NFABuildError::Build(format!(
+            return Err(NFAError::InvalidInput(format!(
                 "Path length {} exceeds maximum length {}",
                 path_len, max_match_len
             )));
@@ -136,7 +123,6 @@ impl NFAGraph {
         let mut in_haystack = haystack_bytes.to_vec();
 
         // Pad with zeros
-        // todo: why 136279841? (Noir breaks needs 0 value)
         curr_states.resize(max_match_len, 0);
         next_states.resize(max_match_len, 0);
         in_haystack.resize(max_haystack_len, 0);
@@ -154,8 +140,9 @@ impl NFAGraph {
                     .collect::<Vec<_>>();
 
                 // Use regex_automata to get capture start indices
-                let re = Regex::new(&self.regex)
-                    .map_err(|e| NFABuildError::Build(format!("Failed to compile regex: {}", e)))?;
+                let re = Regex::new(&self.regex).map_err(|e| {
+                    NFAError::RegexCompilation(format!("Failed to compile regex: {}", e))
+                })?;
                 let mut captures = re.create_captures();
                 re.captures(&haystack, &mut captures);
 

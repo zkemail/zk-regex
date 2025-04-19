@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use wasm_bindgen::prelude::*;
 
-use super::codegen::CircomInputs;
+use super::codegen::CircuitInputs;
 
 /// Supported proving systems
 #[wasm_bindgen]
@@ -21,7 +21,7 @@ pub enum ProvingSystem {
 #[serde(tag = "type")]
 pub enum ProvingSystemInputs {
     #[serde(rename = "circom")]
-    Circom(CircomInputs),
+    Circom(CircuitInputs),
     // #[serde(rename = "noir")] Noir(NoirInputs),
 }
 
@@ -199,7 +199,7 @@ fn generate_circuit_inputs_internal(
     let inputs = match proving_system {
         ProvingSystem::Circom => {
             let circom_inputs = graph
-                .generate_circom_inputs(&haystack.0, max_haystack_length, max_match_length)
+                .generate_circuit_inputs(&haystack.0, max_haystack_length, max_match_length)
                 .map_err(|e| WasmError::InputGenError(e.to_string()))?;
             ProvingSystemInputs::Circom(circom_inputs)
         }

@@ -14,9 +14,52 @@
 //! - Start/accept state validation
 
 use std::collections::{HashMap, HashSet};
+use serde::Serialize;
 
 use crate::nfa::NFAGraph;
 use crate::nfa::error::{NFAError, NFAResult};
+use crate::nfa::codegen::CircuitInputs;
+
+#[derive(Serialize)]
+pub struct CircomInputs {
+    #[serde(rename = "inHaystack")]
+    in_haystack: Vec<u8>,
+    #[serde(rename = "matchStart")]
+    match_start: usize,
+    #[serde(rename = "matchLength")]
+    match_length: usize,
+    #[serde(rename = "currStates")]
+    curr_states: Vec<usize>,
+    #[serde(rename = "nextStates")]
+    next_states: Vec<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "captureGroupIds")]
+    capture_group_ids: Option<Vec<usize>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "captureGroupStarts")]
+    capture_group_starts: Option<Vec<u8>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "captureGroupStartIndices")]
+    capture_group_start_indices: Option<Vec<usize>>,
+    #[serde(rename = "traversalPathLength")]
+    traversal_path_length: usize,
+}
+
+impl From<CircuitInputs> for CircomInputs {
+    fn from(inputs: CircuitInputs) -> Self {
+        CircomInputs {
+            in_haystack: inputs.in_haystack,
+            match_start: inputs.match_start,
+            match_length: inputs.match_length,
+            curr_states: inputs.curr_states,
+            next_states: inputs.next_states,
+            capture_group_ids: inputs.capture_group_ids,
+            capture_group_starts: inputs.capture_group_starts,
+            capture_group_start_indices: inputs.capture_group_start_indices,
+            traversal_path_length: inputs.traversal_path_length,
+        }
+    }
+}
 
 impl NFAGraph {
     /// Generates complete Circom circuit code for the NFA.

@@ -11,7 +11,7 @@ set_inputs_to_use() {
         "timestamp")
             HAYSTACK=$(echo -e "dkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20230601; t=1694989812; x=1695594612; dara=google.com; h=to:subject:message-id:date:from:mime-version:from:to:cc:subject :date:message-id:reply-to; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=;\x00")
             MAX_HAYSTACK_LEN=300
-            MAX_MATCH_LEN=300
+            MAX_MATCH_LEN=100
             ;;
         "simple")
             HAYSTACK=aaaaaaab

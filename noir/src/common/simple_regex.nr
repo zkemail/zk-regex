@@ -1,4 +1,5 @@
 use crate::utils::{
+   select_subarray,
    sparse_array::SparseArray,
    transitions::check_transition
 };
@@ -32,21 +33,21 @@ fn check_start_state(start_state: Field) {
  * 
  * @param next_state - The asserted next state of the NFA
  * @param haystack_index - The index being operated on in the haystack
- * @param asserted_transition_length - The asserted traversal path length
+ * @param asserted_match_length - The asserted traversal path length
  * @return - 0 if accept_state is reached, nonzero otherwise
  */
 fn check_accept_state(
     next_state: Field,
     haystack_index: Field, 
-    asserted_transition_length: Field
+    asserted_match_length: Field
 ) -> Field {
     // check if the next state is an accept state
     let accept_state_reached = (next_state - 4);
     let accept_state_reached_bool = (accept_state_reached == 0) as Field;
 
-    // check if the haystack index is the asserted transition length
-    // should equal 1 since haystack_index should be 1 less than asserted_transition length
-    let asserted_path_traversed = (asserted_transition_length - haystack_index == 1) as Field;
+    // check if the haystack index is the asserted match length
+    // should equal 1 since haystack_index should be 1 less than asserted_match)length
+    let asserted_path_traversed = (asserted_match_length - haystack_index == 1) as Field;
 
     // if accept state reached, check asserted path traversed. Else return 1
     let valid_condition =
@@ -57,22 +58,26 @@ fn check_accept_state(
     accept_state_reached
 }
 
-pub fn regex_match<let MAX_HAYSTACK_LENTH: u32>(
-    haystack: [u8; MAX_HAYSTACK_LENTH],
-    current_states: [Field; MAX_HAYSTACK_LENTH],
-    next_states: [Field; MAX_HAYSTACK_LENTH],
-    transition_length: u32,
+pub fn regex_match<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
+    in_haystack: [u8; MAX_HAYSTACK_LEN],
+    match_start: u32,
+    match_length: u32,
+    current_states: [Field; MAX_MATCH_LEN],
+    next_states: [Field; MAX_MATCH_LEN],
 ) {
     // regex:"a*b"
+    // resize haystack 
+    let haystack: [u8; MAX_MATCH_LEN] = select_subarray(in_haystack, match_start, match_length);
+
     let mut reached_end_state = 1;
     check_start_state(current_states[0]);
-    for i in 0..MAX_HAYSTACK_LENTH-1 {
-        // transition length - 1 since current states should be 1 less than next states
-        let in_range = (i < transition_length - 1) as Field;
+    for i in 0..MAX_MATCH_LEN-1 {
+        // match length - 1 since current states should be 1 less than next states
+        let in_range = (i < match_length - 1) as Field;
         let matching_states = current_states[i + 1] - next_states[i];
         assert(in_range * matching_states == 0, "Invalid Transition Input");
     }
-    for i in 0..MAX_HAYSTACK_LENTH {
+    for i in 0..MAX_MATCH_LEN {
         check_transition(
             TRANSITION_TABLE,
             haystack[i] as Field,
@@ -83,7 +88,7 @@ pub fn regex_match<let MAX_HAYSTACK_LENTH: u32>(
         reached_end_state = reached_end_state * check_accept_state(
             next_states[i],
             i as Field,
-            transition_length as Field,
+            match_length as Field,
         );
     }
     assert(reached_end_state == 0, "Did not reach a valid end state");

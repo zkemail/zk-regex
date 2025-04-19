@@ -3,9 +3,26 @@ use std::collections::{HashMap, HashSet};
 use crate::nfa::{
     NFAGraph,
     codegen::CircuitInputs,
-    error::{NFABuildError, NFAResult},
+    error::{NFAError, NFAResult},
 };
 use comptime::{FieldElement, SparseArray};
+use serde::Serialize;
+
+#[derive(Serialize)]
+pub struct NoirInputs {
+    in_haystack: Vec<u8>,
+    match_start: usize,
+    match_length: usize,
+    curr_states: Vec<usize>,
+    next_states: Vec<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    capture_group_ids: Option<Vec<usize>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    capture_group_starts: Option<Vec<u8>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "captureGroupStartIndices")]
+    capture_group_start_indices: Option<Vec<usize>>,
+}
 
 impl NFAGraph {
     /// Generate Noir code for the NFA
@@ -31,7 +48,7 @@ impl NFAGraph {
         if !capture_group_set.is_empty() {
             if let Some(max_bytes) = max_substring_bytes {
                 if max_bytes.len() < capture_group_set.len() {
-                    return Err(NFABuildError::InvalidCapture(format!(
+                    return Err(NFAError::InvalidCapture(format!(
                         "Insufficient max_substring_bytes: need {} but got {}",
                         capture_group_set.len(),
                         max_bytes.len()
@@ -39,13 +56,13 @@ impl NFAGraph {
                 }
                 for &bytes in max_bytes {
                     if bytes == 0 {
-                        return Err(NFABuildError::InvalidCapture(
+                        return Err(NFAError::InvalidCapture(
                             "max_substring_bytes contains zero length".into(),
                         ));
                     }
                 }
             } else {
-                return Err(NFABuildError::InvalidCapture(
+                return Err(NFAError::InvalidCapture(
                     "max_substring_bytes required for capture groups".into(),
                 ));
             }
@@ -59,12 +76,14 @@ impl NFAGraph {
         // todo: ability to change import path
         if has_capture_groups {
             code.push_str("use zkregex::utils::{\n");
+            code.push_str("   select_subarray,\n");
             code.push_str("   captures::capture_substring,\n");
             code.push_str("   sparse_array::SparseArray,\n");
             code.push_str("   transitions::check_transition_with_captures\n");
             code.push_str("};\n\n");
         } else {
             code.push_str("use zkregex::utils::{\n");
+            code.push_str("   select_subarray,\n");
             code.push_str("   sparse_array::SparseArray,\n");
             code.push_str("   transitions::check_transition\n");
             code.push_str("};\n\n");
@@ -97,19 +116,16 @@ impl NFAGraph {
 
         // regex match fn
         code.push_str(&format!(
-            "pub fn regex_match<let MAX_HAYSTACK_LENTH: u32>(\n"
+            "pub fn regex_match<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(\n"
         ));
-        code.push_str(&format!("    haystack: [u8; MAX_HAYSTACK_LENTH],\n"));
-        code.push_str(&format!(
-            "    current_states: [Field; MAX_HAYSTACK_LENTH],\n"
-        ));
-        code.push_str(&format!("    next_states: [Field; MAX_HAYSTACK_LENTH],\n"));
-        code.push_str(&format!("    transition_length: u32,\n"));
+        code.push_str(&format!("    in_haystack: [u8; MAX_HAYSTACK_LEN],\n"));
+        code.push_str(&format!("    match_start: u32,\n"));
+        code.push_str(&format!("    match_length: u32,\n"));
+        code.push_str(&format!("    current_states: [Field; MAX_MATCH_LEN],\n"));
+        code.push_str(&format!("    next_states: [Field; MAX_MATCH_LEN],\n"));
         if (max_substring_bytes.is_some()) {
-            code.push_str(&format!("    capture_ids: [Field; MAX_HAYSTACK_LENTH],\n"));
-            code.push_str(&format!(
-                "    capture_starts: [Field; MAX_HAYSTACK_LENTH],\n"
-            ));
+            code.push_str(&format!("    capture_ids: [Field; MAX_MATCH_LEN],\n"));
+            code.push_str(&format!("    capture_starts: [Field; MAX_MATCH_LEN],\n"));
             code.push_str(&format!(
                 "    capture_start_indices: [Field; NUM_CAPTURE_GROUPS],\n"
             ));
@@ -125,12 +141,14 @@ impl NFAGraph {
         };
         code.push_str(&format!(") {}{{\n", return_type));
         code.push_str(&format!("    // regex:{:?}\n", regex_pattern));
+        code.push_str(&format!("    // resize haystack \n"));
+        code.push_str(&format!("    let haystack: [u8; MAX_MATCH_LEN] = select_subarray(in_haystack, match_start, match_length);\n\n"));
         code.push_str(&format!("    let mut reached_end_state = 1;\n"));
         code.push_str(&format!("    check_start_state(current_states[0]);\n"));
-        code.push_str(&format!("    for i in 0..MAX_HAYSTACK_LENTH-1 {{\n"));
-        code.push_str(&format!("        // transition length - 1 since current states should be 1 less than next states\n"));
+        code.push_str(&format!("    for i in 0..MAX_MATCH_LEN-1 {{\n"));
+        code.push_str(&format!("        // match length - 1 since current states should be 1 less than next states\n"));
         code.push_str(&format!(
-            "        let in_range = (i < transition_length - 1) as Field;\n"
+            "        let in_range = (i < match_length - 1) as Field;\n"
         ));
         code.push_str(&format!(
             "        let matching_states = current_states[i + 1] - next_states[i];\n"
@@ -139,7 +157,7 @@ impl NFAGraph {
             "        assert(in_range * matching_states == 0, \"Invalid Transition Input\");\n"
         ));
         code.push_str(&format!("    }}\n"));
-        code.push_str(&format!("    for i in 0..MAX_HAYSTACK_LENTH {{\n"));
+        code.push_str(&format!("    for i in 0..MAX_MATCH_LEN {{\n"));
         if max_substring_bytes.is_some() {
             code.push_str(&format!("        check_transition_with_captures(\n"));
             code.push_str(&format!("            TRANSITION_TABLE,\n"));
@@ -164,7 +182,7 @@ impl NFAGraph {
         ));
         code.push_str(&format!("            next_states[i],\n"));
         code.push_str(&format!("            i as Field,\n"));
-        code.push_str(&format!("            transition_length as Field,\n"));
+        code.push_str(&format!("            match_length as Field,\n"));
         code.push_str(&format!("        );\n"));
         code.push_str(&format!("    }}\n"));
         code.push_str(&format!(
@@ -176,14 +194,14 @@ impl NFAGraph {
                 let max_substring_bytes = if let Some(max_substring_bytes) = max_substring_bytes {
                     max_substring_bytes[capture_group_id - 1]
                 } else {
-                    return Err(NFABuildError::InvalidCapture(format!(
+                    return Err(NFAError::InvalidCapture(format!(
                         "Max substring bytes not provided for capture group {}",
                         capture_group_id
                     )));
                 };
 
                 code.push_str(&format!("     // Capture Group {}\n", capture_group_id));
-                code.push_str(&format!("     let capture_{} = capture_substring::<MAX_HAYSTACK_LENTH, CAPTURE_{}_MAX_LENGTH, {}>(\n", capture_group_id, capture_group_id, capture_group_id));
+                code.push_str(&format!("     let capture_{} = capture_substring::<MAX_MATCH_LEN, CAPTURE_{}_MAX_LENGTH, {}>(\n", capture_group_id, capture_group_id, capture_group_id));
                 code.push_str(&format!("        haystack,\n"));
                 code.push_str(&format!("        capture_ids,\n"));
                 code.push_str(&format!("        capture_starts,\n"));
@@ -216,7 +234,9 @@ impl NFAGraph {
             .map(|num| format!("\"{num}\""))
             .collect::<Vec<_>>()
             .join(", ");
-        toml.push_str(&format!("haystack = [{}]\n", haystack));
+        toml.push_str(&format!("in_haystack = [{}]\n", haystack));
+        toml.push_str(&format!("match_start = \"{}\"\n", inputs.match_start));
+        toml.push_str(&format!("match_length = \"{}\"\n", inputs.match_length));
         let curr_states = inputs
             .curr_states
             .iter()
@@ -231,10 +251,6 @@ impl NFAGraph {
             .collect::<Vec<_>>()
             .join(", ");
         toml.push_str(&format!("next_states = [{}]\n", next_states));
-        toml.push_str(&format!(
-            "traversal_path_length = \"{}\"\n",
-            inputs.traversal_path_length
-        ));
         // substring capture inputs
         if inputs.capture_group_ids.is_some() {
             let capture_group_ids = inputs
@@ -326,21 +342,21 @@ fn accept_state_fn(accept_states: &Vec<usize>) -> String {
  * 
  * @param next_state - The asserted next state of the NFA
  * @param haystack_index - The index being operated on in the haystack
- * @param asserted_transition_length - The asserted traversal path length
+ * @param asserted_match_length - The asserted traversal path length
  * @return - 0 if accept_state is reached, nonzero otherwise
  */
 fn check_accept_state(
     next_state: Field,
     haystack_index: Field, 
-    asserted_transition_length: Field
+    asserted_match_length: Field
 ) -> Field {{
     // check if the next state is an accept state
     let accept_state_reached = {expression};
     let accept_state_reached_bool = (accept_state_reached == 0) as Field;
 
-    // check if the haystack index is the asserted transition length
-    // should equal 1 since haystack_index should be 1 less than asserted_transition length
-    let asserted_path_traversed = (asserted_transition_length - haystack_index == 1) as Field;
+    // check if the haystack index is the asserted match length
+    // should equal 1 since haystack_index should be 1 less than asserted_match)length
+    let asserted_path_traversed = (asserted_match_length - haystack_index == 1) as Field;
 
     // if accept state reached, check asserted path traversed. Else return 1
     let valid_condition =

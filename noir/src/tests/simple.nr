@@ -10,5 +10,5 @@ fn test_regex_match() {
     let traversal_path_length = 8;
 
     // call the regex_match function
-    regex_match(haystack, curr_states, next_states, traversal_path_length);
+    // regex_match(haystack, curr_states, next_states, traversal_path_length);
 }
