@@ -1,7 +1,7 @@
 //! Code generation module for converting NFAs to various output formats.
 
-mod circom;
-mod noir;
+pub mod circom;
+pub mod noir;
 
 use regex_automata::meta::Regex;
 use serde::Serialize;

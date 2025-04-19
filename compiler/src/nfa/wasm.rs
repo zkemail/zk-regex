@@ -1,9 +1,13 @@
-use crate::{DecomposedRegexConfig, compile, nfa::NFAGraph, utils::decomposed_to_composed_regex};
+use crate::{
+    DecomposedRegexConfig,
+    compile, 
+    nfa::{NFAGraph, codegen::{CircuitInputs, circom::CircomInputs, noir::NoirInputs}},
+    utils::decomposed_to_composed_regex
+};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use wasm_bindgen::prelude::*;
 
-use super::codegen::CircuitInputs;
 
 /// Supported proving systems
 #[wasm_bindgen]
@@ -11,9 +15,9 @@ use super::codegen::CircuitInputs;
 #[serde(rename_all = "camelCase")]
 pub enum ProvingSystem {
     Circom,
+    Noir,
     // Future systems:
     // Halo2,
-    // Noir,
 }
 
 /// Input types for different proving systems
@@ -21,8 +25,9 @@ pub enum ProvingSystem {
 #[serde(tag = "type")]
 pub enum ProvingSystemInputs {
     #[serde(rename = "circom")]
-    Circom(CircuitInputs),
-    // #[serde(rename = "noir")] Noir(NoirInputs),
+    Circom(CircomInputs),
+    #[serde(rename = "noir")]
+    Noir(NoirInputs),
 }
 
 /// Output from regex compilation
@@ -157,6 +162,9 @@ fn generate_from_raw_internal(
         ProvingSystem::Circom => nfa
             .generate_circom_code(&template_name.0, &raw_regex.0, Some(max_substring_bytes))
             .map_err(|e| WasmError::CodeGenError("circom".to_string(), e.to_string()))?,
+        ProvingSystem::Noir => nfa
+            .generate_noir_code(&raw_regex.0, Some(max_substring_bytes))
+            .map_err(|e| WasmError::CodeGenError("noir".to_string(), e.to_string()))?,
     };
 
     Ok(RegexOutput { graph, code })
@@ -198,10 +206,16 @@ fn generate_circuit_inputs_internal(
 
     let inputs = match proving_system {
         ProvingSystem::Circom => {
-            let circom_inputs = graph
+            let inputs = graph
                 .generate_circuit_inputs(&haystack.0, max_haystack_length, max_match_length)
                 .map_err(|e| WasmError::InputGenError(e.to_string()))?;
-            ProvingSystemInputs::Circom(circom_inputs)
+            ProvingSystemInputs::Circom(CircomInputs::from(inputs))
+        }
+        ProvingSystem::Noir => {
+            let inputs = NoirInputs::from(graph
+                .generate_circuit_inputs(&haystack.0, max_haystack_length, max_match_length)
+                .map_err(|e| WasmError::InputGenError(e.to_string()))?);
+            ProvingSystemInputs::Noir(NoirInputs::from(inputs))
         }
     };
 

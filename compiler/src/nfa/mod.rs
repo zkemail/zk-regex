@@ -54,26 +54,3 @@ impl NFAGraph {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use std::{fs::File, io::Write};
-
-    use super::*;
-
-    #[test]
-    fn test_build() {
-        let nfa =
-            NFAGraph::build("(?:\r\n|^)dkim-signature:(?:[a-z]+=[^;]+; )+t=([0-9]+);").unwrap();
-
-        let noir_code = nfa.generate_noir_code(
-            "dkim_signature",
-            "(?:\\r\\n|^)dkim-signature:(?:[a-z]+=[^;]+; )+t=([0-9]+);",
-            None
-        ).unwrap();
-
-        // Write the code to the file
-        let mut file = File::create("output/noir/src/main.nr").unwrap();
-        file.write_all(noir_code.as_bytes()).unwrap();
-    }   
-}

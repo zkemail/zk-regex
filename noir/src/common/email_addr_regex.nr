@@ -67,9 +67,9 @@ pub fn regex_match<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
     match_length: u32,
     current_states: [Field; MAX_MATCH_LEN],
     next_states: [Field; MAX_MATCH_LEN],
-    capture_ids: [Field; MAX_MATCH_LEN],
-    capture_starts: [Field; MAX_MATCH_LEN],
-    capture_start_indices: [Field; NUM_CAPTURE_GROUPS],
+    capture_group_ids: [Field; MAX_MATCH_LEN],
+    capture_group_starts: [Field; MAX_MATCH_LEN],
+    capture_group_start_indices: [Field; NUM_CAPTURE_GROUPS],
 ) -> (BoundedVec<u8, CAPTURE_1_MAX_LENGTH>) {
     // regex:"([A-Za-z0-9!#$%&'*+=?\\-\\^_`{|}~./@]+@[A-Za-z0-9.\\-]+)"
     // resize haystack 
@@ -89,8 +89,8 @@ pub fn regex_match<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
             haystack[i] as Field,
             current_states[i],
             next_states[i],
-            capture_ids[i],
-            capture_starts[i],
+            capture_group_ids[i],
+            capture_group_starts[i],
             reached_end_state
         );
         reached_end_state = reached_end_state * check_accept_state(
@@ -103,9 +103,9 @@ pub fn regex_match<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
      // Capture Group 1
      let capture_1 = capture_substring::<MAX_MATCH_LEN, CAPTURE_1_MAX_LENGTH, 1>(
         haystack,
-        capture_ids,
-        capture_starts,
-        capture_start_indices[0],
+        capture_group_ids,
+        capture_group_starts,
+        capture_group_start_indices[0],
      );
     (capture_1)
 }

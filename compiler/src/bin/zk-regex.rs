@@ -141,7 +141,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 false => Some(&max_bytes[..]),
             };
             let code = match noir {
-                true => nfa.generate_noir_code(&template_name, &combined_pattern, max_bytes)?,
+                true => nfa.generate_noir_code(&combined_pattern, max_bytes)?,
                 false => nfa.generate_circom_code(&template_name, &combined_pattern, max_bytes)?,
             };
 
@@ -163,7 +163,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } => {
             let nfa = compile(&raw_regex)?;
             let code = if noir {
-                nfa.generate_noir_code(&template_name, &raw_regex, None)?
+                nfa.generate_noir_code(&raw_regex, None)?
             } else {
                 nfa.generate_circom_code(&template_name, &raw_regex, None)?
             };

@@ -20,15 +20,28 @@ pub struct NoirInputs {
     #[serde(skip_serializing_if = "Option::is_none")]
     capture_group_starts: Option<Vec<u8>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "captureGroupStartIndices")]
     capture_group_start_indices: Option<Vec<usize>>,
+}
+
+impl From<CircuitInputs> for NoirInputs {
+    fn from(inputs: CircuitInputs) -> Self {
+        NoirInputs {
+            in_haystack: inputs.in_haystack,
+            match_start: inputs.match_start,
+            match_length: inputs.match_length,
+            curr_states: inputs.curr_states,
+            next_states: inputs.next_states,
+            capture_group_ids: inputs.capture_group_ids,
+            capture_group_starts: inputs.capture_group_starts,
+            capture_group_start_indices: inputs.capture_group_start_indices,
+        }
+    }
 }
 
 impl NFAGraph {
     /// Generate Noir code for the NFA
     pub fn generate_noir_code(
         &self,
-        regex_name: &str,
         regex_pattern: &str,
         max_substring_bytes: Option<&[usize]>,
     ) -> NFAResult<String> {
@@ -124,10 +137,10 @@ impl NFAGraph {
         code.push_str(&format!("    current_states: [Field; MAX_MATCH_LEN],\n"));
         code.push_str(&format!("    next_states: [Field; MAX_MATCH_LEN],\n"));
         if (max_substring_bytes.is_some()) {
-            code.push_str(&format!("    capture_ids: [Field; MAX_MATCH_LEN],\n"));
-            code.push_str(&format!("    capture_starts: [Field; MAX_MATCH_LEN],\n"));
+            code.push_str(&format!("    capture_group_ids: [Field; MAX_MATCH_LEN],\n"));
+            code.push_str(&format!("    capture_group_starts: [Field; MAX_MATCH_LEN],\n"));
             code.push_str(&format!(
-                "    capture_start_indices: [Field; NUM_CAPTURE_GROUPS],\n"
+                "    capture_group_start_indices: [Field; NUM_CAPTURE_GROUPS],\n"
             ));
         }
         let return_type = if has_capture_groups {
@@ -164,8 +177,8 @@ impl NFAGraph {
             code.push_str(&format!("            haystack[i] as Field,\n"));
             code.push_str(&format!("            current_states[i],\n"));
             code.push_str(&format!("            next_states[i],\n"));
-            code.push_str(&format!("            capture_ids[i],\n"));
-            code.push_str(&format!("            capture_starts[i],\n"));
+            code.push_str(&format!("            capture_group_ids[i],\n"));
+            code.push_str(&format!("            capture_group_starts[i],\n"));
             code.push_str(&format!("            reached_end_state\n"));
             code.push_str(&format!("        );\n"));
         } else {
@@ -203,10 +216,10 @@ impl NFAGraph {
                 code.push_str(&format!("     // Capture Group {}\n", capture_group_id));
                 code.push_str(&format!("     let capture_{} = capture_substring::<MAX_MATCH_LEN, CAPTURE_{}_MAX_LENGTH, {}>(\n", capture_group_id, capture_group_id, capture_group_id));
                 code.push_str(&format!("        haystack,\n"));
-                code.push_str(&format!("        capture_ids,\n"));
-                code.push_str(&format!("        capture_starts,\n"));
+                code.push_str(&format!("        capture_group_ids,\n"));
+                code.push_str(&format!("        capture_group_starts,\n"));
                 code.push_str(&format!(
-                    "        capture_start_indices[{}],\n",
+                    "        capture_group_start_indices[{}],\n",
                     capture_group_id - 1
                 ));
                 code.push_str(&format!("     );\n"));
