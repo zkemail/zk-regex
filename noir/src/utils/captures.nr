@@ -1,10 +1,72 @@
-use sort::sort_advanced;
 
+/// NOTE ON HOW `capture_ids` and `capture_starts` WORK
+/// Example input:
+///
+///   haystack       = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+///   capture_ids    = [0, 0, 0, X, 0, 0, 0, X, 0, 0]
+///   capture_starts = [0, 0, 0, 1, 0, 0, 0, 0, 0, 0]
+///
+/// In transition logic with captures, we constrain byte / current state / next state looks up to a
+/// certain packed value. This packed value contains (valid, start_capture_group, capture_group_id).
+/// `capture_ids` (6 bit number indicating capture group) and `capture_starts` (binary indicating
+/// start of capture group) are constrained to be correct here, so the integrity is already constrained.
+///
+/// There can be multiple transitions of non-deterministic paths between the start and end of a capture.
+/// For `capture_ids`, we will put the id of the capture group at the index where the capture starts and
+/// the index where the capture ends (in example @ index 3 and 7). Meanwhile, we will set a boolean
+/// at index 3 for `capture_starts`. This is enough information to determine the start and end of the
+/// capture group X (X could be 1, 63, etc):
+///
+///   capture_ids[3] == X && capture_starts[3] == 1 indicates start
+///   capture_ids[7] == X && capture_starts[7] == 0 indicates end
+///
+/// The process of capturing is as follows:
+/// 1. Build a bitmask `is_capture` for capture ID X, creating a new array where 1 is only set if 
+///    the `capture_id` value matches the expected capture group id (done by `build_is_capture`):
+///
+///   capture_ids = [0, 0, 0, X, 0, 0, 0, X, 0, 0]
+///   is_capture  = [0, 0, 0, 1, 0, 0, 0, 1, 0, 0]
+/// 
+/// 2. Build a bitmask `is_capture_start` - this mask looks for `is_capture[i]` to be 1 and
+///    `capture_starts[i]` to be 1. All values before this is found should be masked to 0, and all values
+///    from this index to the end should be masked to 1 (done by `build_capture_start_end_mask`):
+///
+///    is_capture       = [0, 0, 0, 1, 0, 0, 0, 1, 0, 0]
+///    capture_starts   = [0, 0, 0, 1, 0, 0, 0, 0, 0, 0]
+///    is_capture_start = [0, 0, 0, 1, 1, 1, 1, 1, 1, 1]
+///
+/// 3. Build a bitmask `is_capture_end` - this mask looks for `is_capture[i]` to be 1 and
+///   `capture_starts[i]` to be 0. This check looks backwards, starting at the last index and iterates
+///   backwards. All values after this is found should be masked to 0, and all values from this index
+///   to the start should be masked to 1 (done by `build_capture_start_end_mask`):
+///
+///   is_capture     = [0, 0, 0, 1, 0, 0, 0, 1, 0, 0]
+///   capture_starts = [0, 0, 0, 1, 0, 0, 0, 0, 0, 0]
+///   is_capture_end = [1, 1, 1, 1, 1, 1, 1, 1, 0, 0]
+///
+/// 4. With `is_capture_start` and `is_capture_end`, we can take the intersection of the two masks
+///    to build a final mask `capture_mask` which is constrained to reveal the exact substring we
+///    want to capture (done by `__build_capture_mask`):
+///
+///   is_capture_start = [0, 0, 0, 1, 1, 1, 1, 1, 1, 1]
+///   is_capture_end   = [1, 1, 1, 1, 1, 1, 1, 1, 0, 0]
+///   capture_mask     = [0, 0, 0, 1, 1, 1, 1, 1, 0, 0]
+///
+/// 5. Finally, we can use the `capture_mask` to extract the substring from the haystack. This process
+///    is relatively straightforward and will not be explained in depth
 
-
-
-
-
+/**
+ * Captures a substring from a haystack
+ *
+ * @param HAYSTACK_MAX_LENGTH: The maximum length of the haystack
+ * @param MATCH_MAX_LEN: The maximum length of the captured substring
+ * @param CAPTURE_GROUP: the id of the capture group to match for
+ *
+ * @param haystack - The haystack of bytes to capture the substring from
+ * @param capture_ids - The capture group ids for the haystack (only set at start and end indices)
+ * @ 
+ * 
+ */
 pub fn capture_substring<let HAYSTACK_MAX_LENGTH: u32, let MATCH_MAX_LEN: u32, let CAPTURE_GROUP: Field>(
     haystack: [u8; HAYSTACK_MAX_LENGTH],
     capture_ids: [Field; HAYSTACK_MAX_LENGTH],
@@ -27,67 +89,7 @@ pub fn capture_substring<let HAYSTACK_MAX_LENGTH: u32, let MATCH_MAX_LEN: u32, l
 }
 
 
-/**
- * Unpacks a transition lookup value
- * @dev 8 bit packed (0: valid transition, 1: start of capture group, 2-8: capture group id)
- * 
- * @return (valid, start_capture_group, capture_group_id)
- */
-fn unpack_sparse_value<let TABLE_SIZE: u32>(key: Field, table: SparseArray<TABLE_SIZE, Field>) -> (Field, Field, Field) {
-    // get packed value from lookup table
-    let value = table.get(key);
-    std::as_witness(value);
-    // Safety: unpack value (unconstrained)
-    let (is_valid, is_capture_start, capture_id) = unsafe { __unpack_sparse_value(value) };
-    // check correct decomposition
-    let recomposed_value = is_valid + is_capture_start * 2 + capture_id * 4;
-    assert(recomposed_value == value, "Invalid Table Unpacking");
-    // constrain size of values
-    is_valid.assert_max_bit_size::<1>();
-    is_capture_start.assert_max_bit_size::<1>();
-    capture_id.assert_max_bit_size::<6>();
-    (is_valid, is_capture_start, capture_id)
-}
 
-fn __unpack_sparse_value(value: Field) -> (Field, Field, Field) {
-    let x = value as u8;
-    let is_valid = x & 1;
-    let is_capture_start = (x & 2) >> 1;
-    let capture_id = x >> 2;
-    (is_valid as Field, is_capture_start as Field, capture_id as Field)
-}
-        
-pub fn check_transition_with_captures<let TABLE_SIZE: u32>(
-    haystack_byte: Field,
-    current_state: Field,
-    next_state: Field,
-    asserted_capture_group: Field,
-    asserted_capture_start: Field,
-    reached_end_state: Field,
-    table: SparseArray<TABLE_SIZE, Field>
-) {
-    let key = current_state + haystack_byte as Field * R as Field + next_state * R_SQUARED as Field;
-    let (is_valid, is_capture_start, capture_id) = unpack_sparse_value(key, table);
-    // check if the transition is valid
-    let matched_condition = ((is_valid - 1)
-        + ((asserted_capture_group - capture_id) * R as Field)
-        + ((asserted_capture_start - is_capture_start) * R_SQUARED as Field))
-        * reached_end_state;
-    assert(matched_condition == 0, "Invalid Transition");
-}
-
-pub fn check_transition<let TABLE_LENGTH: u32>(
-    haystack_byte: Field,
-    current_state: Field,
-    next_state: Field,
-    reached_end_state: Field,
-    table: SparseArray<TABLE_LENGTH, Field>
-) {
-    let key = current_state + haystack_byte as Field * R as Field + next_state * R_SQUARED as Field;
-    let transition_condition = table.get(key) - 1;
-    let matched_condition = transition_condition * reached_end_state;
-    assert(matched_condition == 0, "Invalid Transition");
-}
 
 /**
  * Build a capture mask for the capture group
@@ -187,7 +189,21 @@ fn substring_from_mask<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
         assert(mask_value * haystack_value == substring_value, "Invalid substring extraction");
         length += mask_value;
     }
+
+    // check the unconstrained substring length matches expected length
     assert(substring.len() as Field == length, "Invalid substring length");
+
+    let end_index = start_index + length;
+    // check mask[end_index] = 0
+    // if start_index + length = MAX_HAYSTACK_LEN do not perform check
+    let end_index_is_max = (end_index == MAX_HAYSTACK_LEN) as Field;
+    let end_index_to_check = end_index + (MAX_HAYSTACK_LEN - end_index_is_max);
+    let following_mask_value = mask[end_index_to_check];
+    let following_mask_check = end_index_is_max + ((1 - end_index_is_max) * (1 - following_mask_value));
+    assert(following_mask_check == 1, "Invalid substring end index: proceding mask value is not 0");
+
+    // check mask[end_index - 1] = 1
+    assert(mask[end_index - 1] == 1, "Invalid substring end index: end index mask value is not 1");
     substring
 }
 
