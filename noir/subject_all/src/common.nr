@@ -176,9 +176,15 @@ pub fn capture_substring<let HAYSTACK_MAX_LENGTH: u32, let MATCH_MAX_LEN: u32, l
  * @return (valid, start_capture_group, capture_group_id)
  */
 fn unpack_sparse_value<let TABLE_SIZE: u32>(key: Field, table: SparseArray<TABLE_SIZE, Field>) -> (Field, Field, Field) {
+    // get packed value from lookup table
     let value = table.get(key);
     std::as_witness(value);
+    // Safety: unpack value (unconstrained)
     let (is_valid, is_capture_start, capture_id) = unsafe { __unpack_sparse_value(value) };
+    // check correct decomposition
+    let recomposed_value = is_valid + is_capture_start * 2 + capture_id * 4;
+    assert(recomposed_value == value, "Invalid Table Unpacking");
+    // constrain size of values
     is_valid.assert_max_bit_size::<1>();
     is_capture_start.assert_max_bit_size::<1>();
     capture_id.assert_max_bit_size::<6>();
@@ -353,7 +359,6 @@ fn build_capture_start_end_mask<let HAYSTACK_MAX_LENGTH: u32>(
     let expected_start_mask = ((is_capture[0] * is_capture_start_temp) == 1) as Field;
     assert(start_mask[0] == expected_start_mask, "Invalid Capture Start Mask");
 
-    // check last byte of capture end mask
     let is_capture_end_temp = (capture_starts[HAYSTACK_MAX_LENGTH - 1] == 0) as Field;
     let expected_end_mask = (is_capture[HAYSTACK_MAX_LENGTH - 1] * is_capture_end_temp == 1) as Field;
     assert(end_mask[HAYSTACK_MAX_LENGTH - 1] == expected_end_mask, "Invalid Capture End Mask");

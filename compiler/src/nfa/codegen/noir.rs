@@ -61,7 +61,6 @@ impl NFAGraph {
             code.push_str("use crate::common::{capture_substring, check_transition_with_captures, SparseArray};\n\n");
         } else {
             code.push_str("use crate::common::{check_transition, SparseArray};\n\n");
-
         }
 
         // codegen consts
@@ -79,7 +78,10 @@ impl NFAGraph {
                     length
                 ));
             }
-            code.push_str(&format!("pub global NUM_CAPTURE_GROUPS: u32 = {};\n", capture_group_set.len()));
+            code.push_str(&format!(
+                "pub global NUM_CAPTURE_GROUPS: u32 = {};\n",
+                capture_group_set.len()
+            ));
         }
 
         // add check for valid start states
@@ -87,16 +89,23 @@ impl NFAGraph {
         code.push_str(accept_state_fn(&accept_states).as_str());
 
         // regex match fn
-        code.push_str(&format!("pub fn regex_match<let MAX_HAYSTACK_LENTH: u32>(\n"));
+        code.push_str(&format!(
+            "pub fn regex_match<let MAX_HAYSTACK_LENTH: u32>(\n"
+        ));
         code.push_str(&format!("    haystack: [u8; MAX_HAYSTACK_LENTH],\n"));
-        code.push_str(&format!("    current_states: [Field; MAX_HAYSTACK_LENTH],\n"));
+        code.push_str(&format!(
+            "    current_states: [Field; MAX_HAYSTACK_LENTH],\n"
+        ));
         code.push_str(&format!("    next_states: [Field; MAX_HAYSTACK_LENTH],\n"));
         code.push_str(&format!("    transition_length: u32,\n"));
         if (max_substring_bytes.is_some()) {
             code.push_str(&format!("    capture_ids: [Field; MAX_HAYSTACK_LENTH],\n"));
-            code.push_str(&format!("    capture_starts: [Field; MAX_HAYSTACK_LENTH],\n"));
-            code.push_str(&format!("    capture_start_indices: [Field; NUM_CAPTURE_GROUPS],\n"));
-
+            code.push_str(&format!(
+                "    capture_starts: [Field; MAX_HAYSTACK_LENTH],\n"
+            ));
+            code.push_str(&format!(
+                "    capture_start_indices: [Field; NUM_CAPTURE_GROUPS],\n"
+            ));
         }
         let return_type = if has_capture_groups {
             let mut substrings = Vec::new();
@@ -143,9 +152,11 @@ impl NFAGraph {
             code.push_str(&format!("            TRANSITION_TABLE\n"));
             code.push_str(&format!("        );\n"));
         }
-        code.push_str(&format!(
-            "        reached_end_state = reached_end_state * check_accept_state(next_states[i]);\n"
-        ));
+        code.push_str(&format!("        reached_end_state = reached_end_state * check_accept_state(\n"));
+        code.push_str(&format!("            next_states[i],\n"));
+        code.push_str(&format!("            i as Field,\n"));
+        code.push_str(&format!("            transition_length as Field,\n"));
+        code.push_str(&format!("        );\n"));
         code.push_str(&format!("    }}\n"));
         code.push_str(&format!(
             "    assert(reached_end_state == 0, \"Did not reach a valid end state\");\n"
@@ -267,6 +278,14 @@ fn start_state_fn(start_states: &Vec<usize>) -> String {
         .join(" * ");
     format!(
         r#"
+/**
+ * Constrains a start state to be valid
+ * @dev start states are hardcoded in this function - "(start_state - {{state}})" for each start
+ *      example: `(start_state - 0) * (start_state - 1) * (start_state - 2)` means 0, 1, or 2
+ *      are valid first states
+ * 
+ * @param start_state - The start state of the NFA
+ */
 fn check_start_state(start_state: Field) {{
     let valid_start_state = {expression};
     assert(valid_start_state == 0, "Invalid start state");
@@ -288,8 +307,38 @@ fn accept_state_fn(accept_states: &Vec<usize>) -> String {
         .join(" * ");
     format!(
         r#"
-fn check_accept_state(next_state: Field) -> Field {{
-    {expression}
+/**
+ * Constrains the recognition of accept_state being reached. If an aceppt state is reached,
+ *      ensures asserted traversal path is valid
+ * @dev accept states are hardcoded in this function - "(next_state - {{state}})" for each accept
+ *      example: `(next_state - 19) * (next_state - 20) * (next_state - 21)` means 19, 20, or 21
+ *      are valid accept states
+ * 
+ * @param next_state - The asserted next state of the NFA
+ * @param haystack_index - The index being operated on in the haystack
+ * @param asserted_transition_length - The asserted traversal path length
+ * @return - 0 if accept_state is reached, nonzero otherwise
+ */
+fn check_accept_state(
+    next_state: Field,
+    haystack_index: Field, 
+    asserted_transition_length: Field
+) -> Field {{
+    // check if the next state is an accept state
+    let accept_state_reached = {expression};
+    let accept_state_reached_bool = (accept_state_reached == 0) as Field;
+
+    // check if the haystack index is the asserted transition length
+    // should equal 1 since haystack_index should be 1 less than asserted_transition length
+    let asserted_path_traversed = (asserted_transition_length - haystack_index == 1) as Field;
+
+    // if accept state reached, check asserted path traversed. Else return 1
+    let valid_condition =
+        (1 - accept_state_reached_bool) + (accept_state_reached_bool * asserted_path_traversed);
+    assert(valid_condition == 1, "Accept state reached but not at asserted path end");
+
+    // return accept_state reached value
+    accept_state_reached
 }}
 
 "#

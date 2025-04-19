@@ -9,13 +9,51 @@ global TRANSITION_TABLE: SparseArray<799, Field> = SparseArray {
 pub global CAPTURE_1_MAX_LENGTH: u32 = 10;
 pub global NUM_CAPTURE_GROUPS: u32 = 1;
 
+/**
+ * Constrains a start state to be valid
+ * @dev start states are hardcoded in this function - "(start_state - {state})" for each start
+ *      example: `(start_state - 0) * (start_state - 1) * (start_state - 2)` means 0, 1, or 2
+ *      are valid first states
+ * 
+ * @param start_state - The start state of the NFA
+ */
 fn check_start_state(start_state: Field) {
     let valid_start_state = (start_state - 0) * (start_state - 1) * (start_state - 3);
     assert(valid_start_state == 0, "Invalid start state");
 }
     
-fn check_accept_state(next_state: Field) -> Field {
-    (next_state - 34)
+/**
+ * Constrains the recognition of accept_state being reached. If an aceppt state is reached,
+ *      ensures asserted traversal path is valid
+ * @dev accept states are hardcoded in this function - "(next_state - {state})" for each accept
+ *      example: `(next_state - 19) * (next_state - 20) * (next_state - 21)` means 19, 20, or 21
+ *      are valid accept states
+ * 
+ * @param next_state - The asserted next state of the NFA
+ * @param haystack_index - The index being operated on in the haystack
+ * @param asserted_transition_length - The asserted traversal path length
+ * @return - 0 if accept_state is reached, nonzero otherwise
+ */
+fn check_accept_state(
+    next_state: Field,
+    haystack_index: Field, 
+    asserted_transition_length: Field
+) -> Field {
+    // check if the next state is an accept state
+    let accept_state_reached = (next_state - 34);
+    let accept_state_reached_bool = (accept_state_reached == 0) as Field;
+
+    // check if the haystack index is the asserted transition length
+    // should equal 1 since haystack_index should be 1 less than asserted_transition length
+    let asserted_path_traversed = (asserted_transition_length - haystack_index == 1) as Field;
+
+    // if accept state reached, check asserted path traversed. Else return 1
+    let valid_condition =
+        (1 - accept_state_reached_bool) + (accept_state_reached_bool * asserted_path_traversed);
+    assert(valid_condition == 1, "Accept state reached but not at asserted path end");
+
+    // return accept_state reached value
+    accept_state_reached
 }
 
 pub fn regex_match<let MAX_HAYSTACK_LENTH: u32>(
@@ -46,7 +84,11 @@ pub fn regex_match<let MAX_HAYSTACK_LENTH: u32>(
             reached_end_state,
             TRANSITION_TABLE
         );
-        reached_end_state = reached_end_state * check_accept_state(next_states[i]);
+        reached_end_state = reached_end_state * check_accept_state(
+            next_states[i],
+            i as Field,
+            transition_length as Field,
+        );
     }
     assert(reached_end_state == 0, "Did not reach a valid end state");
      // Capture Group 1
