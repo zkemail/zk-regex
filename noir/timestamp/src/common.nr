@@ -303,6 +303,20 @@ fn substring_from_mask<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
 ) -> BoundedVec<u8, MAX_MATCH_LEN> {
     let substring = unsafe { __substring_from_mask(haystack, mask, start_index) };
     let mut length = 0;
+
+    // check mask[start_index - 1] = 0
+    // if start_index = 0 do not perform check
+    let start_index_is_zero = (start_index == 0) as Field;
+    let start_index_to_check = start_index - (1 - start_index_is_zero);
+    let preceding_mask_value = mask[start_index_to_check];
+    let preceding_mask_check = start_index_is_zero + ((1 - start_index_is_zero) * (1 - preceding_mask_value));
+    assert(preceding_mask_check == 1, "Invalid substring start index: preceding mask value is not 0");
+    
+    // check mask start is 1
+    // is this necessary?
+    assert(mask[start_index] == 1, "Invalid substring start index: start index mask value is not 1");
+
+    // check assigned value
     for i in 0..MAX_MATCH_LEN {
         let index = start_index + i as Field;
         let mask_value = mask[index];
@@ -318,7 +332,6 @@ fn substring_from_mask<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
 /**
  * Unconstrained construction of substring bounded vec
  * @dev HELPER FOR `substring_from_mask` - DO NOT CALL OUTSIDE OF THIS FUNCTION
- * @todo: check the asserted index is correct?
  *
  * @param haystack - The haystack of bytes to reveal substring from
  * @param mask - the capture group mask constructed to extract the substring
