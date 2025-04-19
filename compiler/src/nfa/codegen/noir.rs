@@ -48,12 +48,6 @@ impl NFAGraph {
         // get nfa graph data
         let (start_states, accept_states, transitions) = self.generate_circuit_data()?;
 
-        // build sparse array
-        let transition_array = match max_substring_bytes.is_some() {
-            true => packed_transition_sparse_array(&transitions),
-            false => transition_sparse_array(&transitions),
-        };
-
         let capture_group_set: HashSet<_> = transitions
             .iter()
             .filter_map(|(_, _, _, _, cap)| cap.map(|(id, _)| id))
@@ -102,7 +96,11 @@ impl NFAGraph {
             code.push_str("};\n\n");
         }
 
-        // codegen consts
+        // codegen the transition lookup table
+        let transition_array = match max_substring_bytes.is_some() {
+            true => packed_transition_sparse_array(&transitions),
+            false => transition_sparse_array(&transitions),
+        };
         code.push_str(&format!(
             "global TRANSITION_TABLE: {}\n\n",
             transition_array.to_noir_string(None)
@@ -127,7 +125,23 @@ impl NFAGraph {
         code.push_str(start_state_fn(&start_states).as_str());
         code.push_str(accept_state_fn(&accept_states).as_str());
 
-        // regex match fn
+        // regex match function doc
+        code.push_str(&format!("/**\n"));
+        code.push_str(&format!(" * Regex matching function\n"));
+        code.push_str(&format!(" * @param in_haystack - The input haystack to search from\n"));
+        code.push_str(&format!(" * @param match_start - The start index in the haystack for the subarray to match from\n"));
+        code.push_str(&format!(" * @param match_length - The length of the subarray to extract from haystack\n"));
+        code.push_str(&format!(" * @param current_states - The current states of the NFA at each index in the match subarray\n"));
+        code.push_str(&format!(" * @param next_states - The next states of the NFA at each index in the match subarray\n"));
+        if capture_group_set.len() > 0 {
+            code.push_str(&format!(" * @param capture_group_ids - The ids of the capture groups in the match subarray\n"));
+            code.push_str(&format!(" * @param capture_group_starts - The start positions of the capture groups in the match subarray\n"));
+            code.push_str(&format!(" * @param capture_group_start_indices - The start indices of the capture groups in the match subarray\n"));
+            code.push_str(&format!(" * @return - tuple of substring captures as dictated by the regular expression\n"));
+        }
+        code.push_str(&format!(" */\n"));
+
+        // regex match function signature
         code.push_str(&format!(
             "pub fn regex_match<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(\n"
         ));
@@ -143,6 +157,8 @@ impl NFAGraph {
                 "    capture_group_start_indices: [Field; NUM_CAPTURE_GROUPS],\n"
             ));
         }
+        
+        // define the return type according to existence of / qualities of capture groups
         let return_type = if has_capture_groups {
             let mut substrings = Vec::new();
             for i in 0..max_substring_bytes.unwrap().len() {
@@ -153,10 +169,16 @@ impl NFAGraph {
             String::default()
         };
         code.push_str(&format!(") {}{{\n", return_type));
+
+        // print the actual regex match being performed
         code.push_str(&format!("    // regex:{:?}\n", regex_pattern));
+
+        // resize haystack to MAX_MATCH_LEN
         code.push_str(&format!("    // resize haystack \n"));
         code.push_str(&format!("    let haystack: [u8; MAX_MATCH_LEN] = select_subarray(in_haystack, match_start, match_length);\n\n"));
         code.push_str(&format!("    let mut reached_end_state = 1;\n"));
+
+        // check start & range
         code.push_str(&format!("    check_start_state(current_states[0]);\n"));
         code.push_str(&format!("    for i in 0..MAX_MATCH_LEN-1 {{\n"));
         code.push_str(&format!("        // match length - 1 since current states should be 1 less than next states\n"));
@@ -170,8 +192,11 @@ impl NFAGraph {
             "        assert(in_range * matching_states == 0, \"Invalid Transition Input\");\n"
         ));
         code.push_str(&format!("    }}\n"));
+
+        // iterate through the haystack and check transitions
         code.push_str(&format!("    for i in 0..MAX_MATCH_LEN {{\n"));
         if max_substring_bytes.is_some() {
+            // if capture groups exist, perform check that unpacks transition values
             code.push_str(&format!("        check_transition_with_captures(\n"));
             code.push_str(&format!("            TRANSITION_TABLE,\n"));
             code.push_str(&format!("            haystack[i] as Field,\n"));
@@ -182,6 +207,7 @@ impl NFAGraph {
             code.push_str(&format!("            reached_end_state\n"));
             code.push_str(&format!("        );\n"));
         } else {
+            // if no capture groups exist, simple lookup
             code.push_str(&format!("        check_transition(\n"));
             code.push_str(&format!("            TRANSITION_TABLE,\n"));
             code.push_str(&format!("            haystack[i] as Field,\n"));
@@ -190,6 +216,7 @@ impl NFAGraph {
             code.push_str(&format!("            reached_end_state\n"));
             code.push_str(&format!("        );\n"));
         }
+        // toggle off constraints/ set match assertion if end state found
         code.push_str(&format!(
             "        reached_end_state = reached_end_state * check_accept_state(\n"
         ));
@@ -201,6 +228,7 @@ impl NFAGraph {
         code.push_str(&format!(
             "    assert(reached_end_state == 0, \"Did not reach a valid end state\");\n"
         ));
+        // add substring capture logic if capture groups exist
         if has_capture_groups {
             let mut ids = Vec::new();
             for capture_group_id in capture_group_set {
@@ -225,6 +253,8 @@ impl NFAGraph {
                 code.push_str(&format!("     );\n"));
                 ids.push(format!("capture_{}", capture_group_id));
             }
+
+            // define the return tuple
             let return_vec = ids
                 .iter()
                 .map(|id| format!("{}", id))
