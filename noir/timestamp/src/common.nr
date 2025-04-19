@@ -240,16 +240,13 @@ fn build_is_capture<let HAYSTACK_MAX_LENGTH: u32, let CAPTURE_GROUP: Field>(
         unsafe { __build_is_capture::<HAYSTACK_MAX_LENGTH, CAPTURE_GROUP>(capture_ids) };
     for i in 0..HAYSTACK_MAX_LENGTH {
         // check is_capture is binary
-        let is_capture_temp = is_capture[i];
-        is_capture_temp.assert_max_bit_size::<1>();
+        is_capture[i].assert_max_bit_size::<1>();
 
         // check if the capture group is targeted at index
-        let capture_id = capture_ids[i];
-        std::as_witness(capture_id);
-        let index_selector = (capture_id - CAPTURE_GROUP == 0) as Field;
+        let index_selector = (capture_ids[i] - CAPTURE_GROUP == 0) as Field;
 
         // if the index is part of the capture group, check mask
-        assert(index_selector * (capture_id - CAPTURE_GROUP) == 0, "Invalid Capture Group Mask");
+        assert(index_selector * (is_capture[i] - 1) == 0, "Invalid Capture Group Mask");
     }
     is_capture
 }
