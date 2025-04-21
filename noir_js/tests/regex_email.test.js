@@ -26,16 +26,11 @@ describe("ZKEmail.nr Circuit Unit Tests", () => {
     let bb;
     let noir;
 
-
     beforeAll(() => {
         let num_cpus = os.cpus().length;
         bb = new UltraHonkBackend(circuit.bytecode, { threads: num_cpus });
         noir = new Noir(circuit);
     });
-
-    // afterAll(async () => {
-    //     await bb.destroy();
-    // });
 
     describe("Simulate Witnesses", () => {
         it("2048-bit DKIM", async () => {
