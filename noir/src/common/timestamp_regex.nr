@@ -41,7 +41,7 @@ fn check_start_state(start_state: Field) {
  */
 fn check_accept_state(
     next_state: Field,
-    haystack_index: Field, 
+    haystack_index: Field,
     asserted_match_length: Field
 ) -> Field {
     // check if the next state is an accept state
@@ -74,7 +74,6 @@ pub fn regex_match<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
     // regex:"(?:\r\n|^)dkim-signature:(?:[a-z]+=[^;]+; )+t=([0-9]+);"
     // resize haystack 
     let haystack: [u8; MAX_MATCH_LEN] = select_subarray(in_haystack, match_start, match_length);
-
     let mut reached_end_state = 1;
     check_start_state(current_states[0]);
     for i in 0..MAX_MATCH_LEN-1 {

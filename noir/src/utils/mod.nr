@@ -20,6 +20,8 @@ pub fn select_subarray<
         let index = is_in_range * shifted_index as Field;
         let byte = input[index];
         let masked = byte * is_in_range as u8;
+        let output_byte = output[i];
+
         assert(masked == output[i], "Subarray: mismatch between input and output");
     }
 
@@ -46,7 +48,7 @@ unconstrained pub fn __select_subarray<
 ) -> [u8; MAX_MATCH_LEN] {
     let mut subarray = [0; MAX_MATCH_LEN];
     for i in 0..MAX_MATCH_LEN {
-        if i + match_start < match_len {
+        if i < match_len {
             subarray[i] = haystack[i + match_start];
         }
     }
