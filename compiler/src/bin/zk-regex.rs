@@ -1,7 +1,9 @@
 use clap::{Parser, Subcommand};
-use compiler::{DecomposedRegexConfig, NFAGraph, compile, decomposed_to_composed_regex};
-use heck::{ToPascalCase, ToSnakeCase};
-use std::{fs::File, path::PathBuf};
+use compiler::{
+    DecomposedRegexConfig, NFAGraph, ProvingFramework, gen_from_decomposed, gen_from_raw,
+    generate_circuit_inputs, save_outputs, validate_cli_template_name,
+};
+use std::{fs::File, path::PathBuf, str::FromStr};
 
 #[derive(Parser)]
 #[command(about = "ZK Regex Compiler CLI")]
@@ -26,9 +28,9 @@ enum Commands {
         #[arg(short, long, value_parser = validate_cli_template_name)]
         template_name: String,
 
-        /// Noir boolean
-        #[arg(long)]
-        noir: bool,
+        /// Proving framework to use (e.g., circom, noir)
+        #[arg(short, long)]
+        proving_framework: String,
     },
 
     /// Process a raw regex string
@@ -45,9 +47,9 @@ enum Commands {
         #[arg(short, long, value_parser = validate_cli_template_name)]
         template_name: String,
 
-        /// Noir boolean
-        #[arg(long)]
-        noir: bool,
+        /// Proving framework to use (e.g., circom, noir)
+        #[arg(short, long)]
+        proving_framework: String,
     },
 
     /// Generate circuit inputs from a cached graph
@@ -70,54 +72,12 @@ enum Commands {
 
         /// Output JSON file for circuit inputs
         #[arg(short, long)]
-        output: PathBuf,
+        output_file_path: PathBuf,
 
-        /// Generate inputs for Noir
+        /// Proving framework to use (e.g., circom, noir)
         #[arg(short, long)]
-        noir: Option<bool>
+        proving_framework: String,
     },
-}
-
-fn validate_cli_template_name(name: &str) -> Result<String, String> {
-    // Convert to PascalCase to normalize
-    let pascal_name = name.to_pascal_case();
-
-    // Verify it's valid PascalCase
-    if pascal_name != name {
-        return Err("Template name must be in PascalCase (e.g., ThisIsATemplate)".into());
-    }
-
-    Ok(name.to_string())
-}
-
-fn save_outputs(
-    nfa: &NFAGraph,
-    circom_code: String,
-    output_dir: &PathBuf,
-    template_name: &str,
-    file_extension: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    validate_cli_template_name(template_name)?;
-
-    // Create output directory if it doesn't exist
-    std::fs::create_dir_all(output_dir)?;
-
-    let snake_case_name = template_name.to_snake_case();
-
-    // Save circuit file
-    let circuit_path = output_dir.join(format!("{}_regex.{}", snake_case_name, file_extension));
-    std::fs::write(&circuit_path, circom_code)?;
-
-    // Save graph JSON
-    let graph_json = nfa.to_json()?;
-    let graph_path = output_dir.join(format!("{}_graph.json", snake_case_name));
-    std::fs::write(&graph_path, graph_json)?;
-
-    println!("Generated files:");
-    println!("  Circuit: {}", circuit_path.display());
-    println!("  Graph: {}", graph_path.display());
-
-    Ok(())
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -128,30 +88,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             decomposed_regex_path,
             output_file_path,
             template_name,
-            noir,
+            proving_framework,
         } => {
             let config: DecomposedRegexConfig =
                 serde_json::from_reader(File::open(decomposed_regex_path)?)?;
-
-            let (combined_pattern, max_bytes) = decomposed_to_composed_regex(&config);
-
-            let nfa = compile(&combined_pattern)?;
-            let max_bytes = match max_bytes.is_empty() {
-                true => None,
-                false => Some(&max_bytes[..]),
-            };
-            let code = match noir {
-                true => nfa.generate_noir_code(&combined_pattern, max_bytes)?,
-                false => nfa.generate_circom_code(&template_name, &combined_pattern, max_bytes)?,
-            };
-
-            let file_extension = if noir { "nr" } else { "circom" };
+            let proving_framework = ProvingFramework::from_str(&proving_framework)?;
+            let (nfa, code) = gen_from_decomposed(config, &template_name, proving_framework)?;
             save_outputs(
                 &nfa,
                 code,
                 &output_file_path,
                 &template_name,
-                &file_extension,
+                &proving_framework.file_extension(),
             )?;
         }
 
@@ -159,23 +107,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             raw_regex,
             output_file_path,
             template_name,
-            noir,
+            proving_framework,
         } => {
-            let nfa = compile(&raw_regex)?;
-            let code = if noir {
-                nfa.generate_noir_code(&raw_regex, None)?
-            } else {
-                nfa.generate_circom_code(&template_name, &raw_regex, None)?
-            };
-
-            // Create output file path by combining directory and template name
-            let file_extension = if noir { ".nr" } else { ".circom" };
+            let proving_framework = ProvingFramework::from_str(&proving_framework)?;
+            let (nfa, code) = gen_from_raw(&raw_regex, None, &template_name, proving_framework)?;
             save_outputs(
                 &nfa,
                 code,
                 &output_file_path,
                 &template_name,
-                &file_extension,
+                &proving_framework.file_extension(),
             )?;
         }
 
@@ -184,26 +125,39 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             input,
             max_haystack_len,
             max_match_len,
-            output,
-            noir
+            output_file_path,
+            proving_framework,
         } => {
             // Load the cached graph
             let graph_json = std::fs::read_to_string(graph_path)?;
             let nfa = NFAGraph::from_json(&graph_json)?;
 
             // Generate circuit inputs
-            let inputs = nfa.generate_circuit_inputs(&input, max_haystack_len, max_match_len)?;
+            let inputs = match proving_framework.as_str() {
+                "circom" => generate_circuit_inputs(
+                    &nfa,
+                    &input,
+                    max_haystack_len,
+                    max_match_len,
+                    ProvingFramework::Circom,
+                )?,
+                "noir" => generate_circuit_inputs(
+                    &nfa,
+                    &input,
+                    max_haystack_len,
+                    max_match_len,
+                    ProvingFramework::Noir,
+                )?,
+                _ => {
+                    return Err("Invalid proving framework".into());
+                }
+            };
 
             // Save inputs
-            if noir.is_none_or(|x| !x ) {
-                let input_json = serde_json::to_string_pretty(&inputs)?;
-                std::fs::write(&output, input_json)?;
-            } else {
-                let input_toml = NFAGraph::to_prover_toml(&inputs);
-                std::fs::write(&output, input_toml)?;
-            }
+            let input_json = serde_json::to_string_pretty(&inputs)?;
+            std::fs::write(&output_file_path, input_json)?;
 
-            println!("Generated circuit inputs: {}", output.display());
+            println!("Generated circuit inputs: {}", output_file_path.display());
         }
     }
 
