@@ -14,7 +14,7 @@
 //! - Start/accept state validation
 
 use serde::Serialize;
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use crate::nfa::NFAGraph;
 use crate::nfa::error::{NFAError, NFAResult};
@@ -86,7 +86,7 @@ pub fn generate_circom_code(
     let (start_states, accept_states, transitions) = generate_circuit_data(nfa)?;
 
     // Validate capture groups
-    let capture_group_set: HashSet<_> = transitions
+    let capture_group_set: BTreeSet<_> = transitions
         .iter()
         .filter_map(|(_, _, _, _, cap)| cap.map(|(id, _)| id))
         .collect();

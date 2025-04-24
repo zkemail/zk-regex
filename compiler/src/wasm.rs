@@ -134,8 +134,10 @@ fn generate_from_raw_internal(
             generate_circom_code(&nfa, &template_name.0, &raw_regex.0, max_substring_bytes)
                 .map_err(|e| WasmError::CodeGenError("circom".to_string(), e.to_string()))?
         }
-        ProvingFramework::Noir => generate_noir_code(&nfa, &raw_regex.0, max_substring_bytes)
-            .map_err(|e| WasmError::CodeGenError("noir".to_string(), e.to_string()))?,
+        ProvingFramework::Noir => {
+            generate_noir_code(&nfa, &template_name.0, &raw_regex.0, max_substring_bytes)
+                .map_err(|e| WasmError::CodeGenError("noir".to_string(), e.to_string()))?
+        }
     };
 
     Ok(RegexOutput { graph, code })

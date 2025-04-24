@@ -50,7 +50,7 @@ pub fn gen_from_raw(
     let code = match proving_framework {
         ProvingFramework::Circom => generate_circom_code(&nfa, &template_name, &pattern, max_bytes)
             .map_err(|e| CompilerError::RegexCompilation(e.to_string()))?,
-        ProvingFramework::Noir => generate_noir_code(&nfa, &pattern, max_bytes)
+        ProvingFramework::Noir => generate_noir_code(&nfa, &template_name, &pattern, max_bytes)
             .map_err(|e| CompilerError::RegexCompilation(e.to_string()))?,
     };
 

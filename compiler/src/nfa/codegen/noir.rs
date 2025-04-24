@@ -1,13 +1,13 @@
-use std::collections::HashSet;
+use comptime::{FieldElement, SparseArray};
+use heck::{ToSnakeCase, ToUpperCamelCase};
+use serde::Serialize;
+use std::collections::BTreeSet;
 
+use super::{CircuitInputs, escape_regex_for_display, generate_circuit_data};
 use crate::nfa::{
     NFAGraph,
     error::{NFAError, NFAResult},
 };
-use comptime::{FieldElement, SparseArray};
-use serde::Serialize;
-
-use super::{CircuitInputs, generate_circuit_data};
 
 #[derive(Serialize)]
 pub struct NoirInputs {
@@ -42,13 +42,14 @@ impl From<CircuitInputs> for NoirInputs {
 /// Generate Noir code for the NFA
 pub fn generate_noir_code(
     nfa: &NFAGraph,
+    regex_name: &str,
     regex_pattern: &str,
     max_substring_bytes: Option<Vec<usize>>,
 ) -> NFAResult<String> {
     // get nfa graph data
     let (start_states, accept_states, transitions) = generate_circuit_data(nfa)?;
 
-    let capture_group_set: HashSet<_> = transitions
+    let capture_group_set: BTreeSet<_> = transitions
         .iter()
         .filter_map(|(_, _, _, _, cap)| cap.map(|(id, _)| id))
         .collect();
@@ -121,13 +122,19 @@ pub fn generate_noir_code(
         ));
     }
 
+    let display_pattern = escape_regex_for_display(regex_pattern);
+
     // add check for valid start states
     code.push_str(start_state_fn(&start_states).as_str());
     code.push_str(accept_state_fn(&accept_states).as_str());
 
     // regex match function doc
     code.push_str(&format!("/**\n"));
-    code.push_str(&format!(" * Regex matching function\n"));
+    code.push_str(&format!(
+        " * {}Regex matching function\n",
+        regex_name.to_upper_camel_case()
+    ));
+    code.push_str(&format!(" * Regex: {}\n", display_pattern));
     code.push_str(&format!(
         " * @param in_haystack - The input haystack to search from\n"
     ));
@@ -165,9 +172,9 @@ pub fn generate_noir_code(
     }
     code.push_str(&format!(" */\n"));
 
-    // regex match function signature
     code.push_str(&format!(
-        "pub fn regex_match<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(\n"
+        "pub fn {}_regex<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(\n",
+        regex_name.to_snake_case()
     ));
     code.push_str(&format!("    in_haystack: [u8; MAX_HAYSTACK_LEN],\n"));
     code.push_str(&format!("    match_start: u32,\n"));
@@ -195,9 +202,6 @@ pub fn generate_noir_code(
         String::default()
     };
     code.push_str(&format!(") {}{{\n", return_type));
-
-    // print the actual regex match being performed
-    code.push_str(&format!("    // regex:{:?}\n", regex_pattern));
 
     // resize haystack to MAX_MATCH_LEN
     code.push_str(&format!("    // resize haystack \n"));
@@ -258,8 +262,9 @@ pub fn generate_noir_code(
     code.push_str(&format!("        );\n"));
     code.push_str(&format!("    }}\n"));
     code.push_str(&format!(
-        "    assert(reached_end_state == 0, \"Did not reach a valid end state\");\n"
+        "    assert(reached_end_state == 0, \"Did not reach a valid end state\");\n\n"
     ));
+
     // add substring capture logic if capture groups exist
     if has_capture_groups {
         let mut ids = Vec::new();
@@ -273,23 +278,23 @@ pub fn generate_noir_code(
                 )));
             }
 
-            code.push_str(&format!("     // Capture Group {}\n", capture_group_id));
+            code.push_str(&format!("    // Capture Group {}\n", capture_group_id));
             code.push_str(
                 &format!(
-                    "     let capture_{} = capture_substring::<MAX_MATCH_LEN, CAPTURE_{}_MAX_LENGTH, {}>(\n",
+                    "    let capture_{} = capture_substring::<MAX_MATCH_LEN, CAPTURE_{}_MAX_LENGTH, {}>(\n",
                     capture_group_id,
                     capture_group_id,
                     capture_group_id
                 )
             );
-            code.push_str(&format!("        haystack,\n"));
-            code.push_str(&format!("        capture_group_ids,\n"));
-            code.push_str(&format!("        capture_group_starts,\n"));
+            code.push_str(&format!("       haystack,\n"));
+            code.push_str(&format!("       capture_group_ids,\n"));
+            code.push_str(&format!("       capture_group_starts,\n"));
             code.push_str(&format!(
-                "        capture_group_start_indices[{}],\n",
+                "       capture_group_start_indices[{}],\n",
                 capture_group_id - 1
             ));
-            code.push_str(&format!("     );\n"));
+            code.push_str(&format!("    );\n\n"));
             ids.push(format!("capture_{}", capture_group_id));
         }
 
@@ -301,7 +306,9 @@ pub fn generate_noir_code(
             .join(", ");
         code.push_str(&format!("    ({})\n", return_vec));
     }
+
     code.push_str(&format!("}}\n\n"));
+
     Ok(code)
 }
 
