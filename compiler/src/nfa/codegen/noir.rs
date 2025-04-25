@@ -1,5 +1,5 @@
 use comptime::{FieldElement, SparseArray};
-use heck::{ToSnakeCase, ToUpperCamelCase};
+use heck::ToUpperCamelCase;
 use serde::Serialize;
 use std::collections::BTreeSet;
 
@@ -173,8 +173,7 @@ pub fn generate_noir_code(
     code.push_str(&format!(" */\n"));
 
     code.push_str(&format!(
-        "pub fn {}_regex<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(\n",
-        regex_name.to_snake_case()
+        "pub fn regex_match<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(\n"
     ));
     code.push_str(&format!("    in_haystack: [u8; MAX_HAYSTACK_LEN],\n"));
     code.push_str(&format!("    match_start: u32,\n"));
