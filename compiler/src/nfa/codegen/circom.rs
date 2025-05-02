@@ -24,24 +24,24 @@ use super::{CircuitInputs, escape_regex_for_display, generate_circuit_data};
 #[derive(Serialize)]
 pub struct CircomInputs {
     #[serde(rename = "inHaystack")]
-    in_haystack: Vec<u8>,
+    pub in_haystack: Vec<u8>,
     #[serde(rename = "matchStart")]
-    match_start: usize,
+    pub match_start: usize,
     #[serde(rename = "matchLength")]
-    match_length: usize,
+    pub match_length: usize,
     #[serde(rename = "currStates")]
-    curr_states: Vec<usize>,
+    pub curr_states: Vec<usize>,
     #[serde(rename = "nextStates")]
-    next_states: Vec<usize>,
+    pub next_states: Vec<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "captureGroupIds")]
-    capture_group_ids: Option<Vec<usize>>,
+    pub capture_group_ids: Option<Vec<usize>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "captureGroupStarts")]
-    capture_group_starts: Option<Vec<u8>>,
+    pub capture_group_starts: Option<Vec<u8>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "captureGroupStartIndices")]
-    capture_group_start_indices: Option<Vec<usize>>,
+    pub capture_group_start_indices: Option<Vec<usize>>,
 }
 
 impl From<CircuitInputs> for CircomInputs {

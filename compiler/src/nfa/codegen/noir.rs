@@ -11,17 +11,17 @@ use crate::nfa::{
 
 #[derive(Serialize)]
 pub struct NoirInputs {
-    in_haystack: Vec<u8>,
-    match_start: usize,
-    match_length: usize,
-    curr_states: Vec<usize>,
-    next_states: Vec<usize>,
+    pub in_haystack: Vec<u8>,
+    pub match_start: usize,
+    pub match_length: usize,
+    pub curr_states: Vec<usize>,
+    pub next_states: Vec<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    capture_group_ids: Option<Vec<usize>>,
+    pub capture_group_ids: Option<Vec<usize>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    capture_group_starts: Option<Vec<u8>>,
+    pub capture_group_starts: Option<Vec<u8>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    capture_group_start_indices: Option<Vec<usize>>,
+    pub capture_group_start_indices: Option<Vec<usize>>,
 }
 
 impl From<CircuitInputs> for NoirInputs {
