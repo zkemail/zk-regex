@@ -2,11 +2,11 @@ use regex_automata::{Input, nfa::thompson::pikevm::PikeVM};
 
 use super::NFAGraph;
 use crate::nfa::error::{NFAError, NFAResult};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 // Each step in the path contains:
-// (current_state, next_state, byte, Option<(capture_group_id, capture_group_start)>)
-pub type PathStep = (usize, usize, u8, Option<(usize, bool)>);
+// (current_state, next_state, byte, Option<BTreeSet<(capture_group_id, capture_group_start)>>)
+pub type PathStep = (usize, usize, u8, Option<BTreeSet<(usize, bool)>>);
 pub type TraversalPath = Vec<PathStep>;
 
 pub struct PathWithMatchSpan {
@@ -31,21 +31,19 @@ impl NFAGraph {
     /// Get transitions with capture group information
     pub fn get_transitions_with_capture_info(
         &self,
-    ) -> Vec<(usize, u8, usize, Option<(usize, bool)>)> {
+    ) -> Vec<(usize, u8, usize, Option<BTreeSet<(usize, bool)>>)> {
         let mut transitions = Vec::new();
         for (state_idx, node) in self.nodes.iter().enumerate() {
             for (&byte, destinations) in &node.byte_transitions {
                 for &next_state in destinations {
                     if let Some(captures_on_next_state) = node.capture_groups.get(&next_state) {
                         if !captures_on_next_state.is_empty() {
-                            for capture_info in captures_on_next_state {
-                                transitions.push((
-                                    state_idx,
-                                    byte,
-                                    next_state,
-                                    Some(*capture_info),
-                                ));
-                            }
+                            transitions.push((
+                                state_idx,
+                                byte,
+                                next_state,
+                                Some(captures_on_next_state.clone()),
+                            ));
                         } else {
                             // No captures for this specific next_state, but the transition exists
                             transitions.push((state_idx, byte, next_state, None));
@@ -196,7 +194,7 @@ impl NFAGraph {
                         let capture = self.nodes[state]
                             .capture_groups
                             .get(&next_state)
-                            .and_then(|caps| caps.first().copied());
+                            .and_then(|caps| Some(caps.clone()));
 
                         new_path.push((state, next_state, byte, capture));
                         new_paths.insert(next_state, new_path);

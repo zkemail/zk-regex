@@ -79,6 +79,7 @@ impl NFAGraph {
                     ..
                 } => {
                     self.add_capture_transition(state_idx, next, group_index, slot)?;
+                    self.num_capture_groups = self.num_capture_groups.max(group_index.as_usize());
                 }
                 State::Look { next, .. } => {
                     self.add_look_transition(state_idx, next)?;

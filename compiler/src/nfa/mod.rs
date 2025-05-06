@@ -41,6 +41,9 @@ pub struct NFAGraph {
 
     /// Set of accept state indices
     pub accept_states: BTreeSet<usize>,
+
+    /// Number of capture groups
+    pub num_capture_groups: usize,
 }
 
 impl NFAGraph {
@@ -51,6 +54,7 @@ impl NFAGraph {
             nodes: Vec::new(),
             start_states: BTreeSet::new(),
             accept_states: BTreeSet::new(),
+            num_capture_groups: 0,
         }
     }
 }

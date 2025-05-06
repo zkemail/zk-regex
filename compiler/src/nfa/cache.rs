@@ -8,6 +8,7 @@ impl NFAGraph {
             nodes: self.nodes.clone(),
             start_states: self.start_states.clone(),
             accept_states: self.accept_states.clone(),
+            num_capture_groups: self.num_capture_groups,
         };
 
         serde_json::to_string(&serialized).map_err(|e| NFAError::Serialization(e.to_string()))
@@ -24,6 +25,7 @@ impl NFAGraph {
             nodes: serialized.nodes,
             start_states: serialized.start_states,
             accept_states: serialized.accept_states,
+            num_capture_groups: serialized.num_capture_groups,
         };
         graph.verify()?;
 
