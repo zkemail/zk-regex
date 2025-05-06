@@ -60,6 +60,7 @@ impl From<&str> for Haystack {
 /// Generate circuit from decomposed regex configuration
 #[wasm_bindgen]
 #[allow(non_snake_case)]
+#[cfg(target_arch = "wasm32")]
 pub fn genFromDecomposed(
     decomposedRegexJson: &str,
     templateName: &str,
@@ -97,6 +98,7 @@ fn generate_from_decomposed_internal(
 /// Generate circuit from raw regex string
 #[wasm_bindgen]
 #[allow(non_snake_case)]
+#[cfg(target_arch = "wasm32")]
 pub fn genFromRaw(
     rawRegex: &str,
     maxSubstringBytes: Option<Vec<usize>>,
@@ -146,6 +148,7 @@ fn generate_from_raw_internal(
 /// Generate circuit inputs for a regex match
 #[wasm_bindgen]
 #[allow(non_snake_case)]
+#[cfg(target_arch = "wasm32")]
 pub fn genCircuitInputs(
     regexGraphJson: &str,
     haystack: &str,
@@ -187,19 +190,4 @@ fn generate_circuit_inputs_internal(
     .map_err(|e| WasmError::InputGenError(e.to_string()))?;
 
     serde_json::to_string(&inputs).map_err(|e| WasmError::SerializationError(e.to_string()))
-}
-
-/// Pad a string to the specified length with null bytes
-#[wasm_bindgen]
-#[allow(non_snake_case)]
-pub fn padString(input: &str, maxLength: usize) -> Vec<u8> {
-    let mut bytes = input.as_bytes().to_vec();
-
-    if bytes.len() > maxLength {
-        bytes.truncate(maxLength);
-    } else {
-        bytes.resize(maxLength, 0);
-    }
-
-    bytes
 }

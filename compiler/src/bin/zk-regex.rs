@@ -1,9 +1,9 @@
 use clap::{Parser, Subcommand};
-use compiler::{
+use std::{fs::File, path::PathBuf, str::FromStr};
+use zk_regex_compiler::{
     DecomposedRegexConfig, NFAGraph, ProvingFramework, gen_from_decomposed, gen_from_raw,
     generate_circuit_inputs, save_outputs, validate_cli_template_name,
 };
-use std::{fs::File, path::PathBuf, str::FromStr};
 
 #[derive(Parser)]
 #[command(about = "ZK Regex Compiler CLI")]
