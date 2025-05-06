@@ -55,21 +55,40 @@ impl NFAGraph {
                 if !self.nodes[r_state].byte_transitions.is_empty() {
                     has_byte_transitions[r_state] = true;
 
-                    // Add byte transitions from r_state to the source state
+                    // Add byte transitions from r_state to the source state `state`
                     for (&byte, targets) in &self.nodes[r_state].byte_transitions {
-                        new_transitions[state]
-                            .entry(byte)
-                            .or_insert_with(BTreeSet::new)
-                            .extend(targets);
+                        for &actual_target in targets {
+                            new_transitions[state]
+                                .entry(byte)
+                                .or_insert_with(BTreeSet::new)
+                                .insert(actual_target);
 
-                        // If r_state had captures, they belong to the target states
-                        for &target in targets {
-                            for &(capture_state, capture) in &closure.captures {
-                                if capture_state == r_state {
+                            // Collect all captures for the new transition: state --byte--> actual_target
+
+                            // 1. Captures from the epsilon path leading from `state` up to `r_state`
+                            // (before the byte transition at `r_state`).
+                            for &(_original_epsilon_source_state, capture_info) in &closure.captures
+                            {
+                                new_captures[state]
+                                    .entry(actual_target)
+                                    .or_insert_with(BTreeSet::new)
+                                    .insert(capture_info);
+                            }
+
+                            // 2. If `actual_target` itself leads to an accept state via an
+                            // epsilon path, and that epsilon path has captures, those captures
+                            // also belong to the new transition `state --byte--> actual_target`.
+                            let closure_of_actual_target = &closures[actual_target];
+                            if closure_of_actual_target.is_accept {
+                                for &(
+                                    _orig_eps_src_from_target_closure,
+                                    cap_info_from_target_closure,
+                                ) in &closure_of_actual_target.captures
+                                {
                                     new_captures[state]
-                                        .entry(target)
+                                        .entry(actual_target)
                                         .or_insert_with(BTreeSet::new)
-                                        .insert(capture);
+                                        .insert(cap_info_from_target_closure);
                                 }
                             }
                         }

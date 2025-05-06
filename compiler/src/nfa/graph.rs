@@ -36,13 +36,24 @@ impl NFAGraph {
         for (state_idx, node) in self.nodes.iter().enumerate() {
             for (&byte, destinations) in &node.byte_transitions {
                 for &next_state in destinations {
-                    // Get capture group for this transition if it exists
-                    let capture = if let Some(captures) = node.capture_groups.get(&next_state) {
-                        captures.first().copied()
+                    if let Some(captures_on_next_state) = node.capture_groups.get(&next_state) {
+                        if !captures_on_next_state.is_empty() {
+                            for capture_info in captures_on_next_state {
+                                transitions.push((
+                                    state_idx,
+                                    byte,
+                                    next_state,
+                                    Some(*capture_info),
+                                ));
+                            }
+                        } else {
+                            // No captures for this specific next_state, but the transition exists
+                            transitions.push((state_idx, byte, next_state, None));
+                        }
                     } else {
-                        None
+                        // No capture group map entry for this next_state
+                        transitions.push((state_idx, byte, next_state, None));
                     };
-                    transitions.push((state_idx, byte, next_state, capture));
                 }
             }
         }
