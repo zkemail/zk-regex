@@ -46,7 +46,7 @@ unconstrained pub fn __select_subarray<
 ) -> [u8; MAX_MATCH_LEN] {
     let mut subarray = [0; MAX_MATCH_LEN];
     for i in 0..MAX_MATCH_LEN {
-        if i + match_start < match_len {
+        if i < match_len {
             subarray[i] = haystack[i + match_start];
         }
     }
