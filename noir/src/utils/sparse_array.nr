@@ -54,7 +54,7 @@ where
             //     assert(x == -1);
             // }
             // THIS IS THE BUG: the commented line was the original line
-            r.values[sorted_keys.sort_indices[i] + 2] = _values[i];
+            r.values[(sorted_keys.sort_indices[i] + 2) as u32] = _values[i];
         //    r.values[i + 2] = _values[sorted_keys.sort_indices[i]];
         }
         // insert values that map to our key start and endpoints
@@ -113,6 +113,7 @@ where
      * @details cost is 14.5 gates per lookup
      **/
     pub fn get(self, idx: Field) -> T {
+        // Safety: found and found_index are unconstrained.
         let (found, found_index) = unsafe { self.search_for_key(idx) };
         // bool check. 0.25 gates cheaper than a raw `bool` type. need to fix at some point
         assert(found * found == found);
@@ -125,8 +126,8 @@ where
         // case 2 can be modified to  `self.keys[found_index] + 1 <= idx <= self.keys[found_index + 1] - 1
         // combine the two into the following single statement:
         // `self.keys[found_index] + 1 - found <= idx <= self.keys[found_index + 1 - found] - 1 + found
-        let lhs = self.keys[found_index];
-        let rhs = self.keys[found_index + 1 - found];
+        let lhs = self.keys[found_index as u32];
+        let rhs = self.keys[(found_index + 1 - found) as u32];
         let lhs_condition = idx - lhs - 1 + found;
         let rhs_condition = rhs - 1 + found - idx;
         lhs_condition.assert_max_bit_size::<32>();
@@ -135,6 +136,6 @@ where
         // self.keys[i] maps to self.values[i+1]
         // however...if we did not find a non-sparse entry, we want to return self.values[0] (the default value)
         let value_index = (found_index + 1) * found;
-        self.values[value_index]
+        self.values[value_index as u32]
     }
 }

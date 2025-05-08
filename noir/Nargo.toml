@@ -1,5 +1,5 @@
 [package]
-name = "zkregex.nr"
+name = "zkregex"
 type = "lib"
 authors = [""]
 compiler_version = ">=1.0.0"
