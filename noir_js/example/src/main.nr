@@ -28,7 +28,7 @@ fn main(
     match_start: u32,
     match_length: u32,
     curr_states: [Field; MAX_MATCH_LEN],
-    next_states: [Field; MAX_MATCH_LEN],
+    next_states: [Field; MAX_MATCH_LEN],        
     capture_group_ids: [Field; MAX_MATCH_LEN],
     capture_group_starts: [Field; MAX_MATCH_LEN],
     capture_group_start_indices: [Field; NUM_CAPTURE_GROUPS],

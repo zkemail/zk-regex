@@ -12,6 +12,7 @@ import compiler, {
 
 import circuit from "../example/target/timestamp_demo.json";
 import graph from "./timestamp_graph.json";
+
 const email = fs.readFileSync(
     path.join(__dirname, "./email.eml"),
 );
@@ -54,6 +55,7 @@ describe("ZKEmail.nr Circuit Unit Tests", () => {
                 });
             // combine inputs
             let inputs = { ...emailInputs, ...regexInputs };
+            // execute and return public outputs
             let { returnValue } = await noir.execute(inputs);
             let emailNullifier = returnValue[0];
             let pubkeyHash = returnValue[1];
@@ -63,7 +65,7 @@ describe("ZKEmail.nr Circuit Unit Tests", () => {
             ).toString();
             console.log("Email Nullifier", emailNullifier);
             console.log("Pubkey Hash", pubkeyHash);
-            console.log("Substring", substring);
+            console.log("Timestamp Substring", substring);
         });
     });
 });
