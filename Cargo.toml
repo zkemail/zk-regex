@@ -5,9 +5,10 @@ members = ["compiler"]
 edition = "2024"
 
 [workspace.dependencies]
-clap = "4.5.34"
+clap = "4.2.1"
+comptime = { git = "https://github.com/jp4g/sparse_array", branch = "feat/comptime-codegen" }
 heck = "0.5.0"
-regex-automata = "0.4.9"
+regex-automata = "0.4.7"
 serde = "1.0.219"
 serde_json = "1.0.140"
 thiserror = "2.0.12"

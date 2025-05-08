@@ -4,12 +4,12 @@ mod codegen;
 mod epsilon;
 mod error;
 mod graph;
-mod wasm;
 
-use std::collections::{BTreeMap, BTreeSet};
+pub use codegen::*;
+pub use error::{NFAError, NFAResult};
 
-pub use error::NFAResult;
 use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, BTreeSet};
 
 /// A node in the NFA graph
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
