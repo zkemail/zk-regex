@@ -58,6 +58,15 @@ fn check_accept_state(
     accept_state_reached
 }
 
+/**
+ * SimpleRegex matching function
+ * Regex: a*b
+ * @param in_haystack - The input haystack to search from
+ * @param match_start - The start index in the haystack for the subarray to match from
+ * @param match_length - The length of the subarray to extract from haystack
+ * @param current_states - The current states of the NFA at each index in the match subarray
+ * @param next_states - The next states of the NFA at each index in the match subarray
+ */
 pub fn regex_match<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
     in_haystack: [u8; MAX_HAYSTACK_LEN],
     match_start: u32,
@@ -65,7 +74,6 @@ pub fn regex_match<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
     current_states: [Field; MAX_MATCH_LEN],
     next_states: [Field; MAX_MATCH_LEN],
 ) {
-    // regex:"a*b"
     // resize haystack 
     let haystack: [u8; MAX_MATCH_LEN] = select_subarray(in_haystack, match_start, match_length);
 
@@ -92,5 +100,6 @@ pub fn regex_match<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
         );
     }
     assert(reached_end_state == 0, "Did not reach a valid end state");
+
 }
 

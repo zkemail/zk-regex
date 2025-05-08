@@ -128,7 +128,6 @@ fn substring_from_mask<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
     start_index: Field,
 ) -> BoundedVec<u8, MAX_MATCH_LEN> {
     let substring = unsafe { __substring_from_mask(haystack, mask, start_index) };
-    println(f"substring: {substring}");
     let mut length = 0;
 
     // check mask[start_index - 1] = 0
