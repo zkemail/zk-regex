@@ -11,9 +11,9 @@
       "prepublishOnly": "yarn lint && yarn build"
     },
     "dependencies": {
-      "@aztec/bb.js": "0.66.0",
-      "@noir-lang/noir_js": "1.0.0-beta.1",
-      "@noir-lang/noirc_abi": "^1.0.0-beta.1",
+      "@aztec/bb.js": "0.82.2",
+      "@noir-lang/noir_js": "1.0.0-beta.3",
+      "@noir-lang/noirc_abi": "^1.0.0-beta.3",
       "@zk-email/zkemail-nr": "1.3.1"
     },
     "devDependencies": {

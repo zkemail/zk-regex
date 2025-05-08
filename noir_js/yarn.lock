@@ -22,6 +22,18 @@
     pako "^2.1.0"
     tslib "^2.4.0"
 
+"@aztec/bb.js@0.82.2":
+  version "0.82.2"
+  resolved "https://registry.yarnpkg.com/@aztec/bb.js/-/bb.js-0.82.2.tgz#e123cd781a534b5868da016d93165043923058b4"
+  integrity sha512-MBOHFVHOtfsknyJ1IsHH30paYqf0qLwYkiDTPyH1/KtkMwemvo5VyIgY0Dsl81KQa388MzoKhC6qnaFgERiaog==
+  dependencies:
+    comlink "^4.4.1"
+    commander "^12.1.0"
+    debug "^4.3.4"
+    fflate "^0.8.0"
+    pako "^2.1.0"
+    tslib "^2.4.0"
+
 "@babel/code-frame@^7.0.0", "@babel/code-frame@^7.12.13", "@babel/code-frame@^7.26.2":
   version "7.26.2"
   resolved "https://registry.yarnpkg.com/@babel/code-frame/-/code-frame-7.26.2.tgz#4b5fab97d33338eff916235055f0ebc21e573a85"
@@ -1611,6 +1623,11 @@
   resolved "https://registry.yarnpkg.com/@noir-lang/acvm_js/-/acvm_js-1.0.0-beta.1.tgz#d10cda3232bdbc307266ab6efdcc51a9b700679b"
   integrity sha512-4lWC543pScZ+NG8hqB0xOLfdgqCQJaclrdQ8GVIj7jwZ8mS982XV97IKfglqgE7Ovcik2j8QRHZq5FaVR/Bn9w==
 
+"@noir-lang/acvm_js@1.0.0-beta.3":
+  version "1.0.0-beta.3"
+  resolved "https://registry.yarnpkg.com/@noir-lang/acvm_js/-/acvm_js-1.0.0-beta.3.tgz#013f43e8238aa0e7733514dc055c5ecfdd3b8364"
+  integrity sha512-Dc6g5rJr/x7tKsWvnTbZvjwqI1uiAtvq+NAz5tcLRzUHJw6NAvDXEH5h117h+BfIAhhsHXuPTkDfDB1Gnqp/Bg==
+
 "@noir-lang/noir_js@1.0.0-beta.1":
   version "1.0.0-beta.1"
   resolved "https://registry.yarnpkg.com/@noir-lang/noir_js/-/noir_js-1.0.0-beta.1.tgz#ae115dc07da38e8c8900d4a3c952642f5ec49811"
@@ -1620,6 +1637,15 @@
     "@noir-lang/noirc_abi" "1.0.0-beta.1"
     "@noir-lang/types" "1.0.0-beta.1"
 
+"@noir-lang/noir_js@1.0.0-beta.3":
+  version "1.0.0-beta.3"
+  resolved "https://registry.yarnpkg.com/@noir-lang/noir_js/-/noir_js-1.0.0-beta.3.tgz#709afad05186df929c5e0f67bbdabd5d64ed0cc2"
+  integrity sha512-Nt/rP7zRMOfNq9urD8+GtRpYqEc0K10FoKXs/v+ZTbGaP6Jkm7+F+UPj2bkWy66k1HNzsN6ortli7c7mnLDHwA==
+  dependencies:
+    "@noir-lang/acvm_js" "1.0.0-beta.3"
+    "@noir-lang/noirc_abi" "1.0.0-beta.3"
+    "@noir-lang/types" "1.0.0-beta.3"
+
 "@noir-lang/noirc_abi@1.0.0-beta.1":
   version "1.0.0-beta.1"
   resolved "https://registry.yarnpkg.com/@noir-lang/noirc_abi/-/noirc_abi-1.0.0-beta.1.tgz#8ecd9a9408aafba275b889b845cba77386742148"
@@ -1627,7 +1653,7 @@
   dependencies:
     "@noir-lang/types" "1.0.0-beta.1"
 
-"@noir-lang/noirc_abi@^1.0.0-beta.1":
+"@noir-lang/noirc_abi@1.0.0-beta.3", "@noir-lang/noirc_abi@^1.0.0-beta.1", "@noir-lang/noirc_abi@^1.0.0-beta.3":
   version "1.0.0-beta.3"
   resolved "https://registry.yarnpkg.com/@noir-lang/noirc_abi/-/noirc_abi-1.0.0-beta.3.tgz#b5a5233d59e260d66c3e2644d8bc0dff0aec228e"
   integrity sha512-L6BI64ennatwTUciHqQ14ahUFsgzL41tzghqUELzO7XojasStcWDaSMjlTxca/2pvpWtEJHDtseKe1VZWIIVXQ==
@@ -2388,6 +2414,11 @@ commander@^10.0.1:
   version "10.0.1"
   resolved "https://registry.yarnpkg.com/commander/-/commander-10.0.1.tgz#881ee46b4f77d1c1dccc5823433aa39b022cbe06"
   integrity sha512-y4Mg2tXshplEbSGzx7amzPwKKOCGuoSRP/CjEdwwk0FOGlUbq6lKuoyDZTNZkmxHdJtp54hdfY/JUrdL7Xfdug==
+
+commander@^12.1.0:
+  version "12.1.0"
+  resolved "https://registry.yarnpkg.com/commander/-/commander-12.1.0.tgz#01423b36f501259fdaac4d0e4d60c96c991585d3"
+  integrity sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA==
 
 concat-map@0.0.1:
   version "0.0.1"
