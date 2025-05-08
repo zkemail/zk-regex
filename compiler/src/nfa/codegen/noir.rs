@@ -290,7 +290,7 @@ pub fn generate_noir_code(
             code.push_str(&format!("       capture_group_ids,\n"));
             code.push_str(&format!("       capture_group_starts,\n"));
             code.push_str(&format!(
-                "       capture_group_start_indices[{}] - match_start as Field,\n",
+                "       capture_group_start_indices[{}],\n",
                 capture_group_id - 1
             ));
             code.push_str(&format!("    );\n\n"));

@@ -61,6 +61,19 @@ fn check_accept_state(
     accept_state_reached
 }
 
+/**
+ * SubjectAllRegex matching function
+ * Regex: (?:\r\n|^)subject:([a-z]+)\r\n
+ * @param in_haystack - The input haystack to search from
+ * @param match_start - The start index in the haystack for the subarray to match from
+ * @param match_length - The length of the subarray to extract from haystack
+ * @param current_states - The current states of the NFA at each index in the match subarray
+ * @param next_states - The next states of the NFA at each index in the match subarray
+ * @param capture_group_ids - The ids of the capture groups in the match subarray
+ * @param capture_group_starts - The start positions of the capture groups in the match subarray
+ * @param capture_group_start_indices - The start indices of the capture groups in the match subarray
+ * @return - tuple of substring captures as dictated by the regular expression
+ */
 pub fn regex_match<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
     in_haystack: [u8; MAX_HAYSTACK_LEN],
     match_start: u32,
@@ -71,7 +84,6 @@ pub fn regex_match<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
     capture_group_starts: [Field; MAX_MATCH_LEN],
     capture_group_start_indices: [Field; NUM_CAPTURE_GROUPS],
 ) -> (BoundedVec<u8, CAPTURE_1_MAX_LENGTH>) {
-    // regex:"(?:\r\n|^)subject:([a-z]+)\r\n"
     // resize haystack 
     let haystack: [u8; MAX_MATCH_LEN] = select_subarray(in_haystack, match_start, match_length);
 
@@ -100,13 +112,15 @@ pub fn regex_match<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
         );
     }
     assert(reached_end_state == 0, "Did not reach a valid end state");
-     // Capture Group 1
-     let capture_1 = capture_substring::<MAX_MATCH_LEN, CAPTURE_1_MAX_LENGTH, 1>(
-        haystack,
-        capture_group_ids,
-        capture_group_starts,
-        capture_group_start_indices[0],
-     );
+
+    // Capture Group 1
+    let capture_1 = capture_substring::<MAX_MATCH_LEN, CAPTURE_1_MAX_LENGTH, 1>(
+       haystack,
+       capture_group_ids,
+       capture_group_starts,
+       capture_group_start_indices[0],
+    );
+
     (capture_1)
 }
 

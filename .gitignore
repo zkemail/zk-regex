@@ -2,6 +2,7 @@ nfa.json
 target
 /compiler/pkg
 /compiler/.yarn
+node_modules
 
 Prover.toml
 prover.toml

@@ -20,6 +20,8 @@ pub fn select_subarray<
         let index = is_in_range * shifted_index as Field;
         let byte = input[index];
         let masked = byte * is_in_range as u8;
+        let output_byte = output[i];
+
         assert(masked == output[i], "Subarray: mismatch between input and output");
     }
 

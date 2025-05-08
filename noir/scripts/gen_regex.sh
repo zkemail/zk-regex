@@ -12,7 +12,7 @@ codegen_regex() {
         --decomposed-regex-path "./noir/templates/${template_name}/${template_name}.json" \
         --output-file-path ./noir/templates/${template_name} \
         --template-name "$template_name_pascal" \
-        --noir
+        --proving-framework noir
     
     mv ./noir/templates/${template_name}/${template_name}_regex.nr ./noir/src/common/${template_name}_regex.nr
     sed -i 's/zkregex/crate/g' ./noir/src/common/${template_name}_regex.nr

@@ -1,4 +1,3 @@
-
 /// NOTE ON HOW `capture_ids` and `capture_starts` WORK
 /// Example input:
 ///
@@ -21,12 +20,12 @@
 ///   capture_ids[7] == X && capture_starts[7] == 0 indicates end
 ///
 /// The process of capturing is as follows:
-/// 1. Build a bitmask `is_capture` for capture ID X, creating a new array where 1 is only set if 
+/// 1. Build a bitmask `is_capture` for capture ID X, creating a new array where 1 is only set if
 ///    the `capture_id` value matches the expected capture group id (done by `build_is_capture`):
 ///
 ///   capture_ids = [0, 0, 0, X, 0, 0, 0, X, 0, 0]
 ///   is_capture  = [0, 0, 0, 1, 0, 0, 0, 1, 0, 0]
-/// 
+///
 /// 2. Build a bitmask `is_capture_start` - this mask looks for `is_capture[i]` to be 1 and
 ///    `capture_starts[i]` to be 1. All values before this is found should be masked to 0, and all values
 ///    from this index to the end should be masked to 1 (done by `build_capture_start_end_mask`):
@@ -76,8 +75,9 @@ pub fn capture_substring<let HAYSTACK_MAX_LENGTH: u32, let MATCH_MAX_LEN: u32, l
     // determine if an index is the start or end of the capture group
     let is_capture = build_is_capture::<HAYSTACK_MAX_LENGTH, CAPTURE_GROUP>(capture_ids);
     // build start and end masks
-    let (is_capture_start, is_capture_end) = build_capture_start_end_mask(is_capture, capture_starts);
-    
+    let (is_capture_start, is_capture_end) =
+        build_capture_start_end_mask(is_capture, capture_starts);
+
     // build capture mask
     let capture_mask = unsafe { __build_capture_mask(is_capture_start, is_capture_end) };
     for i in 0..HAYSTACK_MAX_LENGTH {
@@ -135,12 +135,19 @@ fn substring_from_mask<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
     let start_index_is_zero = (start_index == 0) as Field;
     let start_index_to_check = start_index - (1 - start_index_is_zero);
     let preceding_mask_value = mask[start_index_to_check];
-    let preceding_mask_check = start_index_is_zero + ((1 - start_index_is_zero) * (1 - preceding_mask_value));
-    assert(preceding_mask_check == 1, "Invalid substring start index: preceding mask value is not 0");
-    
+    let preceding_mask_check =
+        start_index_is_zero + ((1 - start_index_is_zero) * (1 - preceding_mask_value));
+    assert(
+        preceding_mask_check == 1,
+        "Invalid substring start index: preceding mask value is not 0",
+    );
+
     // check mask start is 1
     // is this necessary?
-    assert(mask[start_index] == 1, "Invalid substring start index: start index mask value is not 1");
+    assert(
+        mask[start_index] == 1,
+        "Invalid substring start index: start index mask value is not 1",
+    );
 
     // check assigned value
     for i in 0..MAX_MATCH_LEN {
@@ -184,7 +191,8 @@ fn build_capture_start_end_mask<let HAYSTACK_MAX_LENGTH: u32>(
     is_capture: [Field; HAYSTACK_MAX_LENGTH],
     capture_starts: [Field; HAYSTACK_MAX_LENGTH],
 ) -> ([Field; HAYSTACK_MAX_LENGTH], [Field; HAYSTACK_MAX_LENGTH]) {
-    let (start_mask, end_mask) = unsafe { __build_capture_start_end_mask(is_capture, capture_starts) };
+    let (start_mask, end_mask) =
+        unsafe { __build_capture_start_end_mask(is_capture, capture_starts) };
 
     // check first byte of capture start mask
     let is_capture_start_temp = (capture_starts[0] - 1 == 0) as Field;
@@ -193,22 +201,25 @@ fn build_capture_start_end_mask<let HAYSTACK_MAX_LENGTH: u32>(
 
     // check last byte of capture end mask
     let is_capture_end_temp = (capture_starts[HAYSTACK_MAX_LENGTH - 1] == 0) as Field;
-    let expected_end_mask = (is_capture[HAYSTACK_MAX_LENGTH - 1] * is_capture_end_temp == 1) as Field;
+    let expected_end_mask =
+        (is_capture[HAYSTACK_MAX_LENGTH - 1] * is_capture_end_temp == 1) as Field;
     assert(end_mask[HAYSTACK_MAX_LENGTH - 1] == expected_end_mask, "Invalid Capture End Mask");
-    
+
     // check all other bytes of capture start and end masks
     for i in 1..HAYSTACK_MAX_LENGTH {
         // capture group start mask
         let is_capture_start_temp = (capture_starts[i] - 1 == 0) as Field;
         let is_capture_start_valid_temp = ((is_capture[i] * is_capture_start_temp) == 1) as Field;
-        let expected_start_mask = (1 - (1 - is_capture_start_valid_temp) * (1 - start_mask[i - 1]) == 1) as Field;
+        let expected_start_mask =
+            (1 - (1 - is_capture_start_valid_temp) * (1 - start_mask[i - 1]) == 1) as Field;
         assert(start_mask[i] == expected_start_mask, "Invalid Capture Start Mask");
 
         // capture group end mask
         let j = HAYSTACK_MAX_LENGTH - 1 - i;
         let is_capture_end_temp = (capture_starts[j] == 0) as Field;
         let is_capture_end_valid_temp = (is_capture[j] * is_capture_end_temp == 1) as Field;
-        let expected_end_mask = (1 - (1 - is_capture_end_valid_temp) * (1 - end_mask[j + 1]) == 1) as Field;
+        let expected_end_mask =
+            (1 - (1 - is_capture_end_valid_temp) * (1 - end_mask[j + 1]) == 1) as Field;
         assert(end_mask[j] == expected_end_mask, "Invalid Capture End Mask");
     }
     (start_mask, end_mask)
@@ -310,9 +321,11 @@ unconstrained fn __substring_from_mask<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_
     let mut substring = BoundedVec::new();
     for i in 0..MAX_MATCH_LEN {
         let index = start_index + i as Field;
-        let mask_value = mask[index];
-        if mask_value == 1 {
-            substring.push(haystack[index]);
+        if index as u32 < MAX_HAYSTACK_LEN {
+            let mask_value = mask[index];
+            if mask_value == 1 {
+                substring.push(haystack[index]);
+            }
         }
     }
     substring
