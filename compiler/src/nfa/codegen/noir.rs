@@ -179,13 +179,13 @@ pub fn generate_noir_code(
     if nfa.num_capture_groups > 0 {
         for i in 1..=nfa.num_capture_groups {
             code.push_str(&format!(
-                "    capture_group_{}_ids: [Field; MAX_MATCH_LEN],\n",
+                "    capture_group_{}_id: [Field; MAX_MATCH_LEN],\n",
                 i
             ));
         }
         for i in 1..=nfa.num_capture_groups {
             code.push_str(&format!(
-                "    capture_group_{}_starts: [Field; MAX_MATCH_LEN],\n",
+                "    capture_group_{}_start: [Field; MAX_MATCH_LEN],\n",
                 i
             ));
         }

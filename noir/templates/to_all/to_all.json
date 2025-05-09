@@ -1,7 +1,0 @@
-{
-    "parts": [
-        { "Pattern": "(?:\r\n|^)to:" },
-        { "PublicPattern": ["[^\r\n]+", 64] },
-        { "Pattern": "\r\n" }
-    ]
-}
