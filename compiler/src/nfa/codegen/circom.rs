@@ -14,7 +14,6 @@
 //! - Start/accept state validation
 
 use serde::Serialize;
-use std::collections::BTreeSet;
 
 use crate::nfa::NFAGraph;
 use crate::nfa::error::{NFAError, NFAResult};
@@ -35,10 +34,10 @@ pub struct CircomInputs {
     pub next_states: Vec<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "captureGroupIds")]
-    pub capture_group_ids: Option<Vec<usize>>,
+    pub capture_group_ids: Option<Vec<Vec<usize>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "captureGroupStarts")]
-    pub capture_group_starts: Option<Vec<u8>>,
+    pub capture_group_starts: Option<Vec<Vec<u8>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "captureGroupStartIndices")]
     pub capture_group_start_indices: Option<Vec<usize>>,
@@ -85,18 +84,12 @@ pub fn generate_circom_code(
 
     let (start_states, accept_states, transitions) = generate_circuit_data(nfa)?;
 
-    // Validate capture groups
-    let capture_group_set: BTreeSet<_> = transitions
-        .iter()
-        .filter_map(|(_, _, _, _, cap)| cap.map(|(id, _)| id))
-        .collect();
-
-    if !capture_group_set.is_empty() {
+    if nfa.num_capture_groups > 0 {
         if let Some(max_bytes) = max_substring_bytes.as_ref() {
-            if max_bytes.len() < capture_group_set.len() {
+            if max_bytes.len() != nfa.num_capture_groups {
                 return Err(NFAError::InvalidCapture(format!(
                     "Insufficient max_substring_bytes: need {} but got {}",
-                    capture_group_set.len(),
+                    nfa.num_capture_groups,
                     max_bytes.len()
                 )));
             }
@@ -113,8 +106,6 @@ pub fn generate_circom_code(
             ));
         }
     }
-
-    let has_capture_groups = !capture_group_set.is_empty();
 
     let mut code = String::new();
 
@@ -143,9 +134,21 @@ pub fn generate_circom_code(
     code.push_str("    signal input nextStates[maxMatchBytes];\n");
 
     // Only add capture group signals if needed
-    if has_capture_groups {
-        code.push_str("    signal input captureGroupIds[maxMatchBytes];\n");
-        code.push_str("    signal input captureGroupStarts[maxMatchBytes];\n\n");
+    if nfa.num_capture_groups > 0 {
+        for i in 0..nfa.num_capture_groups {
+            code.push_str(
+                format!("    signal input captureGroup{}Id[maxMatchBytes];\n", i + 1).as_str(),
+            );
+        }
+        for i in 0..nfa.num_capture_groups {
+            code.push_str(
+                format!(
+                    "    signal input captureGroup{}Start[maxMatchBytes];\n",
+                    i + 1
+                )
+                .as_str(),
+            );
+        }
     }
 
     code.push_str("    signal output isValid;\n\n");
@@ -234,63 +237,103 @@ pub fn generate_circom_code(
     code.push_str("            isTransitionLinked[i] === isWithinPathLengthMinusOne[i];\n");
     code.push_str("        }\n\n");
 
-    if has_capture_groups {
+    if nfa.num_capture_groups > 0 {
+        // Prepare strings for input signal arrays, used in each transition's Circom call
+        let input_signal_cg_ids_list_str = (1..=nfa.num_capture_groups)
+            .map(|k| format!("captureGroup{}Ids[i]", k))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let input_signal_cg_starts_list_str = (1..=nfa.num_capture_groups)
+            .map(|k| format!("captureGroup{}Starts[i]", k))
+            .collect::<Vec<_>>()
+            .join(", ");
+
         for (transition_idx, (curr_state, start, end, next_state, capture_info)) in
             transitions.iter().enumerate()
         {
-            let (capture_group_id, capture_group_start) = match capture_info {
-                Some(capture_info) => (capture_info.0, capture_info.1 as u8),
-                None => (0, 0),
+            // These vectors store the properties of *this specific transition*
+            // regarding which capture groups it affects and how.
+            let mut transition_prop_cg_ids = vec![0; nfa.num_capture_groups];
+            let mut transition_prop_cg_starts = vec![0; nfa.num_capture_groups];
+
+            let capture_details_for_comment = capture_info
+                .as_ref()
+                .map(|infos| {
+                    infos
+                        .iter()
+                        .map(|(id, is_start_bool)| {
+                            if *id > 0 && *id <= nfa.num_capture_groups {
+                                transition_prop_cg_ids[*id - 1] = *id;
+                                transition_prop_cg_starts[*id - 1] = *is_start_bool as u8;
+                            }
+                            format!("({}, {})", id, *is_start_bool as u8)
+                        })
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                })
+                .unwrap_or_else(|| "".to_string());
+
+            let capture_comment_segment = if capture_details_for_comment.is_empty() {
+                "Capture Group: []".to_string()
+            } else {
+                format!("Capture Group:[ {}]", capture_details_for_comment)
             };
+
+            // String representation of this transition's capture group properties
+            let transition_prop_cg_ids_str = transition_prop_cg_ids
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(", ");
+            let transition_prop_cg_starts_str = transition_prop_cg_starts
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(", ");
 
             if start == end {
                 code.push_str(
                     format!(
-                        "        // Transition {}: {} -[{}]-> {} | Capture Group: ({}, {})\n",
-                        transition_idx,
-                        curr_state,
-                        start,
-                        next_state,
-                        capture_group_id,
-                        capture_group_start
+                        "        // Transition {}: {} -[{}]-> {} | {}\n",
+                        transition_idx, curr_state, start, next_state, capture_comment_segment
                     )
                     .as_str(),
                 );
                 code.push_str(
                     format!(
-                        "        isValidTransition[{}][i] <== CheckByteTransitionWithCapture()({}, {}, {}, {}, {}, currStates[i], nextStates[i], haystack[i], captureGroupIds[i], captureGroupStarts[i]);\n",
+                        "        isValidTransition[{}][i] <== CheckByteTransitionWithCapture({})({}, {}, {}, [{}], [{}], currStates[i], nextStates[i], haystack[i], [{}], [{}]);\n",
                         transition_idx,
+                        nfa.num_capture_groups,
                         curr_state,
                         next_state,
                         start,
-                        capture_group_id,
-                        capture_group_start
+                        transition_prop_cg_ids_str,
+                        transition_prop_cg_starts_str,
+                        input_signal_cg_ids_list_str, // Array of input signals
+                        input_signal_cg_starts_list_str // Array of input signals
                     ).as_str()
                 );
             } else {
                 code.push_str(
                     format!(
-                        "        // Transition {}: {} -[{}-{}]-> {} | Capture Group: ({}, {})\n",
-                        transition_idx,
-                        curr_state,
-                        start,
-                        end,
-                        next_state,
-                        capture_group_id,
-                        capture_group_start
+                        "        // Transition {}: {} -[{}-{}]-> {} | {}\n",
+                        transition_idx, curr_state, start, end, next_state, capture_comment_segment
                     )
                     .as_str(),
                 );
                 code.push_str(
                     format!(
-                        "        isValidTransition[{}][i] <== CheckByteRangeTransitionWithCapture()({}, {}, {}, {}, {}, {}, currStates[i], nextStates[i], haystack[i], captureGroupIds[i], captureGroupStarts[i]);\n",
+                        "        isValidTransition[{}][i] <== CheckByteRangeTransitionWithCapture({})({}, {}, {}, {}, [{}], [{}], currStates[i], nextStates[i], haystack[i], [{}], [{}]);\n",
                         transition_idx,
+                        nfa.num_capture_groups,
                         curr_state,
                         next_state,
                         start,
                         end,
-                        capture_group_id,
-                        capture_group_start
+                        transition_prop_cg_ids_str,
+                        transition_prop_cg_starts_str,
+                        input_signal_cg_ids_list_str, // Array of input signals
+                        input_signal_cg_starts_list_str // Array of input signals
                     ).as_str()
                 );
             }
@@ -375,15 +418,15 @@ pub fn generate_circom_code(
     code.push_str("    }\n\n");
     code.push_str("    isValid <== isValidRegex[maxMatchBytes-1];\n\n");
 
-    if has_capture_groups {
+    if nfa.num_capture_groups > 0 {
         code.push_str(
             format!(
                 "    signal input captureGroupStartIndices[{}];\n\n",
-                capture_group_set.len()
+                nfa.num_capture_groups
             )
             .as_str(),
         );
-        for capture_group_id in capture_group_set {
+        for capture_group_id in 1..=nfa.num_capture_groups {
             let max_substring_bytes =
                 if let Some(max_substring_bytes) = max_substring_bytes.as_ref() {
                     max_substring_bytes[capture_group_id - 1]
@@ -397,12 +440,14 @@ pub fn generate_circom_code(
             code.push_str(format!("    // Capture Group {}\n", capture_group_id).as_str());
             code.push_str(
                 format!(
-                    "    signal output capture{}[{}] <== CaptureSubstring(maxMatchBytes, {}, {})(captureGroupStartIndices[{}], haystack, captureGroupIds, captureGroupStarts);\n",
+                    "    signal output capture{}[{}] <== CaptureSubstring(maxMatchBytes, {}, {})(captureGroupStartIndices[{}], haystack, captureGroup{}Id, captureGroup{}Start);\n",
                     capture_group_id,
                     max_substring_bytes,
                     max_substring_bytes,
                     capture_group_id,
-                    capture_group_id - 1
+                    capture_group_id,
+                    capture_group_id,
+                    capture_group_id
                 ).as_str()
             );
         }

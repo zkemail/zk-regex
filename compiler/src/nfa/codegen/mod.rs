@@ -7,7 +7,7 @@ use circom::CircomInputs;
 use noir::NoirInputs;
 use regex_automata::meta::Regex;
 use serde::Serialize;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::{
     ProverInputs, ProvingFramework,
@@ -25,9 +25,9 @@ pub struct CircuitInputs {
     curr_states: Vec<usize>,
     next_states: Vec<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    capture_group_ids: Option<Vec<usize>>,
+    capture_group_ids: Option<Vec<Vec<usize>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    capture_group_starts: Option<Vec<u8>>,
+    capture_group_starts: Option<Vec<Vec<u8>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     capture_group_start_indices: Option<Vec<usize>>,
 }
@@ -37,7 +37,7 @@ pub fn generate_circuit_data(
 ) -> NFAResult<(
     Vec<usize>,
     Vec<usize>,
-    Vec<(usize, u8, u8, usize, Option<(usize, bool)>)>,
+    Vec<(usize, u8, u8, usize, Option<BTreeSet<(usize, bool)>>)>,
 )> {
     if nfa.start_states.is_empty() {
         return Err(NFAError::Verification("NFA has no start states".into()));
@@ -60,7 +60,8 @@ pub fn generate_circuit_data(
 
     // Group and convert to ranges - use BTreeMap for deterministic ordering
     let mut range_transitions = Vec::new();
-    let mut grouped: BTreeMap<(usize, usize, Option<(usize, bool)>), Vec<u8>> = BTreeMap::new();
+    let mut grouped: BTreeMap<(usize, usize, Option<BTreeSet<(usize, bool)>>), Vec<u8>> =
+        BTreeMap::new();
 
     for (src, byte, dst, capture) in transitions {
         if src >= nfa.nodes.len() || dst >= nfa.nodes.len() {
@@ -75,7 +76,12 @@ pub fn generate_circuit_data(
     // Convert to ranges
     for ((src, dst, capture), mut bytes) in grouped {
         if bytes.is_empty() {
-            continue;
+            // This case should ideally not be reached if the grouping logic is correct
+            // and transitions always have associated bytes.
+            return Err(NFAError::InvalidTransition(format!(
+                "Found an empty byte list for transition group (src: {}, dst: {}, capture: {:?}). This indicates an issue with NFA processing.",
+                src, dst, capture
+            )));
         }
 
         bytes.sort_unstable();
@@ -84,12 +90,12 @@ pub fn generate_circuit_data(
 
         for &byte in &bytes[1..] {
             if byte != prev + 1 {
-                range_transitions.push((src, start, prev, dst, capture));
+                range_transitions.push((src, start, prev, dst, capture.clone()));
                 start = byte;
             }
             prev = byte;
         }
-        range_transitions.push((src, start, prev, dst, capture));
+        range_transitions.push((src, start, prev, dst, capture.clone()));
     }
 
     Ok((start_states, accept_states, range_transitions))
@@ -144,14 +150,33 @@ pub fn generate_circuit_inputs(
     // Handle capture groups if they exist
     let (capture_group_ids, capture_group_starts, capture_group_start_indices) =
         if path.iter().any(|(_, _, _, c)| c.is_some()) {
-            let mut ids = path
-                .iter()
-                .map(|(_, _, _, c)| c.map(|(id, _)| id).unwrap_or(0))
-                .collect::<Vec<_>>();
-            let mut starts = path
-                .iter()
-                .map(|(_, _, _, c)| c.map(|(_, start)| start as u8).unwrap_or(0))
-                .collect::<Vec<_>>();
+            // Initialize structures:
+            // capture_group_ids[group_idx_0_based][step_idx]
+            let mut capture_group_ids: Vec<Vec<usize>> =
+                vec![vec![0; max_match_len]; nfa.num_capture_groups];
+            // capture_group_starts[group_idx_0_based][step_idx]
+            let mut capture_group_starts: Vec<Vec<u8>> =
+                vec![vec![0; max_match_len]; nfa.num_capture_groups];
+
+            // Populate these based on the actual path traversal
+            // path_len is the actual number of steps taken for the match
+            for step_idx in 0..path_len {
+                // path[step_idx].3 is the Option<BTreeSet<(usize group_id, bool is_start)>>
+                if let Some(capture_set) = &path[step_idx].3 {
+                    for (group_id, is_start) in capture_set.iter() {
+                        // group_id is 1-based from the regex engine
+                        if *group_id > 0 && *group_id <= nfa.num_capture_groups {
+                            let group_vector_idx = *group_id - 1; // Convert to 0-based for vector access
+
+                            // Record the group ID if active
+                            capture_group_ids[group_vector_idx][step_idx] = *group_id;
+                            // Record if it's a start or end/continuation
+                            capture_group_starts[group_vector_idx][step_idx] =
+                                if *is_start { 1 } else { 0 };
+                        }
+                    }
+                }
+            }
 
             // Use regex_automata to get capture start indices
             let re = Regex::new(&nfa.regex).map_err(|e| {
@@ -165,11 +190,11 @@ pub fn generate_circuit_inputs(
                 .map(|m| m.start)
                 .collect();
 
-            // Pad arrays
-            ids.resize(max_match_len, 0);
-            starts.resize(max_match_len, 0);
-
-            (Some(ids), Some(starts), Some(start_indices))
+            (
+                Some(capture_group_ids),
+                Some(capture_group_starts),
+                Some(start_indices),
+            )
         } else {
             (None, None, None)
         };
