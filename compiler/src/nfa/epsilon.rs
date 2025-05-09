@@ -64,31 +64,32 @@ impl NFAGraph {
                                 .insert(actual_target);
 
                             // Collect all captures for the new transition: state --byte--> actual_target
+                            let captures_for_this_transition = new_captures[state]
+                                .entry(actual_target)
+                                .or_insert_with(BTreeSet::new);
 
-                            // 1. Captures from the epsilon path leading from `state` up to `r_state`
-                            // (before the byte transition at `r_state`).
-                            for &(_original_epsilon_source_state, capture_info) in &closure.captures
+                            // 1. Add START events from the epsilon path leading from `state` up to `r_state`
+                            //    (before the byte transition at `r_state`).
+                            //    `closure` is `closures[state]`.
+                            for &(_original_epsilon_source_state, (group_id, is_start_event)) in
+                                &closure.captures
                             {
-                                new_captures[state]
-                                    .entry(actual_target)
-                                    .or_insert_with(BTreeSet::new)
-                                    .insert(capture_info);
+                                if is_start_event {
+                                    // This is a START event for group_id
+                                    captures_for_this_transition.insert((group_id, true));
+                                }
                             }
 
-                            // 2. If `actual_target` itself leads to an accept state via an
-                            // epsilon path, and that epsilon path has captures, those captures
-                            // also belong to the new transition `state --byte--> actual_target`.
+                            // 2. Add END events from the epsilon path starting FROM `actual_target`
+                            //    (after `byte` is consumed and actual_target is reached).
+                            //    `closure_of_actual_target` is `closures[actual_target]`.
                             let closure_of_actual_target = &closures[actual_target];
-                            if closure_of_actual_target.is_accept {
-                                for &(
-                                    _orig_eps_src_from_target_closure,
-                                    cap_info_from_target_closure,
-                                ) in &closure_of_actual_target.captures
-                                {
-                                    new_captures[state]
-                                        .entry(actual_target)
-                                        .or_insert_with(BTreeSet::new)
-                                        .insert(cap_info_from_target_closure);
+                            for &(_orig_eps_src_from_target_closure, (group_id, is_start_event)) in
+                                &closure_of_actual_target.captures
+                            {
+                                if !is_start_event {
+                                    // This is an END event for group_id
+                                    captures_for_this_transition.insert((group_id, false));
                                 }
                             }
                         }

@@ -299,8 +299,8 @@ pub fn generate_noir_code(
                 )
             );
             code.push_str(&format!("       haystack,\n"));
-            code.push_str(&format!("       capture_group_{}_ids,\n", i));
-            code.push_str(&format!("       capture_group_{}_starts,\n", i));
+            code.push_str(&format!("       capture_group_{}_id,\n", i));
+            code.push_str(&format!("       capture_group_{}_start,\n", i));
             code.push_str(&format!(
                 "       capture_group_start_indices[{}] - (match_start as Field),\n",
                 i - 1

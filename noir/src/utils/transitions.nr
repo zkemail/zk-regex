@@ -49,7 +49,7 @@ pub fn check_transition_with_captures<let TABLE_SIZE: u32, let NUM_CAPTURE_GROUP
     let key = current_state + haystack_byte as Field * R as Field + next_state * R_SQUARED as Field;
 
     let (is_valid, capture_starts_from_table, capture_participations_from_table) =
-        unpack_sparse_value(key, table);
+        unpack_sparse_value::<TABLE_SIZE, NUM_CAPTURE_GROUPS>(key, table);
 
     let mut error_accumulator: Field = 1 - is_valid;
     let base_weight: Field = 3;

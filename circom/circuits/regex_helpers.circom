@@ -57,48 +57,57 @@ template CheckByteRangeTransition() {
     out <== MultiAND(4)([isCurrentState, isNextState, isByteValid[0], isByteValid[1]]);
 }
 
-template CheckByteTransitionWithCapture() {
+template CheckByteTransitionWithCapture(numCaptureGroups) {
     signal input currState;
     signal input nextState;
     signal input byte;
-    signal input captureGroupId;
-    signal input captureGroupStart;
+    signal input captureGroupId[numCaptureGroups];
+    signal input captureGroupStart[numCaptureGroups];
 
     signal input inCurrState;
     signal input inNextState;
     signal input inByte;
-    signal input inCaptureGroupId;
-    signal input inCaptureGroupStart;
+    signal input inCaptureGroupId[numCaptureGroups];
+    signal input inCaptureGroupStart[numCaptureGroups];
     signal output out;  
 
-    signal isCaptureGroupEqual <== IsEqual()([captureGroupId, inCaptureGroupId]);
-    signal isCaptureGroupStartEqual <== IsEqual()([captureGroupStart, inCaptureGroupStart]);
+    component isCaptureGroupEqual = MultiAND(numCaptureGroups);
+    component isCaptureGroupStartEqual = MultiAND(numCaptureGroups);
+    
+    for (var i = 0; i < numCaptureGroups; i++) {
+        isCaptureGroupEqual.in[i] <== IsEqual()([captureGroupId[i], inCaptureGroupId[i]]);
+        isCaptureGroupStartEqual.in[i] <== IsEqual()([captureGroupStart[i], inCaptureGroupStart[i]]);
+    }
     signal isValidTransition <== CheckByteTransition()(currState, nextState, byte, inCurrState, inNextState, inByte);
     
-    out <== MultiAND(3)([isValidTransition, isCaptureGroupEqual, isCaptureGroupStartEqual]);
+    out <== MultiAND(3)([isValidTransition, isCaptureGroupEqual.out, isCaptureGroupStartEqual.out]);
 }
 
-template CheckByteRangeTransitionWithCapture() {
+template CheckByteRangeTransitionWithCapture(numCaptureGroups) {
     signal input currState;
     signal input nextState;
     signal input byteStart;
     signal input byteEnd;   
-    signal input captureGroupId;
-    signal input captureGroupStart;
+    signal input captureGroupId[numCaptureGroups];
+    signal input captureGroupStart[numCaptureGroups];
 
     signal input inCurrState;
     signal input inNextState;
     signal input inByte;    
-    signal input inCaptureGroupId;
-    signal input inCaptureGroupStart;
+    signal input inCaptureGroupId[numCaptureGroups];
+    signal input inCaptureGroupStart[numCaptureGroups];
 
     signal output out;
 
-    signal isCaptureGroupEqual <== IsEqual()([captureGroupId, inCaptureGroupId]);
-    signal isCaptureGroupStartEqual <== IsEqual()([captureGroupStart, inCaptureGroupStart]);    
+    component isCaptureGroupEqual = MultiAND(numCaptureGroups);
+    component isCaptureGroupStartEqual = MultiAND(numCaptureGroups);
+    for (var i = 0; i < numCaptureGroups; i++) {
+        isCaptureGroupEqual.in[i] <== IsEqual()([captureGroupId[i], inCaptureGroupId[i]]);
+        isCaptureGroupStartEqual.in[i] <== IsEqual()([captureGroupStart[i], inCaptureGroupStart[i]]);
+    }
     signal isValidTransition <== CheckByteRangeTransition()(currState, nextState, byteStart, byteEnd, inCurrState, inNextState, inByte);
 
-    out <== MultiAND(3)([isValidTransition, isCaptureGroupEqual, isCaptureGroupStartEqual]);
+    out <== MultiAND(3)([isValidTransition, isCaptureGroupEqual.out, isCaptureGroupStartEqual.out]);
 }
 
 template CaptureSubstring(maxBytes, maxSubstringBytes, captureId) {
