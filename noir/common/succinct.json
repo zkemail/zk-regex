@@ -1,0 +1,6 @@
+{
+    "parts": [
+        { "PublicPattern": ["Welcome to the ", 15] },
+        { "PublicPattern": ["Succinct Residency!", 19] }
+    ]
+}
