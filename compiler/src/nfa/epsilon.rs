@@ -98,15 +98,48 @@ impl NFAGraph {
             }
         }
 
-        // Handle start states - only make byte transition states reachable via epsilon into start states
-        for &start in &self.start_states {
-            new_start_states.insert(start);
+        // Handle start states
+        // Preserve original start states to iterate over them
+        let original_start_states_snapshot: BTreeSet<usize> =
+            self.start_states.iter().copied().collect();
+        new_start_states.clear();
 
-            for &r_state in &closures[start].states {
-                if has_byte_transitions[r_state] {
-                    new_start_states.insert(r_state);
+        for &orig_start in &original_start_states_snapshot {
+            new_start_states.insert(orig_start); // The original start state is always kept
+
+            // Check if the closure of this original start state contains any START captures.
+            // If so, we don't want to create alternative start points from within this closure,
+            // as that might allow bypassing these essential start captures.
+            let mut has_start_captures_in_orig_closure = false;
+            if let Some(orig_closure) = closures.get(orig_start) {
+                for &(_, (_group_id, is_start_event)) in &orig_closure.captures {
+                    if is_start_event {
+                        has_start_captures_in_orig_closure = true;
+                        break;
+                    }
                 }
             }
+
+            if !has_start_captures_in_orig_closure {
+                // If no start captures in orig_start's closure, it's safe to add
+                // other states from its closure that have byte transitions as new start states.
+                if let Some(orig_closure) = closures.get(orig_start) {
+                    for &r_state in &orig_closure.states {
+                        if r_state == orig_start {
+                            continue;
+                        }
+                        // Check if r_state (a state reachable via epsilon from orig_start)
+                        // itself is the source of a byte transition.
+                        // The has_byte_transitions vec was populated based on nodes[r_state].byte_transitions
+                        if r_state < has_byte_transitions.len() && has_byte_transitions[r_state] {
+                            new_start_states.insert(r_state);
+                        }
+                    }
+                }
+            }
+            // If has_start_captures_in_orig_closure is true, we *only* keep orig_start.
+            // This forces paths through orig_start, ensuring its transitions (which will
+            // have correctly accumulated these start captures) are used.
         }
 
         // Apply changes
