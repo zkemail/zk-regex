@@ -1,0 +1,17 @@
+{
+    "pass": [
+        "b",
+        "ab",
+        "aab",
+        "aaab",
+        "aaaaab",
+        "aaaaaaaaaaaaaaaaaaaaab",
+        "ba",
+        "acb",
+        "bb",
+        "abc",
+        "cab",
+        "bab"
+    ],
+    "fail": ["a", "aaa", "", " "]
+}

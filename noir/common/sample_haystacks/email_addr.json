@@ -1,0 +1,32 @@
+{
+    "pass": [
+        "test@example.com",
+        "user.name+tag+sorting@example.com",
+        "user_name@subdomain.example.co.uk",
+        "firstname.lastname@example.com",
+        "email@example-one.com",
+        "_______@example.com",
+        "email@example.name",
+        "email@example.museum",
+        "email@example.co.jp",
+        "firstname-lastname@example.com",
+        "much.\"more\\ unusual\"@example.com",
+        "very.unusual.\"@\".unusual.com@example.com",
+        "email@example@example.com",
+        "Joe Smith <email@example.com>",
+        "email.@example.com",
+        "email..email@example.com",
+        "email@example.com (Joe Smith)",
+        "email@example",
+        "email@-example.com",
+        "email@example..com",
+        ".email@example.com",
+        "Abc..123@example.com"
+    ],
+    "fail": [
+        "plainaddress",
+        "#@%^%#$@#$@#.com",
+        "@example.com",
+        "email.example.com"
+    ]
+}

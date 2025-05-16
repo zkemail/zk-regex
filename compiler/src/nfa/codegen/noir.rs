@@ -468,13 +468,7 @@ fn check_accept_state(
     // should equal 1 since haystack_index should be 1 less than asserted_match)length
     let asserted_path_traversed = (asserted_match_length - haystack_index == 1) as Field;
 
-    // if accept state reached, check asserted path traversed. Else return 1
-    let valid_condition =
-        (1 - accept_state_reached_bool) + (accept_state_reached_bool * asserted_path_traversed);
-    assert(valid_condition == 1, "Accept state reached but not at asserted path end");
-
-    // return accept_state reached value
-    accept_state_reached
+    (1 - (accept_state_reached_bool * asserted_path_traversed))
 }}
 
 "#
