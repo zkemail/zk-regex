@@ -114,7 +114,8 @@ pub fn generate_circom_code(
     code.push_str("include \"circomlib/circuits/comparators.circom\";\n");
     code.push_str("include \"circomlib/circuits/gates.circom\";\n");
     code.push_str("include \"@zk-email/zk-regex-circom/circuits/regex_helpers.circom\";\n");
-    code.push_str("include \"@zk-email/circuits/utils/array.circom\";\n\n");
+    code.push_str("include \"@zk-email/circuits/utils/array.circom\";\n");
+    code.push_str("include \"@zk-email/circuits/utils/regex.circom\";\n\n");
 
     let display_pattern = escape_regex_for_display(regex_pattern);
     code.push_str(format!("// regex: {}\n", display_pattern).as_str());
@@ -240,11 +241,11 @@ pub fn generate_circom_code(
     if nfa.num_capture_groups > 0 {
         // Prepare strings for input signal arrays, used in each transition's Circom call
         let input_signal_cg_ids_list_str = (1..=nfa.num_capture_groups)
-            .map(|k| format!("captureGroup{}Ids[i]", k))
+            .map(|k| format!("captureGroup{}Id[i]", k))
             .collect::<Vec<_>>()
             .join(", ");
         let input_signal_cg_starts_list_str = (1..=nfa.num_capture_groups)
-            .map(|k| format!("captureGroup{}Starts[i]", k))
+            .map(|k| format!("captureGroup{}Start[i]", k))
             .collect::<Vec<_>>()
             .join(", ");
 
@@ -445,7 +446,7 @@ pub fn generate_circom_code(
                     max_substring_bytes,
                     max_substring_bytes,
                     capture_group_id,
-                    capture_group_id,
+                    capture_group_id - 1,
                     capture_group_id,
                     capture_group_id
                 ).as_str()
