@@ -515,7 +515,14 @@ fn packed_transition_sparse_array(
     let mut keys = Vec::new();
     let mut values = Vec::new();
 
+    let mut current_max_state_id_in_transitions = 0; // To track the actual max state ID
+
     for (state_idx, start_byte, end_byte, dest_state, capture_opt) in transitions {
+        // Update the actual maximum state ID encountered
+        current_max_state_id_in_transitions = current_max_state_id_in_transitions
+            .max(*state_idx)
+            .max(*dest_state);
+
         let mut participations_flags = 0u32;
         let mut starts_flags = 0u32;
 
@@ -545,21 +552,12 @@ fn packed_transition_sparse_array(
         }
     }
 
-    // The max_size for SparseArray should be determined by the maximum possible key value.
-    // This requires knowing the maximum number of states in the NFA.
-    // Assuming max_states is, for example, 200 as per the old comment's context.
-    // This should ideally be passed or derived accurately (e.g., nfa.states().len()).
-    let max_states_assumed = if num_capture_groups > 0 {
-        200
-    } else {
-        transitions.len().max(1)
-    }; // A placeholder for actual max states
     let max_byte_val = 255; // Max value for a u8
-    // Calculate max possible key: (max_state_idx) + max_byte_val * r + (max_dest_idx) * r^2
-    // Assuming state indices are 0-based up to max_states_assumed - 1
-    let estimated_max_key_val = max_states_assumed.saturating_sub(1)
-        + max_byte_val * r
-        + max_states_assumed.saturating_sub(1) * r * r;
+
+    let derived_max_state_id = current_max_state_id_in_transitions;
+
+    let estimated_max_key_val =
+        derived_max_state_id + max_byte_val * r + derived_max_state_id * r * r;
     let max_size = FieldElement::from(estimated_max_key_val + 1); // +1 because keys can be 0 up to estimated_max_key_val
 
     SparseArray::create(&keys, &values, max_size)
