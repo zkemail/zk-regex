@@ -1,8 +1,8 @@
 use clap::{Parser, Subcommand};
 use std::{fs::File, path::PathBuf, str::FromStr};
 use zk_regex_compiler::{
-    DecomposedRegexConfig, NFAGraph, ProvingFramework, gen_from_decomposed, gen_from_raw,
-    generate_circuit_inputs, save_outputs, validate_cli_template_name,
+    CompilerError, DecomposedRegexConfig, NFAGraph, ProvingFramework, gen_circuit_inputs,
+    gen_from_decomposed, gen_from_raw, save_outputs, validate_cli_template_name,
 };
 
 #[derive(Parser)]
@@ -93,14 +93,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let config: DecomposedRegexConfig =
                 serde_json::from_reader(File::open(decomposed_regex_path)?)?;
             let proving_framework = ProvingFramework::from_str(&proving_framework)?;
-            let (nfa, code) = gen_from_decomposed(config, &template_name, proving_framework)?;
-            save_outputs(
-                &nfa,
-                code,
-                &output_file_path,
-                &template_name,
-                &proving_framework.file_extension(),
-            )?;
+
+            match gen_from_decomposed(config, &template_name, proving_framework) {
+                Ok((nfa, code)) => {
+                    save_outputs(
+                        &nfa,
+                        code,
+                        &output_file_path,
+                        &template_name,
+                        &proving_framework.file_extension(),
+                    )?;
+                }
+                Err(compiler_err) => {
+                    eprintln!("\n❌ Compilation failed:");
+                    eprintln!("Error Code: {}", compiler_err.code());
+                    eprintln!("Message: {}", compiler_err.user_message());
+
+                    if compiler_err.is_recoverable() {
+                        eprintln!("\n💡 This error can be fixed by adjusting your input.");
+                    } else {
+                        eprintln!("\n⚠️  This appears to be an internal compiler issue.");
+                        eprintln!("Please consider reporting this issue if it persists.");
+                    }
+
+                    std::process::exit(1);
+                }
+            }
         }
 
         Commands::Raw {
@@ -110,14 +128,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             proving_framework,
         } => {
             let proving_framework = ProvingFramework::from_str(&proving_framework)?;
-            let (nfa, code) = gen_from_raw(&raw_regex, None, &template_name, proving_framework)?;
-            save_outputs(
-                &nfa,
-                code,
-                &output_file_path,
-                &template_name,
-                &proving_framework.file_extension(),
-            )?;
+
+            match gen_from_raw(&raw_regex, None, &template_name, proving_framework) {
+                Ok((nfa, code)) => {
+                    save_outputs(
+                        &nfa,
+                        code,
+                        &output_file_path,
+                        &template_name,
+                        &proving_framework.file_extension(),
+                    )?;
+                }
+                Err(compiler_err) => {
+                    eprintln!("\n❌ Compilation failed:");
+                    eprintln!("Error Code: {}", compiler_err.code());
+                    eprintln!("Message: {}", compiler_err.user_message());
+
+                    if compiler_err.is_recoverable() {
+                        eprintln!("\n💡 This error can be fixed by adjusting your input.");
+                    } else {
+                        eprintln!("\n⚠️  This appears to be an internal compiler issue.");
+                        eprintln!("Please consider reporting this issue if it persists.");
+                    }
+
+                    std::process::exit(1);
+                }
+            }
         }
 
         Commands::GenerateCircuitInput {
@@ -130,34 +166,58 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } => {
             // Load the cached graph
             let graph_json = std::fs::read_to_string(graph_path)?;
-            let nfa = NFAGraph::from_json(&graph_json)?;
 
-            // Generate circuit inputs
-            let inputs = match proving_framework.as_str() {
-                "circom" => generate_circuit_inputs(
-                    &nfa,
-                    &input,
-                    max_haystack_len,
-                    max_match_len,
-                    ProvingFramework::Circom,
-                )?,
-                "noir" => generate_circuit_inputs(
-                    &nfa,
-                    &input,
-                    max_haystack_len,
-                    max_match_len,
-                    ProvingFramework::Noir,
-                )?,
-                _ => {
-                    return Err("Invalid proving framework".into());
+            match NFAGraph::from_json(&graph_json) {
+                Ok(nfa) => {
+                    // Generate circuit inputs
+                    let framework = match proving_framework.as_str() {
+                        "circom" => ProvingFramework::Circom,
+                        "noir" => ProvingFramework::Noir,
+                        _ => {
+                            eprintln!("❌ Invalid proving framework: {}", proving_framework);
+                            eprintln!("Supported frameworks: circom, noir");
+                            std::process::exit(1);
+                        }
+                    };
+
+                    match gen_circuit_inputs(
+                        &nfa,
+                        &input,
+                        max_haystack_len,
+                        max_match_len,
+                        framework,
+                    ) {
+                        Ok(inputs) => {
+                            let input_json = serde_json::to_string_pretty(&inputs)?;
+                            std::fs::write(&output_file_path, input_json)?;
+                            println!(
+                                "✅ Generated circuit inputs: {}",
+                                output_file_path.display()
+                            );
+                        }
+                        Err(compiler_err) => {
+                            eprintln!("\n❌ Input generation failed:");
+                            eprintln!("Error Code: {}", compiler_err.code());
+                            eprintln!("Message: {}", compiler_err.user_message());
+
+                            if compiler_err.is_recoverable() {
+                                eprintln!(
+                                    "\n💡 This error can be fixed by adjusting your input or parameters."
+                                );
+                            }
+
+                            std::process::exit(1);
+                        }
+                    }
                 }
-            };
-
-            // Save inputs
-            let input_json = serde_json::to_string_pretty(&inputs)?;
-            std::fs::write(&output_file_path, input_json)?;
-
-            println!("Generated circuit inputs: {}", output_file_path.display());
+                Err(nfa_err) => {
+                    let compiler_err = CompilerError::from(nfa_err);
+                    eprintln!("\n❌ Failed to load NFA graph:");
+                    eprintln!("Error Code: {}", compiler_err.code());
+                    eprintln!("Message: {}", compiler_err.user_message());
+                    std::process::exit(1);
+                }
+            }
         }
     }
 

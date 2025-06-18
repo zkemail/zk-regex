@@ -1,35 +1,44 @@
 use crate::{
     DecomposedRegexConfig, ProvingFramework, RegexOutput,
     backend::{generate_circom_code, generate_noir_code},
-    compile, gen_circuit_inputs,
+    compile,
+    error::{CompilerError, CompilerResult, ErrorCode},
+    gen_circuit_inputs,
     ir::NFAGraph,
     utils::decomposed_to_composed_regex,
 };
 use thiserror::Error;
 use wasm_bindgen::prelude::*;
 
-/// WASM-specific error type
+/// WASM-specific error type that converts from CompilerError
 #[derive(Error, Debug)]
 pub enum WasmError {
-    #[error("Failed to parse decomposed regex: {0}")]
-    DecomposedParseError(#[from] serde_json::Error),
-    #[error("Failed to compile regex: {0}")]
-    CompileError(String),
-    #[error("Failed to generate {0} code: {1}")]
-    CodeGenError(String, String),
-    #[error("Failed to serialize output: {0}")]
-    SerializationError(String),
-    #[error("Failed to parse regex graph: {0}")]
-    GraphParseError(String),
-    #[error("Failed to generate inputs: {0}")]
-    InputGenError(String),
-    #[error("Proving system not implemented: {0}")]
-    UnimplementedSystem(String),
+    #[error("Compiler error {code}: {message}")]
+    CompilerError { code: String, message: String },
+}
+
+impl From<CompilerError> for WasmError {
+    fn from(err: CompilerError) -> Self {
+        WasmError::CompilerError {
+            code: err.code().to_string(),
+            message: err.user_message(),
+        }
+    }
 }
 
 impl From<WasmError> for JsValue {
     fn from(err: WasmError) -> Self {
-        JsValue::from_str(&err.to_string())
+        // Return a structured error message that JavaScript can parse
+        match err {
+            WasmError::CompilerError { code, message } => {
+                let error_json = format!(
+                    r#"{{"type": "CompilerError", "code": "{}", "message": "{}"}}"#,
+                    code,
+                    message.replace('"', "\\\"").replace('\n', "\\n")
+                );
+                JsValue::from_str(&error_json)
+            }
+        }
     }
 }
 
@@ -75,8 +84,10 @@ pub fn genFromDecomposed(
     );
 
     match result {
-        Ok(output) => serde_wasm_bindgen::to_value(&output)
-            .map_err(|e| WasmError::SerializationError(e.to_string()).into()),
+        Ok(output) => serde_wasm_bindgen::to_value(&output).map_err(|e| {
+            let compiler_err = CompilerError::serialization_error("WASM output", &e.to_string());
+            WasmError::from(compiler_err).into()
+        }),
         Err(e) => Err(e.into()),
     }
 }
@@ -86,7 +97,13 @@ fn generate_from_decomposed_internal(
     template_name: TemplateName,
     proving_framework: ProvingFramework,
 ) -> Result<RegexOutput, WasmError> {
-    let decomposed_regex: DecomposedRegexConfig = serde_json::from_str(decomposed_json)?;
+    let decomposed_regex: DecomposedRegexConfig =
+        serde_json::from_str(decomposed_json).map_err(|e| CompilerError::Internal {
+            code: ErrorCode::E9002,
+            message: format!("Failed to parse decomposed regex JSON: {}", e),
+            context: Some("WASM deserialization".to_string()),
+        })?;
+
     let (composed_regex, max_substring_bytes) = decomposed_to_composed_regex(&decomposed_regex);
 
     generate_from_raw_internal(
@@ -115,8 +132,10 @@ pub fn genFromRaw(
     );
 
     match result {
-        Ok(output) => serde_wasm_bindgen::to_value(&output)
-            .map_err(|e| WasmError::SerializationError(e.to_string()).into()),
+        Ok(output) => serde_wasm_bindgen::to_value(&output).map_err(|e| {
+            let compiler_err = CompilerError::serialization_error("WASM output", &e.to_string());
+            WasmError::from(compiler_err).into()
+        }),
         Err(e) => Err(e.into()),
     }
 }
@@ -127,21 +146,46 @@ fn generate_from_raw_internal(
     template_name: TemplateName,
     proving_framework: ProvingFramework,
 ) -> Result<RegexOutput, WasmError> {
-    let nfa = compile(&raw_regex.0).map_err(|e| WasmError::CompileError(e.to_string()))?;
+    let nfa = compile(&raw_regex.0)?;
 
     let graph = nfa
         .to_json()
-        .map_err(|e| WasmError::SerializationError(e.to_string()))?;
+        .map_err(|nfa_err| CompilerError::from(nfa_err))?;
 
     let code = match proving_framework {
         ProvingFramework::Circom => {
-            generate_circom_code(&nfa, &template_name.0, &raw_regex.0, max_substring_bytes)
-                .map_err(|e| WasmError::CodeGenError("circom".to_string(), e.to_string()))?
+            generate_circom_code(
+                &nfa,
+                &template_name.0,
+                &raw_regex.0,
+                max_substring_bytes.clone(),
+            )
+            .map_err(|nfa_err| {
+                // Provide specific error handling for common WASM use cases
+                match nfa_err {
+                    crate::passes::NFAError::InvalidCapture(_) => {
+                        CompilerError::invalid_capture_config(
+                            nfa.num_capture_groups,
+                            max_substring_bytes.as_ref().map(|v| v.len()).unwrap_or(0),
+                        )
+                    }
+                    other => CompilerError::from(other),
+                }
+            })?
         }
-        ProvingFramework::Noir => {
-            generate_noir_code(&nfa, &template_name.0, &raw_regex.0, max_substring_bytes)
-                .map_err(|e| WasmError::CodeGenError("noir".to_string(), e.to_string()))?
-        }
+        ProvingFramework::Noir => generate_noir_code(
+            &nfa,
+            &template_name.0,
+            &raw_regex.0,
+            max_substring_bytes.clone(),
+        )
+        .map_err(|nfa_err| match nfa_err {
+            crate::passes::NFAError::InvalidCapture(_) => CompilerError::invalid_capture_config(
+                nfa.num_capture_groups,
+                max_substring_bytes.as_ref().map(|v| v.len()).unwrap_or(0),
+            ),
+            other => CompilerError::from(other),
+        })?,
     };
 
     Ok(RegexOutput { graph, code })
@@ -179,8 +223,11 @@ fn generate_circuit_inputs_internal(
     max_match_length: usize,
     proving_framework: ProvingFramework,
 ) -> Result<String, WasmError> {
-    let nfa: NFAGraph =
-        serde_json::from_str(graph_json).map_err(|e| WasmError::GraphParseError(e.to_string()))?;
+    let nfa: NFAGraph = serde_json::from_str(graph_json).map_err(|e| CompilerError::Internal {
+        code: ErrorCode::E9002,
+        message: format!("Failed to parse NFA graph JSON: {}", e),
+        context: Some("WASM graph deserialization".to_string()),
+    })?;
 
     let inputs = gen_circuit_inputs(
         &nfa,
@@ -188,8 +235,8 @@ fn generate_circuit_inputs_internal(
         max_haystack_length,
         max_match_length,
         proving_framework,
-    )
-    .map_err(|e| WasmError::InputGenError(e.to_string()))?;
+    )?;
 
-    serde_json::to_string(&inputs).map_err(|e| WasmError::SerializationError(e.to_string()))
+    serde_json::to_string(&inputs)
+        .map_err(|e| CompilerError::serialization_error("Circuit inputs", &e.to_string()).into())
 }

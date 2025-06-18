@@ -21,17 +21,23 @@ pub use types::*;
 pub use utils::*;
 pub use wasm::*;
 
-// Legacy import removed - now using new backend structure
-
 /// Compile a regular expression pattern into a circuit-friendly NFA
 ///
 /// # Arguments
 /// * `pattern` - The regular expression pattern to compile
 ///
 /// # Returns
-/// * `Result<NFAGraph, Error>` - The compiled NFA or an error
-pub fn compile(pattern: &str) -> Result<NFAGraph, CompilerError> {
-    NFAGraph::build(pattern).map_err(|e| CompilerError::RegexCompilation(e.to_string()))
+/// * `CompilerResult<NFAGraph>` - The compiled NFA or a structured error with error code
+///
+/// # Example
+/// ```rust
+/// use zk_regex_compiler::compile;
+///
+/// let nfa = compile(r"hello \w+").expect("Valid regex");
+/// println!("Compiled NFA with {} states", nfa.state_count());
+/// ```
+pub fn compile(pattern: &str) -> CompilerResult<NFAGraph> {
+    NFAGraph::build(pattern).map_err(CompilerError::from)
 }
 
 /// Generate a circuit from a raw regex pattern
@@ -45,13 +51,31 @@ pub fn compile(pattern: &str) -> Result<NFAGraph, CompilerError> {
 /// * `proving_framework` - Target proving framework (Circom or Noir)
 ///
 /// # Returns
-/// * `Result<(NFAGraph, String), CompilerError>` - The compiled NFA and circuit code
+/// * `CompilerResult<(NFAGraph, String)>` - The compiled NFA and circuit code
+///
+/// # Errors
+/// * `E1001` - Invalid regex syntax
+/// * `E1002` - Unsupported regex features
+/// * `E3002` - Invalid capture group configuration
+/// * `E5001` - Invalid configuration parameters
+///
+/// # Example
+/// ```rust
+/// use zk_regex_compiler::{gen_from_raw, ProvingFramework};
+///
+/// let (nfa, code) = gen_from_raw(
+///     r"(\w+)@(\w+\.\w+)",
+///     Some(vec![20, 30]),
+///     "EmailRegex",
+///     ProvingFramework::Circom
+/// ).expect("Valid email regex");
+/// ```
 pub fn gen_from_raw(
     pattern: &str,
     max_bytes: Option<Vec<usize>>,
     template_name: &str,
     proving_framework: ProvingFramework,
-) -> Result<(NFAGraph, String), CompilerError> {
+) -> CompilerResult<(NFAGraph, String)> {
     let config = CompilationConfig {
         template_name: template_name.to_string(),
         proving_framework,
@@ -73,12 +97,25 @@ pub fn gen_from_raw(
 /// * `proving_framework` - Target proving framework (Circom or Noir)
 ///
 /// # Returns
-/// * `Result<(NFAGraph, String), CompilerError>` - The compiled NFA and circuit code
+/// * `CompilerResult<(NFAGraph, String)>` - The compiled NFA and circuit code
+///
+/// # Example
+/// ```rust
+/// use zk_regex_compiler::{gen_from_decomposed, DecomposedRegexConfig, RegexPart, ProvingFramework};
+///
+/// let config = DecomposedRegexConfig {
+///     parts: vec![
+///         RegexPart::Pattern("prefix:".to_string()),
+///         RegexPart::PublicPattern(("\\w+".to_string(), 20)),
+///     ]
+/// };
+/// let (nfa, code) = gen_from_decomposed(config, "PrefixRegex", ProvingFramework::Noir)?;
+/// ```
 pub fn gen_from_decomposed(
     config: DecomposedRegexConfig,
     template_name: &str,
     proving_framework: ProvingFramework,
-) -> Result<(NFAGraph, String), CompilerError> {
+) -> CompilerResult<(NFAGraph, String)> {
     let (combined_pattern, max_bytes) = decomposed_to_composed_regex(&config);
     gen_from_raw(
         &combined_pattern,
@@ -100,14 +137,38 @@ pub fn gen_from_decomposed(
 /// * `proving_framework` - Target proving framework (Circom or Noir)
 ///
 /// # Returns
-/// * `Result<ProverInputs, CompilerError>` - Framework-specific circuit inputs
+/// * `CompilerResult<ProverInputs>` - Framework-specific circuit inputs
+///
+/// # Errors
+/// * `E4001` - Input length exceeds maximum
+/// * `E4003` - No regex match found in input
+/// * `E4004` - Path traversal failed
+///
+/// # Example
+/// ```rust
+/// use zk_regex_compiler::{compile, gen_circuit_inputs, ProvingFramework};
+///
+/// let nfa = compile(r"hello (\w+)").expect("Valid regex");
+/// let inputs = gen_circuit_inputs(
+///     &nfa,
+///     "hello world",
+///     1024,
+///     64,
+///     ProvingFramework::Circom
+/// ).expect("Valid input");
+/// ```
 pub fn gen_circuit_inputs(
     nfa: &NFAGraph,
     input: &str,
     max_haystack_len: usize,
     max_match_len: usize,
     proving_framework: ProvingFramework,
-) -> Result<ProverInputs, CompilerError> {
+) -> CompilerResult<ProverInputs> {
+    // Validate input length upfront with specific error
+    if input.len() > max_haystack_len {
+        return Err(CompilerError::input_too_long(input.len(), max_haystack_len));
+    }
+
     crate::backend::generate_circuit_inputs(
         nfa,
         input,
@@ -115,5 +176,27 @@ pub fn gen_circuit_inputs(
         max_match_len,
         proving_framework,
     )
-    .map_err(|e| CompilerError::CircuitInputsGeneration(e.to_string()))
+    .map_err(|nfa_err| {
+        // Convert NFAError to more specific input processing errors
+        match nfa_err {
+            crate::passes::NFAError::NoMatch(_) => CompilerError::no_match_found(input),
+            crate::passes::NFAError::InvalidInput(msg) => {
+                if msg.contains("exceeds maximum") {
+                    CompilerError::input_too_long(input.len(), max_haystack_len)
+                } else {
+                    CompilerError::InputProcessing {
+                        code: ErrorCode::E4002,
+                        message: format!("Input generation failed: {}", msg),
+                        input_info: Some(format!("input_len: {}", input.len())),
+                        limits: Some(format!(
+                            "max_haystack: {}, max_match: {}",
+                            max_haystack_len, max_match_len
+                        )),
+                        suggestion: Some("Check input format and circuit parameters".to_string()),
+                    }
+                }
+            }
+            other => CompilerError::from(other),
+        }
+    })
 }

@@ -47,3 +47,121 @@ pub enum NFAError {
 
 /// Result type for NFA operations
 pub type NFAResult<T> = Result<T, NFAError>;
+
+// Convert NFAError to CompilerError with proper categorization and context
+impl From<NFAError> for crate::error::CompilerError {
+    fn from(nfa_error: NFAError) -> Self {
+        use crate::error::{CompilerError, ErrorCode};
+
+        match nfa_error {
+            NFAError::RegexCompilation(msg) => CompilerError::nfa_construction_failed(&msg),
+
+            NFAError::InvalidStateId(msg) => CompilerError::NFAConstruction {
+                code: ErrorCode::E2004,
+                message: format!("State validation failed: {}", msg),
+                state_info: Some(msg),
+                suggestion: Some(
+                    "This indicates an internal compiler issue. Please report this bug."
+                        .to_string(),
+                ),
+            },
+
+            NFAError::InvalidTransition(msg) => CompilerError::NFAConstruction {
+                code: ErrorCode::E2002,
+                message: format!("Invalid state transition: {}", msg),
+                state_info: Some(msg),
+                suggestion: Some(
+                    "Try simplifying your regex pattern or report this as a bug.".to_string(),
+                ),
+            },
+
+            NFAError::EmptyAutomaton(msg) => CompilerError::NFAConstruction {
+                code: ErrorCode::E2001,
+                message: format!("Empty NFA construction: {}", msg),
+                state_info: None,
+                suggestion: Some(
+                    "Check that your regex pattern is not empty or malformed.".to_string(),
+                ),
+            },
+
+            NFAError::Verification(msg) => CompilerError::NFAConstruction {
+                code: ErrorCode::E2004,
+                message: format!("NFA verification failed: {}", msg),
+                state_info: Some(msg),
+                suggestion: Some(
+                    "This indicates a structural issue with the generated NFA.".to_string(),
+                ),
+            },
+
+            NFAError::NoMatch(msg) => CompilerError::InputProcessing {
+                code: ErrorCode::E4003,
+                message: format!("No regex match found: {}", msg),
+                input_info: Some(msg),
+                limits: None,
+                suggestion: Some(
+                    "Ensure your input string contains the expected pattern.".to_string(),
+                ),
+            },
+
+            NFAError::NoValidPath(msg) => CompilerError::InputProcessing {
+                code: ErrorCode::E4004,
+                message: format!("Path traversal failed: {}", msg),
+                input_info: Some(msg),
+                limits: None,
+                suggestion: Some(
+                    "The input doesn't match the regex pattern correctly.".to_string(),
+                ),
+            },
+
+            NFAError::InvalidInput(msg) => CompilerError::InputProcessing {
+                code: ErrorCode::E4001,
+                message: format!("Invalid input: {}", msg),
+                input_info: Some(msg),
+                limits: None,
+                suggestion: Some("Check input format and length constraints.".to_string()),
+            },
+
+            NFAError::InputSizeExceeded(msg) => CompilerError::InputProcessing {
+                code: ErrorCode::E4001,
+                message: format!("Input size limit exceeded: {}", msg),
+                input_info: Some(msg),
+                limits: None,
+                suggestion: Some(
+                    "Reduce input size or increase max_haystack_len parameter.".to_string(),
+                ),
+            },
+
+            NFAError::InvalidCapture(msg) => CompilerError::CircuitGeneration {
+                code: ErrorCode::E3002,
+                message: format!("Invalid capture group configuration: {}", msg),
+                template_name: None,
+                framework: None,
+                suggestion: Some("Check max_bytes parameter for capture groups.".to_string()),
+            },
+
+            NFAError::TemplateError(msg) => CompilerError::CircuitGeneration {
+                code: ErrorCode::E3004,
+                message: format!("Template generation failed: {}", msg),
+                template_name: None,
+                framework: None,
+                suggestion: Some("Check template name and framework configuration.".to_string()),
+            },
+
+            NFAError::Serialization(msg) => {
+                CompilerError::serialization_error("NFA serialization", &msg)
+            }
+
+            NFAError::Deserialization(msg) => CompilerError::Internal {
+                code: ErrorCode::E9002,
+                message: format!("Deserialization failed: {}", msg),
+                context: Some("NFA deserialization".to_string()),
+            },
+
+            NFAError::ParseIntError(err) => CompilerError::Internal {
+                code: ErrorCode::E9003,
+                message: format!("Integer parsing error: {}", err),
+                context: Some("NFA integer parsing".to_string()),
+            },
+        }
+    }
+}
