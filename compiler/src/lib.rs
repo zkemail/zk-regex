@@ -3,19 +3,25 @@
 //! Converts regular expressions into circuit-friendly NFAs for zero-knowledge proofs.
 //! Uses Thompson NFAs from regex-automata as an intermediate representation.
 
+mod backend;
+mod driver;
 mod error;
-mod nfa;
+mod ir;
+mod passes;
 mod types;
 mod utils;
 mod wasm;
 
+pub use backend::*;
+pub use driver::*;
 pub use error::*;
-pub use nfa::*;
+pub use ir::*;
+pub use passes::*;
 pub use types::*;
 pub use utils::*;
 pub use wasm::*;
 
-use nfa::{circom::generate_circom_code, noir::generate_noir_code};
+// Legacy import removed - now using new backend structure
 
 /// Compile a regular expression pattern into a circuit-friendly NFA
 ///
@@ -46,15 +52,15 @@ pub fn gen_from_raw(
     template_name: &str,
     proving_framework: ProvingFramework,
 ) -> Result<(NFAGraph, String), CompilerError> {
-    let nfa = compile(&pattern)?;
-    let code = match proving_framework {
-        ProvingFramework::Circom => generate_circom_code(&nfa, &template_name, &pattern, max_bytes)
-            .map_err(|e| CompilerError::RegexCompilation(e.to_string()))?,
-        ProvingFramework::Noir => generate_noir_code(&nfa, &template_name, &pattern, max_bytes)
-            .map_err(|e| CompilerError::RegexCompilation(e.to_string()))?,
+    let config = CompilationConfig {
+        template_name: template_name.to_string(),
+        proving_framework,
+        max_bytes,
+        optimize: true,
     };
 
-    Ok((nfa, code))
+    let result = Driver::compile(pattern, config)?;
+    Ok((result.nfa, result.code))
 }
 
 /// Generate a circuit from a decomposed regex configuration
@@ -74,14 +80,12 @@ pub fn gen_from_decomposed(
     proving_framework: ProvingFramework,
 ) -> Result<(NFAGraph, String), CompilerError> {
     let (combined_pattern, max_bytes) = decomposed_to_composed_regex(&config);
-    let (nfa, code) = gen_from_raw(
+    gen_from_raw(
         &combined_pattern,
         max_bytes,
         template_name,
         proving_framework,
-    )?;
-
-    Ok((nfa, code))
+    )
 }
 
 /// Generate circuit inputs for a regex match
@@ -104,14 +108,12 @@ pub fn gen_circuit_inputs(
     max_match_len: usize,
     proving_framework: ProvingFramework,
 ) -> Result<ProverInputs, CompilerError> {
-    let inputs = generate_circuit_inputs(
-        &nfa,
-        &input,
+    crate::backend::generate_circuit_inputs(
+        nfa,
+        input,
         max_haystack_len,
         max_match_len,
         proving_framework,
     )
-    .map_err(|e| CompilerError::CircuitInputsGeneration(e.to_string()))?;
-
-    Ok(inputs)
+    .map_err(|e| CompilerError::CircuitInputsGeneration(e.to_string()))
 }

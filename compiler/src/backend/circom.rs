@@ -15,10 +15,10 @@
 
 use serde::Serialize;
 
-use crate::nfa::NFAGraph;
-use crate::nfa::error::{NFAError, NFAResult};
+use crate::ir::NFAGraph;
+use crate::passes::{NFAError, NFAResult};
 
-use super::{CircuitInputs, escape_regex_for_display, generate_circuit_data};
+use super::{escape_regex_for_display, generate_circuit_data};
 
 #[derive(Serialize)]
 pub struct CircomInputs {
@@ -43,20 +43,7 @@ pub struct CircomInputs {
     pub capture_group_start_indices: Option<Vec<usize>>,
 }
 
-impl From<CircuitInputs> for CircomInputs {
-    fn from(inputs: CircuitInputs) -> Self {
-        CircomInputs {
-            in_haystack: inputs.in_haystack,
-            match_start: inputs.match_start,
-            match_length: inputs.match_length,
-            curr_states: inputs.curr_states,
-            next_states: inputs.next_states,
-            capture_group_ids: inputs.capture_group_ids,
-            capture_group_starts: inputs.capture_group_starts,
-            capture_group_start_indices: inputs.capture_group_start_indices,
-        }
-    }
-}
+// From implementation moved to shared.rs
 
 /// Generates complete Circom circuit code for the NFA.
 ///

@@ -1,8 +1,12 @@
+//! Graph algorithms and operations for NFAs
+
 use regex_automata::{Input, nfa::thompson::pikevm::PikeVM};
 
 use super::NFAGraph;
-use crate::nfa::error::{NFAError, NFAResult};
+use crate::passes::{NFAError, NFAResult};
 use std::collections::{BTreeSet, HashMap, HashSet};
+
+// Using NFAResult from passes module
 
 // Each step in the path contains:
 // (current_state, next_state, byte, Option<BTreeSet<(capture_group_id, capture_group_start)>>)

@@ -1,4 +1,7 @@
-use super::{NFAGraph, NFANode, NFAResult, error::NFAError};
+//! Builder pass to convert Thompson NFA to NFAGraph
+
+use super::{NFAError, NFAResult};
+use crate::ir::{NFAGraph, NFANode};
 
 use regex_automata::{
     nfa::thompson::{NFA, State, Transition, pikevm::PikeVM},

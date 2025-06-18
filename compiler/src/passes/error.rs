@@ -1,5 +1,6 @@
-use std::num::ParseIntError;
+//! Error types for compiler passes
 
+use std::num::ParseIntError;
 use thiserror::Error;
 
 /// Error types for NFA operations

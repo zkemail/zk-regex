@@ -1,12 +1,4 @@
-mod builder;
-mod cache;
-mod codegen;
-mod epsilon;
-mod error;
-mod graph;
-
-pub use codegen::*;
-pub use error::{NFAError, NFAResult};
+//! NFA Graph intermediate representation
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -56,5 +48,17 @@ impl NFAGraph {
             accept_states: BTreeSet::new(),
             num_capture_groups: 0,
         }
+    }
+
+    /// Serialize the NFA to JSON
+    pub fn to_json(&self) -> Result<String, crate::error::CompilerError> {
+        serde_json::to_string_pretty(self)
+            .map_err(|e| crate::error::CompilerError::RegexCompilation(e.to_string()))
+    }
+
+    /// Deserialize the NFA from JSON
+    pub fn from_json(json: &str) -> Result<Self, crate::error::CompilerError> {
+        serde_json::from_str(json)
+            .map_err(|e| crate::error::CompilerError::RegexCompilation(e.to_string()))
     }
 }

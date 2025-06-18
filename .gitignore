@@ -6,3 +6,4 @@ target
 Prover.toml
 prover.toml
 inputs.txt
+node_modules

@@ -1,6 +1,8 @@
 use crate::{
-    DecomposedRegexConfig, ProvingFramework, RegexOutput, circom::generate_circom_code, compile,
-    generate_circuit_inputs, nfa::NFAGraph, noir::generate_noir_code,
+    DecomposedRegexConfig, ProvingFramework, RegexOutput,
+    backend::{generate_circom_code, generate_noir_code},
+    compile, gen_circuit_inputs,
+    ir::NFAGraph,
     utils::decomposed_to_composed_regex,
 };
 use thiserror::Error;
@@ -180,7 +182,7 @@ fn generate_circuit_inputs_internal(
     let nfa: NFAGraph =
         serde_json::from_str(graph_json).map_err(|e| WasmError::GraphParseError(e.to_string()))?;
 
-    let inputs = generate_circuit_inputs(
+    let inputs = gen_circuit_inputs(
         &nfa,
         &haystack.0,
         max_haystack_length,

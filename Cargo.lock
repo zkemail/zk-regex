@@ -605,6 +605,7 @@ dependencies = [
  "comptime",
  "heck 0.5.0",
  "regex-automata",
+ "regex-syntax",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",

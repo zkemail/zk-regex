@@ -1,4 +1,7 @@
-use super::{NFAGraph, NFAResult};
+//! Epsilon transition removal pass
+
+use super::NFAResult;
+use crate::ir::NFAGraph;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Represents a closure of states reachable through epsilon transitions.

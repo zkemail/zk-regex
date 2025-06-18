@@ -4,9 +4,9 @@ use serde::Serialize;
 use std::collections::BTreeSet;
 
 use super::{CircuitInputs, escape_regex_for_display, generate_circuit_data};
-use crate::nfa::{
-    NFAGraph,
-    error::{NFAError, NFAResult},
+use crate::{
+    ir::NFAGraph,
+    passes::{NFAError, NFAResult},
 };
 
 #[derive(Serialize)]
@@ -24,20 +24,7 @@ pub struct NoirInputs {
     pub capture_group_start_indices: Option<Vec<usize>>,
 }
 
-impl From<CircuitInputs> for NoirInputs {
-    fn from(inputs: CircuitInputs) -> Self {
-        NoirInputs {
-            in_haystack: inputs.in_haystack,
-            match_start: inputs.match_start,
-            match_length: inputs.match_length,
-            curr_states: inputs.curr_states,
-            next_states: inputs.next_states,
-            capture_group_ids: inputs.capture_group_ids,
-            capture_group_starts: inputs.capture_group_starts,
-            capture_group_start_indices: inputs.capture_group_start_indices,
-        }
-    }
-}
+// From implementation moved to shared.rs
 
 /// Generate Noir code for the NFA
 pub fn generate_noir_code(
