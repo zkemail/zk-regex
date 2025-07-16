@@ -1,6 +1,6 @@
 {
     "name": "@zk-email/zk-regex-compiler",
-    "version": "2.0.0-alpha.4",
+    "version": "2.2.0-alpha.3",
     "description": "A compiler to generate a regex verification circuit in circom from a user-defined regex. Please check [zk-regex](https://github.com/zkemail/zk-regex/tree/main) for the detail.",
     "repository": {
         "type": "git",

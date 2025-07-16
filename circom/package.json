@@ -1,6 +1,6 @@
 {
     "name": "@zk-email/zk-regex-circom",
-    "version": "2.0.0-alpha.20250711",
+    "version": "2.0.0-alpha.20250716",
     "license": "MIT",
     "description": "regex verification circuits in circom for common regexes, generated with the compiler in [zk-regex](https://github.com/zkemail/zk-regex/tree/main).",
     "scripts": {
@@ -8,7 +8,6 @@
     },
     "dependencies": {
         "@zk-email/circuits": "6.3.4",
-        "@zk-email/zk-regex-circom": "2.0.0-alpha.20250711",
         "circomlib": "^2.0.5",
         "prettier": ""
     },

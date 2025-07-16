@@ -2,9 +2,10 @@ pragma circom 2.1.5;
 
 include "circomlib/circuits/comparators.circom";
 include "circomlib/circuits/gates.circom";
-include "@zk-email/zk-regex-circom/circuits/regex_helpers.circom";
 include "@zk-email/circuits/utils/array.circom";
 include "@zk-email/circuits/utils/regex.circom";
+
+include "../regex_helpers.circom";
 
 // regex: (?:\r\n|^)dkim-signature:(?:[a-z]+=[^;]+; )+bh=([a-zA-Z0-9+/=]+);
 template BodyHashRegex(maxHaystackBytes, maxMatchBytes) {
