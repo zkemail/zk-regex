@@ -16,7 +16,7 @@ describe("Bodyhash Regex", () => {
     let circuit;
     beforeAll(async () => {
         const body_hash_json = readFileSync(
-            path.join(__dirname, "../common/body_hash.json"),
+            path.join(__dirname, "../../regexes/body_hash.json"),
             "utf8"
         );
         const output = compiler.genFromDecomposed(

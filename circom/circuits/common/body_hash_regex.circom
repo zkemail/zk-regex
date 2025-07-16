@@ -217,5 +217,5 @@ template BodyHashRegex(maxHaystackBytes, maxMatchBytes) {
     signal input captureGroupStartIndices[1];
 
     // Capture Group 1
-    signal output capture1[128] <== CaptureSubstring(maxMatchBytes, 128, 1)(captureGroupStartIndices[0], haystack, captureGroup1Id, captureGroup1Start);
+    signal output capture1[44] <== CaptureSubstring(maxMatchBytes, 44, 1)(captureGroupStartIndices[0], haystack, captureGroup1Id, captureGroup1Start);
 }
