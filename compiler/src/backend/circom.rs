@@ -222,7 +222,7 @@ pub fn generate_circom_code(
     code.push_str(
         "            isTransitionLinked[i] <== IsEqual()([nextStates[i], currStates[i+1]]);\n",
     );
-    code.push_str("            isTransitionLinked[i] === isWithinPathLengthMinusOne[i];\n");
+    code.push_str("            isTransitionLinked[i] * isWithinPathLengthMinusOne[i] === isWithinPathLengthMinusOne[i];\n");
     code.push_str("        }\n\n");
 
     if nfa.num_capture_groups > 0 {

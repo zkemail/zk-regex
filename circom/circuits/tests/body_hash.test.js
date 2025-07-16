@@ -3,7 +3,7 @@ import * as path from "path";
 import { readFileSync, writeFileSync } from "fs";
 import compiler, {
     genCircuitInputs,
-    ProvingSystem,
+    ProvingFramework,
 } from "../../../compiler/pkg";
 const option = {
     include: path.join(__dirname, "../../node_modules"),
@@ -22,7 +22,7 @@ describe("Bodyhash Regex", () => {
         const output = compiler.genFromDecomposed(
             body_hash_json,
             "BodyHash",
-            ProvingSystem.Circom
+            ProvingFramework.Circom
         );
         writeFileSync(
             path.join(__dirname, "../common/body_hash_graph.json"),
@@ -33,6 +33,12 @@ describe("Bodyhash Regex", () => {
             output.code
         );
 
+        // graph = JSON.parse(
+        //     readFileSync(
+        //         path.join(__dirname, "../common/body_hash_graph.json"),
+        //         "utf8"
+        //     )
+        // );
         graph = JSON.parse(output.graph);
         circuit = await wasm_tester(
             path.join(__dirname, "./circuits/test_body_hash_regex.circom"),
@@ -47,13 +53,18 @@ describe("Bodyhash Regex", () => {
             genCircuitInputs(
                 JSON.stringify(graph),
                 signatureField,
-                1024,
-                1023,
-                ProvingSystem.Circom
+                300,
+                299,
+                ProvingFramework.Circom
             )
         );
+        let { captureGroupIds, captureGroupStarts, ...rest } = circuitInputs;
+        let captureGroup1Id = captureGroupIds[0];
+        let captureGroup1Start = captureGroupStarts[0];
+        rest.captureGroup1Id = captureGroup1Id;
+        rest.captureGroup1Start = captureGroup1Start;
 
-        const witness = await circuit.calculateWitness(circuitInputs);
+        const witness = await circuit.calculateWitness(rest);
         await circuit.checkConstraints(witness);
         expect(1n).toEqual(witness[1]);
         const extractedBodyHash = Array.from(
@@ -70,12 +81,18 @@ describe("Bodyhash Regex", () => {
             genCircuitInputs(
                 JSON.stringify(graph),
                 signatureField,
-                1024,
-                1023,
-                ProvingSystem.Circom
+                300,
+                299,
+                ProvingFramework.Circom
             )
         );
-        const witness = await circuit.calculateWitness(circuitInputs);
+        let { captureGroupIds, captureGroupStarts, ...rest } = circuitInputs;
+        let captureGroup1Id = captureGroupIds[0];
+        let captureGroup1Start = captureGroupStarts[0];
+        rest.captureGroup1Id = captureGroup1Id;
+        rest.captureGroup1Start = captureGroup1Start;
+        
+        const witness = await circuit.calculateWitness(rest);
         await circuit.checkConstraints(witness);
         expect(1n).toEqual(witness[1]);
         const extractedBodyHash = Array.from(
@@ -92,16 +109,22 @@ describe("Bodyhash Regex", () => {
             genCircuitInputs(
                 JSON.stringify(graph),
                 signatureField,
-                1024,
-                1023,
-                ProvingSystem.Circom
+                300,
+                299,
+                ProvingFramework.Circom
             )
         );
-        circuitInputs.inHaystack.splice(2, 0, 116, 111, 58, 32);
-        circuitInputs.inHaystack = circuitInputs.inHaystack.slice(0, 1024);
+        let { captureGroupIds, captureGroupStarts, ...rest } = circuitInputs;
+        let captureGroup1Id = captureGroupIds[0];
+        let captureGroup1Start = captureGroupStarts[0];
+        rest.captureGroup1Id = captureGroup1Id;
+        rest.captureGroup1Start = captureGroup1Start;
+        
+        rest.inHaystack.splice(2, 0, 116, 111, 58, 32);
+        rest.inHaystack = rest.inHaystack.slice(0, 1024);
         await expect(
             (async () => {
-                const witness = await circuit.calculateWitness(circuitInputs);
+                const witness = await circuit.calculateWitness(rest);
                 await circuit.checkConstraints(witness);
             })()
         ).rejects.toThrow();

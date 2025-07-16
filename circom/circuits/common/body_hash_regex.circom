@@ -57,7 +57,7 @@ template BodyHashRegex(maxHaystackBytes, maxMatchBytes) {
         if (i < maxMatchBytes-2) {
             isWithinPathLengthMinusOne[i] <== LessThan(log2Ceil(maxMatchBytes))([i, matchLength-1]);
             isTransitionLinked[i] <== IsEqual()([nextStates[i], currStates[i+1]]);
-            isTransitionLinked[i] === isWithinPathLengthMinusOne[i];
+            isTransitionLinked[i] * isWithinPathLengthMinusOne[i] === isWithinPathLengthMinusOne[i];
         }
 
         // Transition 0: 0 -[13]-> 2 | Capture Group: []
