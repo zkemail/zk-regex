@@ -19,8 +19,8 @@ pub struct CompilationConfig {
 }
 
 impl CompilationConfig {
-    /// Validate the compilation configuration
-    pub fn validate(&self) -> CompilerResult<()> {
+    /// Validate and normalize the compilation configuration
+    pub fn validate(&mut self) -> CompilerResult<&Self> {
         if self.template_name.is_empty() {
             return Err(CompilerError::Configuration {
                 code: crate::error::ErrorCode::E5003,
@@ -31,7 +31,7 @@ impl CompilationConfig {
             });
         }
 
-        // Validate template name format (PascalCase)
+        // Convert template name to PascalCase if not already
         if !self
             .template_name
             .chars()
@@ -39,16 +39,14 @@ impl CompilationConfig {
             .unwrap_or('a')
             .is_uppercase()
         {
-            return Err(CompilerError::Configuration {
-                code: crate::error::ErrorCode::E5001,
-                message: "Template name should be in PascalCase".to_string(),
-                parameter: Some("template_name".to_string()),
-                expected: Some("PascalCase format (e.g., MyTemplate)".to_string()),
-                suggestion: Some("Convert template name to PascalCase".to_string()),
-            });
+            // Convert to PascalCase
+            let mut chars = self.template_name.chars();
+            if let Some(first) = chars.next() {
+                self.template_name = first.to_uppercase().collect::<String>() + chars.as_str();
+            }
         }
 
-        Ok(())
+        Ok(self)
     }
 }
 
@@ -64,7 +62,10 @@ pub struct Driver;
 
 impl Driver {
     /// Compile a regex pattern into circuit code
-    pub fn compile(pattern: &str, config: CompilationConfig) -> CompilerResult<CompilationResult> {
+    pub fn compile(
+        pattern: &str,
+        mut config: CompilationConfig,
+    ) -> CompilerResult<CompilationResult> {
         // Validate configuration
         config.validate()?;
 
