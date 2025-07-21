@@ -39,11 +39,22 @@ impl CompilationConfig {
             .unwrap_or('a')
             .is_uppercase()
         {
-            // Convert to PascalCase
-            let mut chars = self.template_name.chars();
-            if let Some(first) = chars.next() {
-                self.template_name = first.to_uppercase().collect::<String>() + chars.as_str();
+            // Convert to PascalCase from snake_case or kebab-case or camelCase or COBOL-CASE or CONSTANT_CASE or spaced character
+            let mut result = String::new();
+            let mut capitalize_next = true;
+
+            for ch in self.template_name.chars() {
+                if ch == '_' || ch == ' ' || ch == '-' {
+                    capitalize_next = true;
+                } else if capitalize_next {
+                    result.push(ch.to_uppercase().next().unwrap_or(ch));
+                    capitalize_next = false;
+                } else {
+                    result.push(ch.to_lowercase().next().unwrap_or(ch));
+                }
             }
+
+            self.template_name = result;
         }
 
         Ok(self)
