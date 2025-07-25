@@ -1,0 +1,22 @@
+{
+    "pass": [
+        "from: Test User <test@example.com>\r\n",
+        "Subject: Hello\r\nfrom:sender@domain.com\r\nTo: recipient@domain.com\r\n",
+        "from:minimal@a.co\r\n",
+        "\r\nfrom:after_empty_line@example.com\r\n",
+        "from:word\r\n",
+        "from: Name with spaces <spaces@example.com>\r\nAnd other content afterwards.",
+        "from: line1\r\nline2@example.com\r\n",
+        "This is some text before.\r\nfrom:sender@example.com\r\nThis is some text after."
+    ],
+    "fail": [
+        "From: Test User <test@example.com>\r\n",
+        "from: Test User <test@example.com>",
+        "Subject: Hello\r\n from:indented@example.com\r\n",
+        "Test\r\nnotfrom:sender@domain.com\r\n",
+        "from:\r\n",
+        "Hello from: someone\r\n",
+        "nofromlineatinall",
+        "from: no_trailing_newline"
+    ]
+}

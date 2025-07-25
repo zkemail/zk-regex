@@ -1,0 +1,23 @@
+[package]
+name = "zk-regex-compiler"
+version = "2.0.0-alpha.2"
+edition = { workspace = true }
+
+[[bin]]
+name = "zk-regex"
+path = "src/bin/zk-regex.rs"
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+clap = { workspace = true, features = ["derive"] }
+comptime = { workspace = true }
+heck = { workspace = true }
+regex-automata = { workspace = true }
+regex-syntax = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+serde-wasm-bindgen = { workspace = true }
+thiserror = { workspace = true }
+wasm-bindgen = { workspace = true }
