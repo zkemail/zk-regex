@@ -79,37 +79,51 @@ fn build_reverse_graph(
 ///
 /// Ranges are only created for sequences of 16 or more consecutive characters.
 fn optimize_char_ranges(k: &[u8]) -> (Vec<(u8, u8)>, BTreeSet<u8>) {
-    let mut min_maxes = vec![];
-    let mut vals = k.iter().cloned().collect::<BTreeSet<u8>>();
-
     if k.is_empty() {
+        return (vec![], BTreeSet::new());
+    }
+
+    // Pre-allocate with reasonable capacity to avoid reallocations
+    let mut min_maxes = Vec::with_capacity(k.len() / 16);
+    let mut vals = BTreeSet::new();
+    
+    // Sort once and iterate through consecutive groups
+    let mut sorted_chars: Vec<u8> = k.iter().copied().collect();
+    sorted_chars.sort_unstable();
+    sorted_chars.dedup(); // Remove duplicates efficiently
+    
+    if sorted_chars.is_empty() {
         return (min_maxes, vals);
     }
 
-    let mut cur_min = k[0];
-    let mut cur_max = k[0];
-
-    for &val in &k[1..] {
-        if cur_max == val {
-            continue;
-        } else if cur_max + 1 == val {
-            cur_max = val;
+    let mut range_start = sorted_chars[0];
+    let mut range_end = sorted_chars[0];
+    
+    for &ch in &sorted_chars[1..] {
+        if ch == range_end + 1 {
+            // Extend current range
+            range_end = ch;
         } else {
-            if cur_max - cur_min >= 16 {
-                min_maxes.push((cur_min, cur_max));
+            // End current range and start new one
+            if range_end - range_start >= 16 {
+                min_maxes.push((range_start, range_end));
+            } else {
+                // Add individual characters from small ranges
+                for c in range_start..=range_end {
+                    vals.insert(c);
+                }
             }
-            cur_min = val;
-            cur_max = val;
+            range_start = ch;
+            range_end = ch;
         }
     }
 
-    if cur_max - cur_min >= 16 {
-        min_maxes.push((cur_min, cur_max));
-    }
-
-    for (min, max) in &min_maxes {
-        for code in *min..=*max {
-            vals.remove(&code);
+    // Handle the last range
+    if range_end - range_start >= 16 {
+        min_maxes.push((range_start, range_end));
+    } else {
+        for c in range_start..=range_end {
+            vals.insert(c);
         }
     }
 
