@@ -37,5 +37,21 @@
         "regex": "^[a-zA-Z]{2,}\\s[a-zA-Z]{1,}'?-?[a-zA-Z]{2,}\\s?([a-zA-Z]{1,})?$",
         "pass": ["John Doe", "Mary Jane", "Robert O'Neill", "Sarah Jane-Smith"],
         "fail": ["J D", "John", "John  Doe", "12John Doe"]
+    },
+    {
+        "regex": "(\r\n|^)to:([^\r\n]+<)?([^@]{1,3})([^@]*)@([a-zA-Z0-9.-]+)>?\r\n",
+        "pass": [
+            "to:user@example.com\r\n",
+            "to:\"John Doe\" <john@example.com>\r\n",
+            "to:abc@domain.com\r\n",
+            "to:abcd@example.com\r\n",
+            "\r\nto:user+tag@example.com\r\n"
+        ],
+        "fail": [
+            "to:@example.com\r\n",
+            "to:user@\r\n",
+            "from:user@example.com\r\n",
+            "to:user@example.com"
+        ]
     }
 ]
