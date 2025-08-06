@@ -202,7 +202,7 @@ pub fn generate_circuit_inputs(
 
             let start_indices = (1..=captures.group_len())
                 .filter_map(|i| captures.get_group(i))
-                .map(|m| m.start)
+                .map(|m| m.start - match_start)
                 .collect();
 
             (

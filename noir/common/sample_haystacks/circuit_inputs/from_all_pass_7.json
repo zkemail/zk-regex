@@ -305,7 +305,7 @@
   "match_start": 25,
   "match_length": 27,
   "curr_states": [
-    1,
+    0,
     2,
     3,
     4,
@@ -1517,6 +1517,6 @@
     ]
   ],
   "capture_group_start_indices": [
-    32
+    7
   ]
 }
