@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15603470.svg)](https://doi.org/10.5281/zenodo.15603470)
+
 # zk-regex
 
 A library to compile regex verification in circom. Explained on [our blog post](https://zk.email/blog/zkregex).  You can use regex to specify how to parse an email in a ZK Email proof when defining a new patterm on [the ZK Email SDK registry](https://registry.zk.email/). Noir coming soon.
