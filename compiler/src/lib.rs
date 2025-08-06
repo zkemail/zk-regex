@@ -109,7 +109,7 @@ pub fn gen_from_raw(
 ///         RegexPart::PublicPattern(("\\w+".to_string(), 20)),
 ///     ]
 /// };
-/// let (nfa, code) = gen_from_decomposed(config, "PrefixRegex", ProvingFramework::Noir)?;
+/// let (nfa, code) = gen_from_decomposed(config, "PrefixRegex", ProvingFramework::Noir).unwrap();
 /// ```
 pub fn gen_from_decomposed(
     config: DecomposedRegexConfig,
