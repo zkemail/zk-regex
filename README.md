@@ -2,7 +2,7 @@
 
 # zk-regex
 
-A library to compile regex verification in circom. Explained on [our blog post](https://zk.email/blog/zkregex).  You can use regex to specify how to parse an email in a ZK Email proof when defining a new patterm on [the ZK Email SDK registry](https://registry.zk.email/). Noir coming soon.
+A library to compile regex verification in circom. Explained on [our blog post](https://zk.email/blog/zkregex).  You can use regex to specify how to parse an email in a ZK Email proof when defining a new pattern on [the ZK Email SDK registry](https://registry.zk.email/). Noir coming soon.
 
 <!-- We've forked [min-dfa into a UI here](https://mindfa.onrender.com/min_dfa) to create a UI that converts existing regexes with [] support, as well as escapes \_, and the character classes a-z, A-Z, and 0-9. It also shows the DFA states very clearly so you can choose accept states easily. This should make converting regexes into DFA form way cleaner. -->
 
@@ -42,7 +42,7 @@ The regular expressions supported by our compiler version 2.1.1 are **audited by
 
 Note that all international characters are supported.
 
-If you want to use this circuit in practice, we strongly recommend using [AssertZero](https://github.com/zkemail/zk-email-verify/blob/29d5c873161c30ebb98a00efb3a145275d0f0833/packages/circuits/utils/array.circom#L144) on the bytes before and after your match. This is because you likely have shift viaan unconstrained index passed in as the witnesss to represent the start of the regex match. Since that value can be arbitrarily manipulated, you need to manually constrain that there are no extra matches that can be used to exploit the circuit. You can see how we do this in [zk-email here](https://github.com/zkemail/zk-email-verify/blob/29d5c873161c30ebb98a00efb3a145275d0f0833/packages/circuits/email-verifier.circom#L99).
+If you want to use this circuit in practice, we strongly recommend using [AssertZero](https://github.com/zkemail/zk-email-verify/blob/29d5c873161c30ebb98a00efb3a145275d0f0833/packages/circuits/utils/array.circom#L144) on the bytes before and after your match. This is because you likely have shift via an unconstrained index passed in as the witness to represent the start of the regex match. Since that value can be arbitrarily manipulated, you need to manually constrain that there are no extra matches that can be used to exploit the circuit. You can see how we do this in [zk-email here](https://github.com/zkemail/zk-email-verify/blob/29d5c873161c30ebb98a00efb3a145275d0f0833/packages/circuits/email-verifier.circom#L99).
 
 ## How to use
 
