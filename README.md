@@ -168,12 +168,12 @@ yarn test
 Use this bibtex citation.
 ```
 @misc{zk-regex,
-  author = {Gupta, Aayush and Panda, Sampriti and Suegami, Sora},
-  title = {zk-regex},
-  year = {2022},
-  publisher = {GitHub},
-  journal = {GitHub repository},
-  howpublished = {\url{https://github.com/zkemail/zk-regex/}},
+  author = {Gupta, Aayush and Londhe, Shreyas and Bisht, Aditya and Panda, Sampriti and Suegami, Sora},
+  title = {ZK Regex},
+  year         = {2025},
+  publisher    = {Zenodo},
+  howpublished = {\url{https://doi.org/10.5281/zenodo.15603470}},
+  note         = {Software; archived via GitHub repository (original 2022)},
 }
 ```
 
