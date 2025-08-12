@@ -19,6 +19,7 @@
 //! - `-c, --circom-file-path <PATH>`: File path for Circom output
 //! - `-t, --template-name <NAME>`: Template name
 //! - `-g, --gen-substrs`: Generate substrings
+//! - `-i, --is_safe``: Performs rigorous checks on the range of each character in the input string, adding 9 additional constraints per character
 //!
 //! Example:
 //! ```
@@ -39,11 +40,18 @@
 //! - `-c, --circom-file-path <PATH>`: File path for Circom output
 //! - `-t, --template-name <NAME>`: Template name
 //! - `-g, --gen-substrs`: Generate substrings
+//! - `-i, --is_safe``: Performs rigorous checks on the range of each character in the input string, adding 9 additional constraints per character
 //!
 //! Example:
 //! ```
 //! zk-regex raw -r "a*b+c?" -s substrings.json -h ./halo2_output -c ./circom_output.circom -t MyTemplate -g true
 //! ```
+//!
+//! ## Note
+//! The `-i (--is_safe)` option controls the rigor of range checks for input characters:
+//! - If not set to `true`, the generated Circom template uses less rigorous range checks, which may allow excessively large values.
+//! - This is usually not critical, as input text bytes are assumed to be less than 255.
+//! - When `is_safe` is `true`, the template adds 9 extra constraints per character, ensuring strict range checks.
 
 use clap::{Parser, Subcommand};
 use zk_regex_compiler::{gen_from_decomposed, gen_from_raw};
@@ -68,6 +76,8 @@ enum Commands {
         template_name: Option<String>,
         #[arg(short, long)]
         gen_substrs: Option<bool>,
+        #[arg(short, long)]
+        is_safe: Option<bool>,
     },
     Raw {
         #[arg(short, long)]
@@ -82,6 +92,8 @@ enum Commands {
         template_name: Option<String>,
         #[arg(short, long)]
         gen_substrs: Option<bool>,
+        #[arg(short, long)]
+        is_safe: Option<bool>,
     },
 }
 
@@ -100,6 +112,7 @@ fn process_decomposed(cli: Cli) {
         circom_file_path,
         template_name,
         gen_substrs,
+        is_safe,
     } = cli.command
     {
         if let Err(e) = gen_from_decomposed(
@@ -108,6 +121,7 @@ fn process_decomposed(cli: Cli) {
             circom_file_path.as_deref(),
             template_name.as_deref(),
             gen_substrs,
+            is_safe,
         ) {
             eprintln!("Error: {}", e);
             std::process::exit(1);
@@ -123,6 +137,7 @@ fn process_raw(cli: Cli) {
         circom_file_path,
         template_name,
         gen_substrs,
+        is_safe,
     } = cli.command
     {
         if let Err(e) = gen_from_raw(
@@ -132,6 +147,7 @@ fn process_raw(cli: Cli) {
             circom_file_path.as_deref(),
             template_name.as_deref(),
             gen_substrs,
+            is_safe,
         ) {
             eprintln!("Error: {}", e);
             std::process::exit(1);

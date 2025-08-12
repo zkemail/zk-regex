@@ -72,3 +72,23 @@ template IsNotZeroAcc() {
     signal is_zero <== IsZero()(in);
     out <== acc + (1 - is_zero);
 }
+
+template SemiSafeLessThan(n) {
+    assert(n <= 252);
+    signal input in[2];
+    signal output out;
+
+    component aInRange = Num2Bits(n);
+    aInRange.in <== in[0];
+
+    // In this project, in[1] is always 255.
+    // component bInRange = Num2Bits(n);
+    // bInRange.in <== in[1];
+
+    component lt = LessThan(n);
+
+    lt.in[0] <== in[0];
+    lt.in[1] <== in[1];
+
+    out <== lt.out;
+}
