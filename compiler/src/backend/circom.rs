@@ -101,7 +101,7 @@ pub fn generate_circom_code(
     code.push_str("include \"circomlib/circuits/comparators.circom\";\n");
     code.push_str("include \"circomlib/circuits/gates.circom\";\n");
     code.push_str("include \"@zk-email/circuits/utils/array.circom\";\n");
-    code.push_str("include \"@zk-email/circuits/utils/regex.circom\";\n\n");
+    code.push_str("include \"@zk-email/circuits/utils/regex.circom\";\n");
     code.push_str("include \"@zk-email/zk-regex-circom/circuits/regex_helpers.circom\";\n\n");
 
     let display_pattern = escape_regex_for_display(regex_pattern);
