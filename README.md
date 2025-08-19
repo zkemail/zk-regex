@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15603470.svg)](https://doi.org/10.5281/zenodo.15603470)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15603470.svg)](https://zenodo.org/doi/10.5281/zenodo.15603470)
 
 # zk-regex
 
