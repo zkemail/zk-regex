@@ -33,12 +33,6 @@ describe("Bodyhash Regex", () => {
             output.code
         );
 
-        // graph = JSON.parse(
-        //     readFileSync(
-        //         path.join(__dirname, "../common/body_hash_graph.json"),
-        //         "utf8"
-        //     )
-        // );
         graph = JSON.parse(output.graph);
         circuit = await wasm_tester(
             path.join(__dirname, "./circuits/test_body_hash_regex.circom"),

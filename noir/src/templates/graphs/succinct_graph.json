@@ -1,1 +1,411 @@
-{"regex":"(Welcome to the )(Succinct Residency!)","nodes":[{"state_id":0,"byte_transitions":{"87":[1]},"epsilon_transitions":[],"capture_groups":{"1":[[1,true]]}},{"state_id":1,"byte_transitions":{"101":[2]},"epsilon_transitions":[],"capture_groups":{"2":[]}},{"state_id":2,"byte_transitions":{"108":[3]},"epsilon_transitions":[],"capture_groups":{"3":[]}},{"state_id":3,"byte_transitions":{"99":[4]},"epsilon_transitions":[],"capture_groups":{"4":[]}},{"state_id":4,"byte_transitions":{"111":[5]},"epsilon_transitions":[],"capture_groups":{"5":[]}},{"state_id":5,"byte_transitions":{"109":[6]},"epsilon_transitions":[],"capture_groups":{"6":[]}},{"state_id":6,"byte_transitions":{"101":[7]},"epsilon_transitions":[],"capture_groups":{"7":[]}},{"state_id":7,"byte_transitions":{"32":[8]},"epsilon_transitions":[],"capture_groups":{"8":[]}},{"state_id":8,"byte_transitions":{"116":[9]},"epsilon_transitions":[],"capture_groups":{"9":[]}},{"state_id":9,"byte_transitions":{"111":[10]},"epsilon_transitions":[],"capture_groups":{"10":[]}},{"state_id":10,"byte_transitions":{"32":[11]},"epsilon_transitions":[],"capture_groups":{"11":[]}},{"state_id":11,"byte_transitions":{"116":[12]},"epsilon_transitions":[],"capture_groups":{"12":[]}},{"state_id":12,"byte_transitions":{"104":[13]},"epsilon_transitions":[],"capture_groups":{"13":[]}},{"state_id":13,"byte_transitions":{"101":[14]},"epsilon_transitions":[],"capture_groups":{"14":[]}},{"state_id":14,"byte_transitions":{"32":[15]},"epsilon_transitions":[],"capture_groups":{"15":[[1,false]]}},{"state_id":15,"byte_transitions":{"83":[16]},"epsilon_transitions":[],"capture_groups":{"16":[[2,true]]}},{"state_id":16,"byte_transitions":{"117":[17]},"epsilon_transitions":[],"capture_groups":{"17":[]}},{"state_id":17,"byte_transitions":{"99":[18]},"epsilon_transitions":[],"capture_groups":{"18":[]}},{"state_id":18,"byte_transitions":{"99":[19]},"epsilon_transitions":[],"capture_groups":{"19":[]}},{"state_id":19,"byte_transitions":{"105":[20]},"epsilon_transitions":[],"capture_groups":{"20":[]}},{"state_id":20,"byte_transitions":{"110":[21]},"epsilon_transitions":[],"capture_groups":{"21":[]}},{"state_id":21,"byte_transitions":{"99":[22]},"epsilon_transitions":[],"capture_groups":{"22":[]}},{"state_id":22,"byte_transitions":{"116":[23]},"epsilon_transitions":[],"capture_groups":{"23":[]}},{"state_id":23,"byte_transitions":{"32":[24]},"epsilon_transitions":[],"capture_groups":{"24":[]}},{"state_id":24,"byte_transitions":{"82":[25]},"epsilon_transitions":[],"capture_groups":{"25":[]}},{"state_id":25,"byte_transitions":{"101":[26]},"epsilon_transitions":[],"capture_groups":{"26":[]}},{"state_id":26,"byte_transitions":{"115":[27]},"epsilon_transitions":[],"capture_groups":{"27":[]}},{"state_id":27,"byte_transitions":{"105":[28]},"epsilon_transitions":[],"capture_groups":{"28":[]}},{"state_id":28,"byte_transitions":{"100":[29]},"epsilon_transitions":[],"capture_groups":{"29":[]}},{"state_id":29,"byte_transitions":{"101":[30]},"epsilon_transitions":[],"capture_groups":{"30":[]}},{"state_id":30,"byte_transitions":{"110":[31]},"epsilon_transitions":[],"capture_groups":{"31":[]}},{"state_id":31,"byte_transitions":{"99":[32]},"epsilon_transitions":[],"capture_groups":{"32":[]}},{"state_id":32,"byte_transitions":{"121":[33]},"epsilon_transitions":[],"capture_groups":{"33":[]}},{"state_id":33,"byte_transitions":{"33":[34]},"epsilon_transitions":[],"capture_groups":{"34":[[2,false]]}},{"state_id":34,"byte_transitions":{},"epsilon_transitions":[],"capture_groups":{}}],"start_states":[0],"accept_states":[34],"num_capture_groups":2}
+{
+  "regex": "(Welcome to the )(Succinct Residency!)",
+  "nodes": [
+    {
+      "state_id": 0,
+      "byte_transitions": {
+        "87": [
+          1
+        ]
+      },
+      "capture_groups": {
+        "1": [
+          [
+            1,
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "state_id": 1,
+      "byte_transitions": {
+        "101": [
+          2
+        ]
+      },
+      "capture_groups": {
+        "2": []
+      }
+    },
+    {
+      "state_id": 2,
+      "byte_transitions": {
+        "108": [
+          3
+        ]
+      },
+      "capture_groups": {
+        "3": []
+      }
+    },
+    {
+      "state_id": 3,
+      "byte_transitions": {
+        "99": [
+          4
+        ]
+      },
+      "capture_groups": {
+        "4": []
+      }
+    },
+    {
+      "state_id": 4,
+      "byte_transitions": {
+        "111": [
+          5
+        ]
+      },
+      "capture_groups": {
+        "5": []
+      }
+    },
+    {
+      "state_id": 5,
+      "byte_transitions": {
+        "109": [
+          6
+        ]
+      },
+      "capture_groups": {
+        "6": []
+      }
+    },
+    {
+      "state_id": 6,
+      "byte_transitions": {
+        "101": [
+          7
+        ]
+      },
+      "capture_groups": {
+        "7": []
+      }
+    },
+    {
+      "state_id": 7,
+      "byte_transitions": {
+        "32": [
+          8
+        ]
+      },
+      "capture_groups": {
+        "8": []
+      }
+    },
+    {
+      "state_id": 8,
+      "byte_transitions": {
+        "116": [
+          9
+        ]
+      },
+      "capture_groups": {
+        "9": []
+      }
+    },
+    {
+      "state_id": 9,
+      "byte_transitions": {
+        "111": [
+          10
+        ]
+      },
+      "capture_groups": {
+        "10": []
+      }
+    },
+    {
+      "state_id": 10,
+      "byte_transitions": {
+        "32": [
+          11
+        ]
+      },
+      "capture_groups": {
+        "11": []
+      }
+    },
+    {
+      "state_id": 11,
+      "byte_transitions": {
+        "116": [
+          12
+        ]
+      },
+      "capture_groups": {
+        "12": []
+      }
+    },
+    {
+      "state_id": 12,
+      "byte_transitions": {
+        "104": [
+          13
+        ]
+      },
+      "capture_groups": {
+        "13": []
+      }
+    },
+    {
+      "state_id": 13,
+      "byte_transitions": {
+        "101": [
+          14
+        ]
+      },
+      "capture_groups": {
+        "14": []
+      }
+    },
+    {
+      "state_id": 14,
+      "byte_transitions": {
+        "32": [
+          15
+        ]
+      },
+      "capture_groups": {
+        "15": [
+          [
+            1,
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "state_id": 15,
+      "byte_transitions": {
+        "83": [
+          16
+        ]
+      },
+      "capture_groups": {
+        "16": [
+          [
+            2,
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "state_id": 16,
+      "byte_transitions": {
+        "117": [
+          17
+        ]
+      },
+      "capture_groups": {
+        "17": []
+      }
+    },
+    {
+      "state_id": 17,
+      "byte_transitions": {
+        "99": [
+          18
+        ]
+      },
+      "capture_groups": {
+        "18": []
+      }
+    },
+    {
+      "state_id": 18,
+      "byte_transitions": {
+        "99": [
+          19
+        ]
+      },
+      "capture_groups": {
+        "19": []
+      }
+    },
+    {
+      "state_id": 19,
+      "byte_transitions": {
+        "105": [
+          20
+        ]
+      },
+      "capture_groups": {
+        "20": []
+      }
+    },
+    {
+      "state_id": 20,
+      "byte_transitions": {
+        "110": [
+          21
+        ]
+      },
+      "capture_groups": {
+        "21": []
+      }
+    },
+    {
+      "state_id": 21,
+      "byte_transitions": {
+        "99": [
+          22
+        ]
+      },
+      "capture_groups": {
+        "22": []
+      }
+    },
+    {
+      "state_id": 22,
+      "byte_transitions": {
+        "116": [
+          23
+        ]
+      },
+      "capture_groups": {
+        "23": []
+      }
+    },
+    {
+      "state_id": 23,
+      "byte_transitions": {
+        "32": [
+          24
+        ]
+      },
+      "capture_groups": {
+        "24": []
+      }
+    },
+    {
+      "state_id": 24,
+      "byte_transitions": {
+        "82": [
+          25
+        ]
+      },
+      "capture_groups": {
+        "25": []
+      }
+    },
+    {
+      "state_id": 25,
+      "byte_transitions": {
+        "101": [
+          26
+        ]
+      },
+      "capture_groups": {
+        "26": []
+      }
+    },
+    {
+      "state_id": 26,
+      "byte_transitions": {
+        "115": [
+          27
+        ]
+      },
+      "capture_groups": {
+        "27": []
+      }
+    },
+    {
+      "state_id": 27,
+      "byte_transitions": {
+        "105": [
+          28
+        ]
+      },
+      "capture_groups": {
+        "28": []
+      }
+    },
+    {
+      "state_id": 28,
+      "byte_transitions": {
+        "100": [
+          29
+        ]
+      },
+      "capture_groups": {
+        "29": []
+      }
+    },
+    {
+      "state_id": 29,
+      "byte_transitions": {
+        "101": [
+          30
+        ]
+      },
+      "capture_groups": {
+        "30": []
+      }
+    },
+    {
+      "state_id": 30,
+      "byte_transitions": {
+        "110": [
+          31
+        ]
+      },
+      "capture_groups": {
+        "31": []
+      }
+    },
+    {
+      "state_id": 31,
+      "byte_transitions": {
+        "99": [
+          32
+        ]
+      },
+      "capture_groups": {
+        "32": []
+      }
+    },
+    {
+      "state_id": 32,
+      "byte_transitions": {
+        "121": [
+          33
+        ]
+      },
+      "capture_groups": {
+        "33": []
+      }
+    },
+    {
+      "state_id": 33,
+      "byte_transitions": {
+        "33": [
+          34
+        ]
+      },
+      "capture_groups": {
+        "34": [
+          [
+            2,
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "state_id": 34,
+      "byte_transitions": {},
+      "capture_groups": {}
+    }
+  ],
+  "start_states": [
+    0
+  ],
+  "accept_states": [
+    34
+  ],
+  "num_capture_groups": 2
+}

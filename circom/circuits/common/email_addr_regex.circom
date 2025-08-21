@@ -2,11 +2,11 @@ pragma circom 2.1.5;
 
 include "circomlib/circuits/comparators.circom";
 include "circomlib/circuits/gates.circom";
-include "@zk-email/zk-regex-circom/circuits/regex_helpers.circom";
 include "@zk-email/circuits/utils/array.circom";
 include "@zk-email/circuits/utils/regex.circom";
+include "@zk-email/zk-regex-circom/circuits/regex_helpers.circom";
 
-// regex: ([A-Za-z0-9!#$%&\'*+=?\\-\\^_`{|}~./@]+@[A-Za-z0-9.\\-]+)
+// regex: ([A-Za-z0-9!#$%&'*+=?\\-\\^_`{|}~./@]+@[A-Za-z0-9.\\-]+)
 template EmailAddrRegex(maxHaystackBytes, maxMatchBytes) {
     signal input inHaystack[maxHaystackBytes];
     signal input matchStart;
@@ -53,7 +53,7 @@ template EmailAddrRegex(maxHaystackBytes, maxMatchBytes) {
         if (i < maxMatchBytes-2) {
             isWithinPathLengthMinusOne[i] <== LessThan(log2Ceil(maxMatchBytes))([i, matchLength-1]);
             isTransitionLinked[i] <== IsEqual()([nextStates[i], currStates[i+1]]);
-            isTransitionLinked[i] === isWithinPathLengthMinusOne[i];
+            isTransitionLinked[i] * isWithinPathLengthMinusOne[i] === isWithinPathLengthMinusOne[i];
         }
 
         // Transition 0: 0 -[33]-> 1 | Capture Group:[ (1, 1)]
