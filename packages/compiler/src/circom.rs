@@ -980,6 +980,8 @@ pub(crate) fn gen_circom_template(
     if gen_substrs {
         let substrs = add_substrs_constraints(regex_and_dfa)?;
         file.write_all(substrs.as_bytes())?;
+    } else {
+        file.write_all(b"}")?;
     }
 
     file.flush()?;
