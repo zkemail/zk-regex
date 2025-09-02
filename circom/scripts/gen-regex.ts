@@ -26,8 +26,12 @@ const __dirname = path.dirname(__filename);
  */
 async function main(): Promise<void> {
   try {
-    // Calculate project root (going up two levels from circom/scripts/)
-    const projectRoot = path.resolve(__dirname, '..', '..');
+    // Calculate project root (accounting for dist directory if compiled)
+    // If running from dist/circom/scripts/, go up to zk-regex root
+    // If running from circom/scripts/, go up to zk-regex root
+    const projectRoot = __dirname.includes('/dist/') 
+      ? path.resolve(__dirname, '..', '..', '..', '..') 
+      : path.resolve(__dirname, '..', '..');
     
     // Define paths
     const compilerExecutable = path.join(projectRoot, 'target', 'release', 'zk-regex');

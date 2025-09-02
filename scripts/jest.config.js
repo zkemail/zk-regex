@@ -2,10 +2,10 @@
 export default {
   preset: 'ts-jest/presets/default-esm',
   extensionsToTreatAsEsm: ['.ts'],
-  globals: {
-    'ts-jest': {
+  transform: {
+    '^.+\\.ts$': ['ts-jest', {
       useESM: true,
-    },
+    }],
   },
   testEnvironment: 'node',
   testMatch: [
@@ -20,9 +20,12 @@ export default {
     '!**/node_modules/**',
     '!**/dist/**',
   ],
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@utils/(.*)$': '<rootDir>/utils/$1',
     '^@utils$': '<rootDir>/utils/index.ts',
+    '(.+)\\.js$': '$1',
   },
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
+  moduleDirectories: ['node_modules', '<rootDir>'],
 };

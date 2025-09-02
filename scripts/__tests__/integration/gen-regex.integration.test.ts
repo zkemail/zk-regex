@@ -9,8 +9,7 @@ import {
   ensureDirectory,
   writeJsonFile,
   fileExists,
-  executeCommand,
-} from '../../utils/index.js';
+} from '../../utils/index';
 
 describe('Gen-Regex Integration Tests', () => {
   let testProjectRoot: string;

@@ -150,15 +150,15 @@ logger.error('Processing failed', {
 ```bash
 # Development (with TypeScript compilation)
 cd scripts
-npm run build
-npm run gen-regex:circom
-npm run gen-regex:noir  
-npm run gen-inputs:noir
+yarn build
+yarn gen-regex:circom
+yarn gen-regex:noir  
+yarn gen-inputs:noir
 
 # Direct execution
-npx tsx circom/scripts/gen-regex.ts
-npx tsx noir/scripts/gen-regex.ts
-npx tsx noir/scripts/gen-inputs.ts
+yarn tsx ../circom/scripts/gen-regex.ts
+yarn tsx ../noir/scripts/gen-regex.ts
+yarn tsx ../noir/scripts/gen-inputs.ts
 ```
 
 ### Testing
@@ -167,17 +167,17 @@ npx tsx noir/scripts/gen-inputs.ts
 cd scripts
 
 # Run all tests
-npm test
+yarn test
 
 # Run with coverage
-npm test -- --coverage
+yarn test --coverage
 
 # Run specific test suites
-npm test -- --testPathPattern=utils
-npm test -- --testPathPattern=integration
+yarn test --testPathPattern=utils
+yarn test --testPathPattern=integration
 
 # Watch mode for development
-npm run test:watch
+yarn test:watch
 ```
 
 ### Development Workflow
@@ -185,16 +185,16 @@ npm run test:watch
 ```bash
 # Install dependencies
 cd scripts
-npm install
+yarn install
 
 # Build TypeScript
-npm run build
+yarn build
 
 # Watch for changes during development
-npm run dev
+yarn dev
 
 # Clean build artifacts
-npm run clean
+yarn clean
 ```
 
 ## Type Definitions
@@ -343,8 +343,8 @@ All migrated scripts maintain **100% functional compatibility** with their Pytho
 
 1. Make changes to TypeScript files
 2. Update tests if logic changes
-3. Run test suite: `npm test`
-4. Rebuild: `npm run build`
+3. Run test suite: `yarn test`
+4. Rebuild: `yarn build`
 5. Verify functionality with integration tests
 
 ### Dependencies

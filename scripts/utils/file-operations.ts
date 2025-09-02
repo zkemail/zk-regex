@@ -129,7 +129,7 @@ export async function removeFile(filePath: string): Promise<void> {
  */
 export async function removeDirectory(dirPath: string): Promise<void> {
   await safeFileOperation(
-    () => fs.rmdir(dirPath, { recursive: true }),
+    () => fs.rm(dirPath, { recursive: true, force: true }),
     `Failed to remove directory: ${dirPath}`
   );
 }
@@ -174,4 +174,26 @@ export async function readJsonFilesParallel<T = unknown>(filePaths: string[]): P
  */
 export async function readTextFilesParallel(filePaths: string[]): Promise<string[]> {
   return processFilesParallel(filePaths, readTextFile);
+}
+
+/**
+ * Simple glob implementation for basic patterns like "*.json"
+ */
+export async function globFiles(dirPath: string, pattern: string): Promise<string[]> {
+  const files = await safeFileOperation(
+    () => fs.readdir(dirPath),
+    `Failed to read directory: ${dirPath}`
+  );
+  
+  // Convert glob pattern to regex
+  const regexPattern = pattern
+    .replace(/\./g, '\\.')
+    .replace(/\*/g, '.*')
+    .replace(/\?/g, '.');
+  
+  const regex = new RegExp(`^${regexPattern}$`);
+  
+  return files
+    .filter(file => regex.test(file))
+    .map(file => path.join(dirPath, file));
 }

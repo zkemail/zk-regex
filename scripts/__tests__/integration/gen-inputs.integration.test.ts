@@ -12,7 +12,7 @@ import {
   fileExists,
   SampleData,
   CircuitInput,
-} from '../../utils/index.js';
+} from '../../utils/index';
 
 describe('Gen-Inputs Integration Tests', () => {
   let testProjectRoot: string;
@@ -236,10 +236,10 @@ fn main() -> pub Field {
 
     test('detects existing global constants', () => {
       const circuitContent = `
-        global MAX_HAYSTACK_LEN: u32 = 300;
-        global MAX_MATCH_LEN: u32 = 300;
-        
-        fn main() {}
+global MAX_HAYSTACK_LEN: u32 = 300;
+global MAX_MATCH_LEN: u32 = 300;
+
+fn main() {}
       `;
 
       const hasMaxHaystackLen = circuitContent.match(/^global MAX_HAYSTACK_LEN: u32\s*=\s*\d+;/m);

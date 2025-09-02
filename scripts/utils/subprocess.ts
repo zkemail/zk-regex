@@ -1,5 +1,5 @@
 import { spawn, execSync } from 'child_process';
-import { ProcessResult, ScriptError } from './types.js';
+import { ProcessResult } from './types.js';
 import { logger } from './logger.js';
 
 /**
@@ -32,18 +32,18 @@ export function executeCommand(
       };
     } else {
       // For non-captured output, use spawn to show real-time output
-      const child = spawn(command, args, {
+      execSync(`${command} ${args.join(' ')}`, {
         cwd,
+        timeout,
         stdio: 'inherit',
       });
       
-      return new Promise((resolve) => {
-        child.on('close', (code) => {
-          resolve({
-            success: code === 0,
-          });
-        });
-      }) as ProcessResult;
+      return {
+        success: true,
+        stdout: undefined,
+        stderr: undefined,
+        error: undefined,
+      };
     }
   } catch (error) {
     const err = error as Error & { stdout?: string; stderr?: string; status?: number };
@@ -57,8 +57,8 @@ export function executeCommand(
 
     return {
       success: false,
-      stdout: err.stdout,
-      stderr: err.stderr,
+      stdout: err.stdout || undefined,
+      stderr: err.stderr || undefined,
       error: err,
     };
   }
@@ -76,7 +76,7 @@ export async function executeCommandAsync(
     timeout?: number;
   } = {}
 ): Promise<ProcessResult> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const { cwd, captureOutput = true, timeout = 120000 } = options;
     
     logger.debug(`Executing async: ${command} ${args.join(' ')}`, { cwd });
@@ -130,8 +130,8 @@ export async function executeCommandAsync(
 
       resolve({
         success,
-        stdout: captureOutput ? stdout : undefined,
-        stderr: captureOutput ? stderr : undefined,
+        stdout: captureOutput ? (stdout || undefined) : undefined,
+        stderr: captureOutput ? (stderr || undefined) : undefined,
         error: success ? undefined : new Error(`Process exited with code ${code}`),
       });
     });
@@ -208,10 +208,19 @@ export function executeCargo(
   }
   cargoArgs.push(...args);
 
-  return executeCommand('cargo', cargoArgs, {
-    cwd,
+  const commandOptions: {
+    cwd?: string;
+    captureOutput?: boolean;
+    timeout?: number;
+  } = {
     captureOutput: !showOutput,
-  });
+  };
+  
+  if (cwd) {
+    commandOptions.cwd = cwd;
+  }
+
+  return executeCommand('cargo', cargoArgs, commandOptions);
 }
 
 /**

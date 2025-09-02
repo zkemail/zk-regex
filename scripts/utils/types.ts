@@ -11,9 +11,9 @@ export interface CompilerOptions {
 
 export interface ProcessResult {
   success: boolean;
-  stdout?: string;
-  stderr?: string;
-  error?: Error;
+  stdout?: string | undefined;
+  stderr?: string | undefined;
+  error?: Error | undefined;
 }
 
 export interface SampleData {

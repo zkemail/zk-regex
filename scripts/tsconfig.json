@@ -15,7 +15,7 @@
 
     // Output configuration
     "outDir": "./dist",
-    "rootDir": ".",
+    "rootDir": "..",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,

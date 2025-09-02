@@ -17,7 +17,7 @@ import {
   moveFile,
   removeFile,
   removeDirectory,
-} from '../../utils/file-operations.js';
+} from '../../utils/file-operations';
 
 describe('File Operations', () => {
   let testDir: string;

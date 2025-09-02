@@ -6,7 +6,6 @@
  */
 
 import * as path from 'path';
-import * as glob from 'glob';
 import { fileURLToPath } from 'url';
 import {
   logger,
@@ -19,13 +18,11 @@ import {
   readJsonFile,
   writeTextFile,
   readTextFile,
-  listFilesWithExtension,
   fileExists,
   removeFile,
   executeCargo,
-  executeCommandAsync,
-  executeCommandsParallel,
   isCommandAvailable,
+  globFiles,
 } from '../../scripts/utils/index.js';
 
 // Get current file directory
@@ -34,7 +31,10 @@ const __dirname = path.dirname(__filename);
 
 // Configuration
 const SCRIPT_DIR = __dirname;
-const PROJECT_ROOT = path.resolve(SCRIPT_DIR, '..', '..');
+// Calculate project root (accounting for dist directory if compiled)
+const PROJECT_ROOT = __dirname.includes('/dist/') 
+  ? path.resolve(SCRIPT_DIR, '..', '..', '..', '..') 
+  : path.resolve(SCRIPT_DIR, '..', '..');
 
 const DEFAULT_MAX_HAYSTACK_LEN = 300;
 const DEFAULT_MAX_MATCH_LEN = 300;
@@ -70,7 +70,7 @@ async function generateCircuitInputs(): Promise<UnexpectedSuccess[]> {
   const unexpectedSuccesses: UnexpectedSuccess[] = [];
 
   // Get all sample JSON files
-  const sampleJsonFiles = glob.sync(path.join(config.directories.sampleHaystacks, '*.json'));
+  const sampleJsonFiles = await globFiles(config.directories.sampleHaystacks, '*.json');
 
   for (const sampleJsonFile of sampleJsonFiles) {
     if (!(await fileExists(sampleJsonFile))) {
@@ -156,7 +156,7 @@ async function generateCircuitInputs(): Promise<UnexpectedSuccess[]> {
           '--proving-framework', 'noir',
         ], {
           cwd: config.projectRoot,
-          captureOutput: true,
+          showOutput: false,
         });
 
         if (!result.success) {
@@ -207,7 +207,7 @@ async function generateCircuitInputs(): Promise<UnexpectedSuccess[]> {
 async function addTestsToNoirCircuits(): Promise<void> {
   logger.info('Phase 2: Adding tests to Noir circuits...');
   
-  const circuitNrFiles = glob.sync(path.join(config.directories.circuits, '*_regex.nr'));
+  const circuitNrFiles = await globFiles(config.directories.circuits, '*_regex.nr');
 
   for (const circuitNrFile of circuitNrFiles) {
     if (!(await fileExists(circuitNrFile))) {
@@ -277,10 +277,10 @@ async function addTestsToNoirCircuits(): Promise<void> {
     }
 
     // Find pass input JSON files
-    const passInputJsonFiles = glob.sync(path.join(
+    const passInputJsonFiles = await globFiles(
       config.directories.circuitInputs,
       `${templateName}_pass_*.json`
-    ));
+    );
 
     if (passInputJsonFiles.length === 0 && !globalsAddedThisRun && !importsModified && !modTestsRemoved) {
       logger.info(`  No pass case circuit inputs found for ${templateName} and no other changes. No tests added or file modified.`);

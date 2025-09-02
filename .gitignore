@@ -8,4 +8,11 @@ prover.toml
 inputs.txt
 node_modules
 
+# TypeScript build artifacts
+scripts/dist/
+**/scripts/*.js
+**/scripts/*.d.ts
+**/scripts/*.js.map
+**/scripts/*.d.ts.map
+
 .claude

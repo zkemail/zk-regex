@@ -6,18 +6,18 @@ This directory contains TypeScript implementations of all ZK Regex build and pro
 
 ```bash
 # Install dependencies
-npm install
+yarn install
 
 # Build scripts
-npm run build
+yarn build
 
 # Run scripts
-npm run gen-regex:circom    # Generate Circom regex circuits
-npm run gen-regex:noir      # Generate Noir regex circuits  
-npm run gen-inputs:noir     # Generate Noir circuit inputs and tests
+yarn gen-regex:circom    # Generate Circom regex circuits
+yarn gen-regex:noir      # Generate Noir regex circuits  
+yarn gen-inputs:noir     # Generate Noir circuit inputs and tests
 
 # Run tests
-npm test
+yarn test
 ```
 
 ## Scripts Overview
@@ -85,33 +85,33 @@ The `utils/` directory provides shared functionality:
 
 ```bash
 # Install dependencies
-npm install
+yarn install
 
 # Start development mode with watch
-npm run dev
+yarn dev
 
 # Build for production
-npm run build
+yarn build
 
 # Clean build artifacts  
-npm run clean
+yarn clean
 ```
 
 ### Testing
 
 ```bash
 # Run all tests
-npm test
+yarn test
 
 # Run with coverage report
-npm test -- --coverage
+yarn test --coverage
 
 # Watch mode for TDD
-npm run test:watch
+yarn test:watch
 
 # Run specific test suite
-npm test -- utils/string-utils
-npm test -- integration/gen-regex
+yarn test utils/string-utils
+yarn test integration/gen-regex
 ```
 
 ### Code Quality
@@ -214,7 +214,7 @@ These scripts are direct TypeScript migrations of the original Python versions, 
 - Ensure output directories are writable
 
 **Tests failing**  
-- Run `npm run build` to ensure latest code is compiled
+- Run `yarn build` to ensure latest code is compiled
 - Check that test environment has required dependencies
 
 ### Debug Mode
@@ -236,9 +236,9 @@ const logger = new Logger(LogLevel.Debug);
 
 1. Make changes to TypeScript source files (not compiled JavaScript)
 2. Add tests for new functionality
-3. Run test suite: `npm test`
+3. Run test suite: `yarn test`
 4. Update documentation if needed
-5. Build and verify: `npm run build`
+5. Build and verify: `yarn build`
 
 ### Code Style
 

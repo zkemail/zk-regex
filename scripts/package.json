@@ -3,27 +3,27 @@
   "version": "1.0.0",
   "type": "module",
   "description": "TypeScript scripts for ZK Regex compilation and processing",
+  "license": "MIT",
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
     "clean": "rm -rf dist",
     "test": "jest",
     "test:watch": "jest --watch",
-    "gen-regex:circom": "node dist/circom/gen-regex.js",
-    "gen-regex:noir": "node dist/noir/gen-regex.js", 
-    "gen-inputs:noir": "node dist/noir/gen-inputs.js"
+    "gen-regex:circom": "node dist/circom/scripts/gen-regex.js",
+    "gen-regex:noir": "node dist/noir/scripts/gen-regex.js",
+    "gen-inputs:noir": "node dist/noir/scripts/gen-inputs.js"
   },
+  "packageManager": "yarn@1.22.0",
   "dependencies": {
-    "@types/node": "^20.0.0",
-    "glob": "^10.0.0"
+    "@types/node": "^20.0.0"
   },
   "devDependencies": {
     "@types/jest": "^29.5.4",
-    "@types/glob": "^8.1.0",
     "jest": "^29.5.0",
     "ts-jest": "^29.1.0",
-    "typescript": "^5.0.0",
-    "ts-node": "^10.9.0"
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
   },
   "engines": {
     "node": ">=18.0.0"

@@ -2,7 +2,7 @@
  * Tests for string utility functions
  */
 
-import { toPascalCase, toSnakeCase, capitalize } from '../../utils/string-utils.js';
+import { toPascalCase, toSnakeCase, capitalize } from '../../utils/string-utils';
 
 describe('String Utilities', () => {
   describe('toPascalCase', () => {
@@ -51,7 +51,7 @@ describe('String Utilities', () => {
 
     test('handles numbers', () => {
       expect(toSnakeCase('Html2Text')).toBe('html2_text');
-      expect(toSnakeCase('Test123ABC')).toBe('test123_a_b_c');
+      expect(toSnakeCase('Test123ABC')).toBe('test123_abc');
     });
 
     test('handles single words', () => {

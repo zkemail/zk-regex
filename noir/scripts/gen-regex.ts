@@ -9,7 +9,6 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { 
   logger, 
-  toPascalCase,
   toSnakeCase,
   ensureDirectory, 
   listFilesWithExtension,
@@ -27,7 +26,10 @@ const __dirname = path.dirname(__filename);
 
 // Configuration
 const SCRIPT_DIR = __dirname;
-const PROJECT_ROOT = path.resolve(SCRIPT_DIR, '..', '..');
+// Calculate project root (accounting for dist directory if compiled)
+const PROJECT_ROOT = __dirname.includes('/dist/') 
+  ? path.resolve(SCRIPT_DIR, '..', '..', '..', '..') 
+  : path.resolve(SCRIPT_DIR, '..', '..');
 
 // Directories
 const NOIR_COMMON_DIR = path.join(PROJECT_ROOT, 'noir', 'common');
