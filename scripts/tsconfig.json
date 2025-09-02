@@ -1,0 +1,57 @@
+{
+  "compilerOptions": {
+    // Environment setup & latest features
+    "lib": ["esnext"],
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleDetection": "force",
+    "allowJs": true,
+
+    // Node.js environment
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Output configuration
+    "outDir": "./dist",
+    "rootDir": ".",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+
+    // Best practices
+    "strict": true,
+    "skipLibCheck": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": false,
+
+    // Stricter flags
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
+    // Resolution
+    "baseUrl": ".",
+    "paths": {
+      "@utils/*": ["./utils/*"],
+      "@utils": ["./utils/index"]
+    }
+  },
+  "include": [
+    "./**/*.ts",
+    "../circom/scripts/**/*.ts",
+    "../noir/scripts/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
+  "ts-node": {
+    "esm": true
+  }
+}
