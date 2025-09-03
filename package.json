@@ -18,7 +18,9 @@
     "bun": ">=1.0.0"
   },
   "scripts": {
-    "test": "cd scripts && bun test",
+    "test": "bun test",
+    "test:scripts": "cd scripts && bun test", 
+    "test:circom": "cd circom && bun test",
     "gen-regex:circom": "cd scripts && bun run gen-regex:circom",
     "gen-regex:noir": "cd scripts && bun run gen-regex:noir", 
     "gen-inputs:noir": "cd scripts && bun run gen-inputs:noir",

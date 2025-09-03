@@ -6,11 +6,11 @@ import compiler, {
     ProvingFramework,
 } from "../../../compiler/pkg";
 const option = {
-    include: path.join(__dirname, "../../node_modules"),
+    include: path.join(__dirname, "../../../node_modules"),
 };
 const wasm_tester = circom_tester.wasm;
 
-jest.setTimeout(600000);
+// Bun handles timeouts automatically
 describe("Bodyhash Regex", () => {
     let graph;
     let circuit;
