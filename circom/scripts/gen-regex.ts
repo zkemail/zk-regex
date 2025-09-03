@@ -26,12 +26,8 @@ const __dirname = path.dirname(__filename);
  */
 async function main(): Promise<void> {
   try {
-    // Calculate project root (accounting for dist directory if compiled)
-    // If running from dist/circom/scripts/, go up to zk-regex root
-    // If running from circom/scripts/, go up to zk-regex root
-    const projectRoot = __dirname.includes('/dist/') 
-      ? path.resolve(__dirname, '..', '..', '..', '..') 
-      : path.resolve(__dirname, '..', '..');
+    // Calculate project root - always go up two levels from circom/scripts/
+    const projectRoot = path.resolve(__dirname, '..', '..');
     
     // Define paths
     const compilerExecutable = path.join(projectRoot, 'target', 'release', 'zk-regex');
@@ -80,17 +76,23 @@ async function main(): Promise<void> {
       logger.info(`  Template Name: ${templateName}`);
       logger.info(`  Output Directory: ${outputDir}`);
 
-      // Execute the compiler
-      const result = executeCargo('run', [
-        '--bin', 'zk-regex',
+      // Build the command arguments
+      const commandArgs = [
         'decomposed',
         '-d', jsonFilePath,
         '-o', outputDir,
         '-t', templateName,
         '-p', provingFramework,
+      ];
+
+      // Execute the compiler (will use release binary if available)
+      const result = executeCargo('run', [
+        '--bin', 'zk-regex',
+        ...commandArgs,
       ], {
         cwd: projectRoot,
         showOutput: true,
+        preferReleaseBinary: true,  // This will make it use the release binary if available
       });
 
       if (result.success) {

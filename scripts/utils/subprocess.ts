@@ -1,6 +1,7 @@
-import { spawn, execSync } from 'child_process';
+import { spawn, execSync, ExecSyncOptions, SpawnOptions } from 'child_process';
 import { ProcessResult } from './types.js';
 import { logger } from './logger.js';
+import * as fs from 'fs';
 
 /**
  * Execute a command synchronously and return the result
@@ -190,6 +191,7 @@ export async function executeCommandsSequence(
 
 /**
  * Execute a Cargo command with common options
+ * Prefers using the release binary if available for better performance
  */
 export function executeCargo(
   subcommand: string,
@@ -198,10 +200,51 @@ export function executeCargo(
     cwd?: string;
     quiet?: boolean;
     showOutput?: boolean;
+    preferReleaseBinary?: boolean;
   } = {}
 ): ProcessResult {
-  const { cwd, quiet = false, showOutput = true } = options;
+  const { cwd, quiet = false, showOutput = true, preferReleaseBinary = true } = options;
   
+  // Check if we should use the release binary for better performance
+  if (preferReleaseBinary && subcommand === 'run' && args.includes('--bin')) {
+    const binIndex = args.indexOf('--bin');
+    if (binIndex !== -1 && binIndex + 1 < args.length) {
+      const binaryName = args[binIndex + 1];
+      const releaseBinaryPath = cwd 
+        ? `${cwd}/target/release/${binaryName}`
+        : `target/release/${binaryName}`;
+      
+      // Check if release binary exists using fs for cross-platform compatibility
+      try {
+        const binaryExists = fs.existsSync(releaseBinaryPath);
+        if (!binaryExists) {
+          throw new Error('Binary not found');
+        }
+        
+        // Use the release binary directly instead of cargo run
+        const binaryArgs = args.slice(binIndex + 2); // Skip --bin and binary name
+        const commandOptions: {
+          cwd?: string;
+          captureOutput?: boolean;
+          timeout?: number;
+        } = {
+          captureOutput: !showOutput,
+        };
+        
+        if (cwd) {
+          commandOptions.cwd = cwd;
+        }
+        
+        logger.debug(`Using release binary: ${releaseBinaryPath}`);
+        return executeCommand(releaseBinaryPath, binaryArgs, commandOptions);
+      } catch {
+        // Release binary doesn't exist, fall back to cargo run
+        logger.debug(`Release binary not found at ${releaseBinaryPath}, using cargo run`);
+      }
+    }
+  }
+  
+  // Default cargo execution
   const cargoArgs = [subcommand];
   if (quiet) {
     cargoArgs.push('--quiet');

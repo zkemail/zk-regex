@@ -26,10 +26,8 @@ const __dirname = path.dirname(__filename);
 
 // Configuration
 const SCRIPT_DIR = __dirname;
-// Calculate project root (accounting for dist directory if compiled)
-const PROJECT_ROOT = __dirname.includes('/dist/') 
-  ? path.resolve(SCRIPT_DIR, '..', '..', '..', '..') 
-  : path.resolve(SCRIPT_DIR, '..', '..');
+// Calculate project root - always go up two levels from noir/scripts/
+const PROJECT_ROOT = path.resolve(SCRIPT_DIR, '..', '..');
 
 // Directories
 const NOIR_COMMON_DIR = path.join(PROJECT_ROOT, 'noir', 'common');
@@ -67,17 +65,23 @@ async function generateFiles(regexJsonPath: string): Promise<void> {
   logger.info(`Generating files for ${templateNamePascal}...`);
 
   try {
-    // Execute the cargo command
-    const result = executeCargo('run', [
-      '--bin', 'zk-regex',
+    // Build the command arguments
+    const commandArgs = [
       'decomposed',
       '--decomposed-regex-path', regexJsonPath,
       '--output-file-path', TEMP_OUTPUT_DIR,
       '--template-name', templateNamePascal,
       '--proving-framework', 'noir',
+    ];
+
+    // Execute the cargo command (will use release binary if available)
+    const result = executeCargo('run', [
+      '--bin', 'zk-regex',
+      ...commandArgs,
     ], {
       cwd: PROJECT_ROOT,
       showOutput: true,
+      preferReleaseBinary: true,  // This will make it use the release binary if available
     });
 
     if (!result.success) {

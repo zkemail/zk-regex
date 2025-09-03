@@ -31,10 +31,8 @@ const __dirname = path.dirname(__filename);
 
 // Configuration
 const SCRIPT_DIR = __dirname;
-// Calculate project root (accounting for dist directory if compiled)
-const PROJECT_ROOT = __dirname.includes('/dist/') 
-  ? path.resolve(SCRIPT_DIR, '..', '..', '..', '..') 
-  : path.resolve(SCRIPT_DIR, '..', '..');
+// Calculate project root - always go up two levels from noir/scripts/
+const PROJECT_ROOT = path.resolve(SCRIPT_DIR, '..', '..');
 
 const DEFAULT_MAX_HAYSTACK_LEN = 300;
 const DEFAULT_MAX_MATCH_LEN = 300;
@@ -107,9 +105,7 @@ async function generateCircuitInputs(): Promise<UnexpectedSuccess[]> {
           `${templateName}_pass_${index}.json`
         );
 
-        const result = executeCargo('run', [
-          '--quiet',
-          '--bin', 'zk-regex',
+        const commandArgs = [
           'generate-circuit-input',
           '--graph-path', graphPath,
           '--input', haystack,
@@ -117,9 +113,16 @@ async function generateCircuitInputs(): Promise<UnexpectedSuccess[]> {
           '--max-match-len', config.maxMatchLen.toString(),
           '--output-file-path', outputCircuitInputJson,
           '--proving-framework', 'noir',
+        ];
+
+        const result = executeCargo('run', [
+          '--quiet',
+          '--bin', 'zk-regex',
+          ...commandArgs,
         ], {
           cwd: config.projectRoot,
           showOutput: true,
+          preferReleaseBinary: true,  // Use release binary if available
         });
 
         if (result.success) {
@@ -144,9 +147,7 @@ async function generateCircuitInputs(): Promise<UnexpectedSuccess[]> {
           `${templateName}_fail_${index}_temp.json`
         );
 
-        const result = executeCargo('run', [
-          '--quiet',
-          '--bin', 'zk-regex',
+        const failCommandArgs = [
           'generate-circuit-input',
           '--graph-path', graphPath,
           '--input', haystack,
@@ -154,9 +155,16 @@ async function generateCircuitInputs(): Promise<UnexpectedSuccess[]> {
           '--max-match-len', config.maxMatchLen.toString(),
           '--output-file-path', tempFailOutput,
           '--proving-framework', 'noir',
+        ];
+
+        const result = executeCargo('run', [
+          '--quiet',
+          '--bin', 'zk-regex',
+          ...failCommandArgs,
         ], {
           cwd: config.projectRoot,
           showOutput: false,
+          preferReleaseBinary: true,  // Use release binary if available
         });
 
         if (!result.success) {
