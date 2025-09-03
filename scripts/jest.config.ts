@@ -1,5 +1,6 @@
-/** @type {import('jest').Config} */
-export default {
+import type { Config } from 'jest';
+
+const config: Config = {
   preset: 'ts-jest/presets/default-esm',
   extensionsToTreatAsEsm: ['.ts'],
   transform: {
@@ -29,3 +30,5 @@ export default {
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   moduleDirectories: ['node_modules', '<rootDir>'],
 };
+
+export default config;
