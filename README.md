@@ -58,14 +58,29 @@ The project is organized into the following packages:
 ### Prerequisites
 - **Node.js** >= 18.0.0
 - **Bun** >= 1.0.0 (for package management and TypeScript execution)
-- **Rust & Cargo** (for the core compiler)
+- **Rust & Cargo** (for the core compiler and Circom installation)
+- **Circom** >= 2.1.9 (for circuit compilation)
 
 ### Quick Setup
 ```bash
 # Install Bun if you haven't already
 curl -fsSL https://bun.sh/install | bash
 
-# Clone and setup the repository
+# Install Rust (required for Circom)
+curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
+source ~/.cargo/env
+
+# Install Circom from source (required for circuit compilation)
+git clone https://github.com/iden3/circom.git
+cd circom
+cargo build --release
+cargo install --path circom
+cd ..
+
+# Verify circom installation
+circom --help  # Should show version >= 2.1.9
+
+# Clone and setup the ZK-Regex repository
 git clone https://github.com/zkemail/zk-regex.git
 cd zk-regex
 bun install
@@ -116,6 +131,45 @@ Contributions are welcome! This project uses **Bun** for package management and 
 4. **Code Style:** Follow existing TypeScript and Rust conventions
 
 Open an issue to discuss major changes before submitting a pull request.
+
+## Troubleshooting
+
+### Version Compatibility Issues
+
+**Circom version errors:**
+```bash
+# Check your circom version  
+circom --help  # Should show >= 2.1.9
+
+# Install Rust first (if needed)
+curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
+source ~/.cargo/env
+
+# Install/update circom from source (official method)
+git clone https://github.com/iden3/circom.git
+cd circom
+cargo build --release
+cargo install --path circom
+```
+
+**Bun installation issues:**
+```bash
+# Install/reinstall Bun
+curl -fsSL https://bun.sh/install | bash
+
+# Verify installation
+bun --version  # Should show >= 1.0.0
+```
+
+**Test failures:**
+```bash
+# Run all tests
+bun test
+
+# Run specific test suites
+bun run test:scripts  # TypeScript tests only
+bun run test:circom   # Circom circuit tests only
+```
 
 ## License
 
