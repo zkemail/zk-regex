@@ -55,15 +55,67 @@ The project is organized into the following packages:
 
 ## Installation
 
-Installation details depend on which part of the project you need:
+### Prerequisites
+- **Node.js** >= 18.0.0
+- **Bun** >= 1.0.0 (for package management and TypeScript execution)
+- **Rust & Cargo** (for the core compiler)
 
+### Quick Setup
+```bash
+# Install Bun if you haven't already
+curl -fsSL https://bun.sh/install | bash
+
+# Clone and setup the repository
+git clone https://github.com/zkemail/zk-regex.git
+cd zk-regex
+bun install
+
+# Build the Rust compiler
+bun run build-release
+```
+
+### Component-Specific Installation
 -   **Compiler:** If using the compiler directly in a Rust project, add it to your `Cargo.toml`. See [compiler/README.md](./compiler/README.md).
 -   **Circom Helpers:** See [circom/README.md](./circom/README.md) for instructions on integrating the Circom templates.
 -   **Noir Helpers:** See [noir/README.md](./noir/README.md) for instructions on adding the Noir library dependency.
 
+## Development
+
+### Common Commands
+
+```bash
+# Install all dependencies
+bun install
+
+# Generate Circom circuits
+bun run gen-regex:circom
+
+# Generate Noir circuits  
+bun run gen-regex:noir
+
+# Generate Noir test inputs
+bun run gen-inputs:noir
+
+# Run tests
+bun run test
+
+# Build compiler (development)
+bun run build
+
+# Build compiler (optimized release)
+bun run build-release
+```
+
 ## Contributing
 
-Contributions are welcome! Please follow standard Rust development practices. Open an issue to discuss major changes before submitting a pull request.
+Contributions are welcome! This project uses **Bun** for package management and TypeScript execution. Please follow these practices:
+
+1. **Setup:** Ensure you have Bun >= 1.0.0 installed
+2. **Dependencies:** Run `bun install` after cloning
+3. **Testing:** Run `bun test` before submitting PRs
+4. **Code Style:** Follow existing TypeScript and Rust conventions
+
+Open an issue to discuss major changes before submitting a pull request.
 
 ## License
 

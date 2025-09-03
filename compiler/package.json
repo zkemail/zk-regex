@@ -8,17 +8,17 @@
     },
     "scripts": {
         "build": "cargo build && cargo install --path . && wasm-pack build --target nodejs --out-dir ./pkg/ --scope zk-email",
-        "build-debug": "npm run build --",
-        "build-release": "npm run build -- --release",
+        "build-debug": "bun run build --",
+        "build-release": "bun run build -- --release",
         "build-web": "cargo build && wasm-pack build --target web --out-dir ./pkg-web/",
-        "build-web-release": "npm run build-web -- --release",
-        "install": "npm run build-release",
-        "install-debug": "npm run build-debug",
+        "build-web-release": "bun run build-web -- --release",
+        "install": "bun run build-release",
+        "install-debug": "bun run build-debug",
         "test": "cargo test && wasm-pack test --node",
         "upload-binary": "wasm-pack publish -t nodejs",
         "upload-binary-web": "wasm-pack publish -t web --out-dir ./pkg-web/",
-        "upload-binary-web-nightly": "npm run build-web-release && wasm-pack publish-nightly -t web --out-dir ./pkg-web/",
-        "publish:alpha": "npm build && cd pkg && npm version preminor --preid=alpha && npm publis --tag alpha --access public"
+        "upload-binary-web-nightly": "bun run build-web-release && wasm-pack publish-nightly -t web --out-dir ./pkg-web/",
+        "publish:alpha": "bun run build && cd pkg && bun version preminor --preid=alpha && bun publish --tag alpha --access public"
     },
     "license": "MIT"
 }
