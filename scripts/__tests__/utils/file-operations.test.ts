@@ -29,7 +29,7 @@ describe('File Operations', () => {
 
   afterEach(async () => {
     try {
-      await fs.rmdir(testDir, { recursive: true });
+      await fs.rm(testDir, { recursive: true });
     } catch {
       // Ignore cleanup errors
     }

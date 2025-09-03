@@ -1,4 +1,4 @@
-import { spawn, execSync, ExecSyncOptions, SpawnOptions } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import { ProcessResult } from './types.js';
 import { logger } from './logger.js';
 import * as fs from 'fs';

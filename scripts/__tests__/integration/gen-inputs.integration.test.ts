@@ -72,7 +72,7 @@ fn main() -> pub Field {
   afterEach(async () => {
     // Cleanup test environment
     try {
-      await fs.rmdir(testProjectRoot, { recursive: true });
+      await fs.rm(testProjectRoot, { recursive: true });
     } catch {
       // Ignore cleanup errors
     }
