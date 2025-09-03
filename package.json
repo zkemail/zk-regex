@@ -25,7 +25,9 @@
     "gen-regex:noir": "cd scripts && bun run gen-regex:noir", 
     "gen-inputs:noir": "cd scripts && bun run gen-inputs:noir",
     "build": "cd compiler && bun run build",
-    "build-release": "cd compiler && bun run build-release"
+    "build-release": "cd compiler && bun run build-release",
+    "install-hooks": "cp git-hooks/pre-push .git/hooks/ && chmod +x .git/hooks/pre-push",
+    "postinstall": "bun run install-hooks"
   },
   "devDependencies": {
     "bun-types": "latest"

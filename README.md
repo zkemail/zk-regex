@@ -126,9 +126,48 @@ bun run build-release
 Contributions are welcome! This project uses **Bun** for package management and TypeScript execution. Please follow these practices:
 
 1. **Setup:** Ensure you have Bun >= 1.0.0 installed
-2. **Dependencies:** Run `bun install` after cloning
+2. **Dependencies:** Run `bun install` after cloning (this automatically installs git hooks)
 3. **Testing:** Run `bun test` before submitting PRs
 4. **Code Style:** Follow existing TypeScript and Rust conventions
+
+### Automatic Template Generation
+
+This project includes a **pre-push git hook** that ensures Circom and Noir templates are automatically regenerated when compiler changes are made:
+
+- **Automatic Setup**: The hook installs automatically when you run `bun install`
+- **What it does**: Detects compiler changes and regenerates templates before push
+- **Blocks pushes**: Prevents pushing if templates are outdated
+- **Team-wide**: All contributors get the same protection automatically
+
+**How it works:**
+1. Scans commits being pushed for modifications to `compiler/src/` files
+2. Builds compiler with `bun run build-release` 
+3. Regenerates both `bun run gen-regex:circom` and `bun run gen-regex:noir`
+4. Validates that generated templates match committed versions
+5. Blocks push if templates need updates but aren't committed
+
+**If your push is blocked:**
+```bash
+# Review the generated changes
+git diff circom/circuits/ noir/src/templates/
+
+# Add and commit the changes  
+git add circom/circuits/ noir/src/templates/
+git commit -m "chore: regenerate templates after compiler changes"
+
+# Push again
+git push
+```
+
+**Manual hook installation** (if needed):
+```bash
+bun run install-hooks
+```
+
+**Emergency bypass** (use sparingly):
+```bash
+git push --no-verify origin my-branch
+```
 
 Open an issue to discuss major changes before submitting a pull request.
 
