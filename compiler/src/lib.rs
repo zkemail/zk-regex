@@ -177,16 +177,57 @@ pub fn gen_circuit_inputs(
         proving_framework,
     )
     .map_err(|nfa_err| {
-        // Convert NFAError to more specific input processing errors
+        // Convert NFAError to more specific input processing errors with proper context
         match nfa_err {
-            crate::passes::NFAError::NoMatch(_) => CompilerError::no_match_found(input),
+            crate::passes::NFAError::NoMatch(msg) => CompilerError::no_match_found(input),
+            
             crate::passes::NFAError::InvalidInput(msg) => {
-                if msg.contains("exceeds maximum") {
-                    CompilerError::input_too_long(input.len(), max_haystack_len)
+                // Parse specific error conditions for better error messages
+                if msg.contains("exceeds maximum length") {
+                    // Extract actual lengths from the error message if possible
+                    if msg.contains("Haystack length") {
+                        CompilerError::input_too_long(input.len(), max_haystack_len)
+                    } else if msg.contains("Path length") {
+                        // Handle match length exceeded case
+                        CompilerError::InputProcessing {
+                            code: ErrorCode::E4001,
+                            message: format!("Match length exceeds maximum: {}", msg),
+                            input_info: Some(format!("input_len: {}, match_start_found: true", input.len())),
+                            limits: Some(format!(
+                                "max_haystack: {}, max_match: {}",
+                                max_haystack_len, max_match_len
+                            )),
+                            suggestion: Some("Increase max_match_len parameter or use a more restrictive regex".to_string()),
+                        }
+                    } else {
+                        CompilerError::InputProcessing {
+                            code: ErrorCode::E4001,
+                            message: format!("Input size constraint violated: {}", msg),
+                            input_info: Some(format!("input_len: {}", input.len())),
+                            limits: Some(format!(
+                                "max_haystack: {}, max_match: {}",
+                                max_haystack_len, max_match_len
+                            )),
+                            suggestion: Some("Adjust input size or increase circuit parameters".to_string()),
+                        }
+                    }
+                } else if msg.contains("does not equal match length") {
+                    // Handle path/match length mismatch
+                    CompilerError::InputProcessing {
+                        code: ErrorCode::E4004,
+                        message: format!("Path traversal inconsistency: {}", msg),
+                        input_info: Some(format!("input_len: {}", input.len())),
+                        limits: Some(format!(
+                            "max_haystack: {}, max_match: {}",
+                            max_haystack_len, max_match_len
+                        )),
+                        suggestion: Some("This indicates an internal issue with path generation. Please report this bug.".to_string()),
+                    }
                 } else {
+                    // Generic invalid input case
                     CompilerError::InputProcessing {
                         code: ErrorCode::E4002,
-                        message: format!("Input generation failed: {}", msg),
+                        message: format!("Input processing failed: {}", msg),
                         input_info: Some(format!("input_len: {}", input.len())),
                         limits: Some(format!(
                             "max_haystack: {}, max_match: {}",
@@ -196,7 +237,68 @@ pub fn gen_circuit_inputs(
                     }
                 }
             }
-            other => CompilerError::from(other),
+
+            crate::passes::NFAError::NoValidPath(msg) => CompilerError::InputProcessing {
+                code: ErrorCode::E4004,
+                message: format!("Path traversal failed: {}", msg),
+                input_info: Some(format!("input_len: {}, pattern_matched: false", input.len())),
+                limits: Some(format!(
+                    "max_haystack: {}, max_match: {}",
+                    max_haystack_len, max_match_len
+                )),
+                suggestion: Some("Verify that the input contains the expected pattern and check regex correctness".to_string()),
+            },
+
+            crate::passes::NFAError::RegexCompilation(msg) => CompilerError::InputProcessing {
+                code: ErrorCode::E4002,
+                message: format!("Regex compilation failed during input processing: {}", msg),
+                input_info: Some(format!("input_len: {}", input.len())),
+                limits: None,
+                suggestion: Some("This indicates an issue with capture group processing. Please report this bug.".to_string()),
+            },
+
+            crate::passes::NFAError::InvalidCapture(msg) => CompilerError::InputProcessing {
+                code: ErrorCode::E4002,
+                message: format!("Capture group processing failed: {}", msg),
+                input_info: Some(format!("input_len: {}", input.len())),
+                limits: Some(format!(
+                    "max_haystack: {}, max_match: {}",
+                    max_haystack_len, max_match_len
+                )),
+                suggestion: Some("Check capture group configuration and input format".to_string()),
+            },
+
+            // For other NFAError types, delegate to the From<NFAError> implementation
+            // but add input context where relevant
+            other => {
+                let mut base_error = CompilerError::from(other);
+                
+                // Add input context to certain error types
+                match &mut base_error {
+                    CompilerError::InputProcessing { input_info, limits, .. } => {
+                        if input_info.is_none() {
+                            *input_info = Some(format!("input_len: {}", input.len()));
+                        }
+                        if limits.is_none() {
+                            *limits = Some(format!(
+                                "max_haystack: {}, max_match: {}",
+                                max_haystack_len, max_match_len
+                            ));
+                        }
+                    }
+                    CompilerError::NFAConstruction { suggestion, .. } => {
+                        if suggestion.as_ref().map_or(true, |s| s.contains("internal")) {
+                            *suggestion = Some(format!(
+                                "Internal error during input processing (input_len: {}). Please report this issue.",
+                                input.len()
+                            ));
+                        }
+                    }
+                    _ => {}
+                }
+                
+                base_error
+            }
         }
     })
 }
