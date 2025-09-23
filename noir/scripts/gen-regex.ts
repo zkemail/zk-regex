@@ -18,7 +18,7 @@ import {
   removeDirectory,
   executeCargo,
   ScriptError 
-} from '../../scripts/utils/index.js';
+} from '../../scripts/utils/index.ts';
 
 // Get current file directory
 const __filename = fileURLToPath(import.meta.url);

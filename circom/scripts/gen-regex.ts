@@ -15,7 +15,7 @@ import {
   fileExists,
   executeCargo,
   ScriptError 
-} from '../../scripts/utils/index.js';
+} from '../../scripts/utils/index.ts';
 
 // Get current file directory (equivalent to __file__ in Python)
 const __filename = fileURLToPath(import.meta.url);

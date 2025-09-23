@@ -1,4 +1,4 @@
-import circom_tester from "circom_tester";
+const circom_tester = require("circom_tester");
 import * as path from "path";
 import { readFileSync, writeFileSync } from "fs";
 import { fileURLToPath } from "url";
@@ -88,7 +88,7 @@ describe("Bodyhash Regex", () => {
 
     it("bodyhash in the header", async () => {
         const signatureField = `dkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20230601; t=1694989812; x=1695594612; dara=google.com; h=to:subject:message-id:date:from:mime-version:from:to:cc:subject :date:message-id:reply-to; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=`;
-        const bodyHash = signatureField.split("; bh=")[1].split(";")[0];
+        const bodyHash = signatureField.split("; bh=")[1]?.split(";")[0];
         
         const { type, ...circuitInputs }: CircuitInputs = JSON.parse(
             genCircuitInputs(
@@ -111,7 +111,7 @@ describe("Bodyhash Regex", () => {
         expect(1n).toEqual(witness[1]);
         
         const extractedBodyHash = Array.from(
-            { length: bodyHash.length },
+            { length: bodyHash?.length || 0 },
             (_, idx) => String.fromCharCode(Number(witness[2 + idx]))
         ).join("");
         expect(bodyHash).toEqual(extractedBodyHash);
@@ -119,7 +119,7 @@ describe("Bodyhash Regex", () => {
 
     it("bodyhash after new line", async () => {
         const signatureField = `\r\ndkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20230601; t=1694989812; x=1695594612; dara=google.com; h=to:subject:message-id:date:from:mime-version:from:to:cc:subject :date:message-id:reply-to; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=`;
-        const bodyHash = signatureField.split("; bh=")[1].split(";")[0];
+        const bodyHash = signatureField.split("; bh=")[1]?.split(";")[0];
         
         const { type, ...circuitInputs }: CircuitInputs = JSON.parse(
             genCircuitInputs(
@@ -142,7 +142,7 @@ describe("Bodyhash Regex", () => {
         expect(1n).toEqual(witness[1]);
         
         const extractedBodyHash = Array.from(
-            { length: bodyHash.length },
+            { length: bodyHash?.length || 0 },
             (_, idx) => String.fromCharCode(Number(witness[2 + idx]))
         ).join("");
         expect(bodyHash).toEqual(extractedBodyHash);
@@ -150,7 +150,7 @@ describe("Bodyhash Regex", () => {
 
     it("bodyhash in the invalid field", async () => {
         const signatureField = `\r\ndkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20230601; t=1694989812; x=1695594612; dara=google.com; h=to:subject:message-id:date:from:mime-version:from:to:cc:subject :date:message-id:reply-to; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=`;
-        const bodyHash = signatureField.split("; bh=")[1].split(";")[0];
+        const bodyHash = signatureField.split("; bh=")[1]?.split(";")[0];
         
         const { type, ...circuitInputs }: CircuitInputs = JSON.parse(
             genCircuitInputs(

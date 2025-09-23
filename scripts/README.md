@@ -79,6 +79,19 @@ bun run ../noir/scripts/gen-inputs.ts
 - Handles capture groups, imports, and global constants
 - Reports unexpected test results
 
+> **⚠️ Important for Manual Tests:**
+>
+> If you need to add custom/manual tests to Noir circuit files, always add them as **individual test functions**:
+>
+> ```rust
+> #[test]
+> fn test_my_custom_case() {
+>     // Your test logic here
+> }
+> ```
+>
+> **Do NOT** add tests inside `#[cfg(test)] mod tests {}` blocks, as the gen-inputs script will remove these modules during test generation. Individual `#[test]` functions are automatically preserved.
+
 ## Utilities
 
 The `utils/` directory provides shared functionality:
