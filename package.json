@@ -1,0 +1,35 @@
+{
+  "name": "zk-regex-monorepo",
+  "version": "2.2.2-alpha.0",
+  "description": "ZK Regex: Verifiable Regular Expressions in Arithmetic Circuits",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zkemail/zk-regex.git"
+  },
+  "license": "MIT",
+  "private": true,
+  "workspaces": [
+    "scripts",
+    "circom",
+    "compiler"
+  ],
+  "engines": {
+    "node": ">=18.0.0",
+    "bun": ">=1.0.0"
+  },
+  "scripts": {
+    "test": "bun test",
+    "test:scripts": "cd scripts && bun test", 
+    "test:circom": "cd circom && bun test",
+    "gen-regex:circom": "cd scripts && bun run gen-regex:circom",
+    "gen-regex:noir": "cd scripts && bun run gen-regex:noir", 
+    "gen-inputs:noir": "cd scripts && bun run gen-inputs:noir",
+    "build": "cd compiler && bun run build",
+    "build-release": "cd compiler && bun run build-release",
+    "install-hooks": "cp git-hooks/pre-push .git/hooks/ && chmod +x .git/hooks/pre-push",
+    "postinstall": "bun run install-hooks"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  }
+}

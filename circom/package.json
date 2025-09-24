@@ -4,7 +4,7 @@
     "license": "MIT",
     "description": "regex verification circuits in circom for common regexes, generated with the compiler in [zk-regex](https://github.com/zkemail/zk-regex/tree/main).",
     "scripts": {
-        "test": "jest"
+        "test": "bun test circuits/tests/"
     },
     "dependencies": {
         "@zk-email/circuits": "6.4.1-alpha.0",
@@ -13,20 +13,14 @@
     },
     "devDependencies": {
         "@types/bun": "latest",
-        "@types/jest": "^29.5.4",
         "chai": "^4.3.7",
-        "circom_tester": "^0.0.20",
+        "circom_tester": "^0.0.24",
         "circomlibjs": "^0.1.2",
-        "ffjavascript": "^0.3.1",
-        "jest": "^29.5.0",
-        "mocha": "^10.2.0"
+        "ffjavascript": "^0.3.1"
     },
-    "babel": {
-        "presets": [
-            [
-                "@babel/preset-env"
-            ]
-        ]
+    "engines": {
+        "node": ">=18.0.0",
+        "bun": ">=1.0.0"
     },
     "peerDependencies": {
         "typescript": "^5"

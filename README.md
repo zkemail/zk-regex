@@ -55,15 +55,160 @@ The project is organized into the following packages:
 
 ## Installation
 
-Installation details depend on which part of the project you need:
+### Prerequisites
+- **Node.js** >= 18.0.0
+- **Bun** >= 1.0.0 (for package management and TypeScript execution)
+- **Rust & Cargo** (for the core compiler and Circom installation)
+- **Circom** >= 2.1.9 (for circuit compilation)
 
+### Quick Setup
+```bash
+# Install Bun if you haven't already
+curl -fsSL https://bun.sh/install | bash
+
+# Install Rust (required for Circom)
+curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
+source ~/.cargo/env
+
+# Install Circom from source (required for circuit compilation)
+git clone https://github.com/iden3/circom.git
+cd circom
+cargo build --release
+cargo install --path circom
+cd ..
+
+# Verify circom installation
+circom --help  # Should show version >= 2.1.9
+
+# Clone and setup the ZK-Regex repository
+git clone https://github.com/zkemail/zk-regex.git
+cd zk-regex
+bun install
+
+# Build the Rust compiler
+bun run build-release
+```
+
+### Component-Specific Installation
 -   **Compiler:** If using the compiler directly in a Rust project, add it to your `Cargo.toml`. See [compiler/README.md](./compiler/README.md).
 -   **Circom Helpers:** See [circom/README.md](./circom/README.md) for instructions on integrating the Circom templates.
 -   **Noir Helpers:** See [noir/README.md](./noir/README.md) for instructions on adding the Noir library dependency.
 
+## Development
+
+### Common Commands
+
+```bash
+# Install all dependencies
+bun install
+
+# Generate Circom circuits
+bun run gen-regex:circom
+
+# Generate Noir circuits  
+bun run gen-regex:noir
+
+# Generate Noir test inputs
+bun run gen-inputs:noir
+
+# Run tests
+bun run test
+
+# Build compiler (development)
+bun run build
+
+# Build compiler (optimized release)
+bun run build-release
+```
+
 ## Contributing
 
-Contributions are welcome! Please follow standard Rust development practices. Open an issue to discuss major changes before submitting a pull request.
+Contributions are welcome! This project uses **Bun** for package management and TypeScript execution. Please follow these practices:
+
+1. **Setup:** Ensure you have Bun >= 1.0.0 installed
+2. **Dependencies:** Run `bun install` after cloning (this automatically installs git hooks)
+3. **Testing:** Run `bun test` before submitting PRs
+4. **Code Style:** Follow existing TypeScript and Rust conventions
+
+### Automatic Template Generation
+
+This project includes a **pre-push git hook** that ensures Circom and Noir templates are automatically regenerated when compiler changes are made:
+
+- **Automatic Setup**: The hook installs automatically when you run `bun install`
+- **What it does**: Detects compiler changes and regenerates templates before push
+- **Blocks pushes**: Prevents pushing if templates are outdated
+- **Team-wide**: All contributors get the same protection automatically
+
+**How it works:**
+1. Scans commits being pushed for modifications to `compiler/src/` files
+2. Builds compiler with `bun run build-release` 
+3. Regenerates both `bun run gen-regex:circom` and `bun run gen-regex:noir`
+4. Validates that generated templates match committed versions
+5. Blocks push if templates need updates but aren't committed
+
+**If your push is blocked:**
+```bash
+# Review the generated changes
+git diff circom/circuits/ noir/src/templates/
+
+# Add and commit the changes  
+git add circom/circuits/ noir/src/templates/
+git commit -m "chore: regenerate templates after compiler changes"
+
+# Push again
+git push
+```
+
+**Manual hook installation** (if needed):
+```bash
+bun run install-hooks
+```
+
+**Emergency bypass** (use sparingly):
+```bash
+git push --no-verify origin my-branch
+```
+
+Open an issue to discuss major changes before submitting a pull request.
+
+## Troubleshooting
+
+### Version Compatibility Issues
+
+**Circom version errors:**
+```bash
+# Check your circom version  
+circom --help  # Should show >= 2.1.9
+
+# Install Rust first (if needed)
+curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
+source ~/.cargo/env
+
+# Install/update circom from source (official method)
+git clone https://github.com/iden3/circom.git
+cd circom
+cargo build --release
+cargo install --path circom
+```
+
+**Bun installation issues:**
+```bash
+# Install/reinstall Bun
+curl -fsSL https://bun.sh/install | bash
+
+# Verify installation
+bun --version  # Should show >= 1.0.0
+```
+
+**Test failures:**
+```bash
+# Run all tests
+bun test
+
+# Run specific test suites
+bun run test:scripts  # TypeScript tests only
+bun run test:circom   # Circom circuit tests only
+```
 
 ## License
 
