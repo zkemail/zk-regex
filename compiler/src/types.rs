@@ -53,7 +53,7 @@ impl FromStr for ProvingFramework {
             "circom" => Self::Circom,
             "noir" => Self::Noir,
             _ => {
-                return Err(format!("Invalid proving framework: {}", s));
+                return Err(format!("Invalid proving framework: {s}"));
             }
         })
     }

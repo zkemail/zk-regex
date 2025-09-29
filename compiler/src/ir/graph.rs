@@ -98,11 +98,10 @@ impl NFAGraph {
         // Start from accept states
         let mut stack: Vec<_> = self.accept_states.iter().copied().collect();
         while let Some(state) = stack.pop() {
-            if reaching_accept.insert(state) {
-                if let Some(predecessors) = reverse_edges.get(&state) {
+            if reaching_accept.insert(state)
+                && let Some(predecessors) = reverse_edges.get(&state) {
                     stack.extend(predecessors);
                 }
-            }
         }
 
         reaching_accept
@@ -114,8 +113,7 @@ impl NFAGraph {
         for (idx, node) in self.nodes.iter().enumerate() {
             if node.state_id != idx {
                 return Err(NFAError::InvalidStateId(format!(
-                    "State ID mismatch at index {}",
-                    idx
+                    "State ID mismatch at index {idx}"
                 )));
             }
         }
@@ -126,8 +124,7 @@ impl NFAGraph {
                 for &dest in destinations {
                     if dest >= self.nodes.len() {
                         return Err(NFAError::InvalidTransition(format!(
-                            "Invalid transition target {} from state {}",
-                            dest, state_idx
+                            "Invalid transition target {dest} from state {state_idx}"
                         )));
                     }
                 }
@@ -138,8 +135,7 @@ impl NFAGraph {
         for &start in &self.start_states {
             if start >= self.nodes.len() {
                 return Err(NFAError::InvalidStateId(format!(
-                    "Invalid start state {}",
-                    start
+                    "Invalid start state {start}"
                 )));
             }
         }
@@ -148,8 +144,7 @@ impl NFAGraph {
         for &accept in &self.accept_states {
             if accept >= self.nodes.len() {
                 return Err(NFAError::InvalidStateId(format!(
-                    "Invalid accept state {}",
-                    accept
+                    "Invalid accept state {accept}"
                 )));
             }
         }
@@ -160,7 +155,7 @@ impl NFAGraph {
     /// Get the path to the accept state for a given haystack
     pub fn get_path_to_accept(&self, haystack: &[u8]) -> NFAResult<PathWithMatchSpan> {
         let vm = PikeVM::new(&self.regex)
-            .map_err(|e| NFAError::RegexCompilation(format!("Failed to build VM: {}", e)))?;
+            .map_err(|e| NFAError::RegexCompilation(format!("Failed to build VM: {e}")))?;
         let mut cache = vm.create_cache();
         let mat = vm
             .find(&mut cache, Input::new(haystack))
@@ -192,8 +187,7 @@ impl NFAGraph {
                         let mut new_path = path.clone();
                         let capture = self.nodes[state]
                             .capture_groups
-                            .get(&next_state)
-                            .and_then(|caps| Some(caps.clone()));
+                            .get(&next_state).cloned();
 
                         new_path.push((state, next_state, byte, capture));
                         new_paths.insert(next_state, new_path);

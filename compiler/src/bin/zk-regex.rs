@@ -101,7 +101,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         code,
                         &output_file_path,
                         &template_name,
-                        &proving_framework.file_extension(),
+                        proving_framework.file_extension(),
                     )?;
                 }
                 Err(compiler_err) => {
@@ -136,7 +136,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         code,
                         &output_file_path,
                         &template_name,
-                        &proving_framework.file_extension(),
+                        proving_framework.file_extension(),
                     )?;
                 }
                 Err(compiler_err) => {
@@ -174,7 +174,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         "circom" => ProvingFramework::Circom,
                         "noir" => ProvingFramework::Noir,
                         _ => {
-                            eprintln!("❌ Invalid proving framework: {}", proving_framework);
+                            eprintln!("❌ Invalid proving framework: {proving_framework}");
                             eprintln!("Supported frameworks: circom, noir");
                             std::process::exit(1);
                         }

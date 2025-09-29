@@ -2,7 +2,7 @@ use crate::{
     DecomposedRegexConfig, ProvingFramework, RegexOutput,
     backend::{generate_circom_code, generate_noir_code},
     compile,
-    error::{CompilerError, CompilerResult, ErrorCode},
+    error::{CompilerError, ErrorCode},
     gen_circuit_inputs,
     ir::NFAGraph,
     utils::decomposed_to_composed_regex,
@@ -100,7 +100,7 @@ fn generate_from_decomposed_internal(
     let decomposed_regex: DecomposedRegexConfig =
         serde_json::from_str(decomposed_json).map_err(|e| CompilerError::Internal {
             code: ErrorCode::E9002,
-            message: format!("Failed to parse decomposed regex JSON: {}", e),
+            message: format!("Failed to parse decomposed regex JSON: {e}"),
             context: Some("WASM deserialization".to_string()),
         })?;
 
@@ -150,7 +150,7 @@ fn generate_from_raw_internal(
 
     let graph = nfa
         .to_json()
-        .map_err(|nfa_err| CompilerError::from(nfa_err))?;
+        .map_err(CompilerError::from)?;
 
     let code = match proving_framework {
         ProvingFramework::Circom => {
@@ -225,7 +225,7 @@ fn generate_circuit_inputs_internal(
 ) -> Result<String, WasmError> {
     let nfa: NFAGraph = serde_json::from_str(graph_json).map_err(|e| CompilerError::Internal {
         code: ErrorCode::E9002,
-        message: format!("Failed to parse NFA graph JSON: {}", e),
+        message: format!("Failed to parse NFA graph JSON: {e}"),
         context: Some("WASM graph deserialization".to_string()),
     })?;
 

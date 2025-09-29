@@ -89,8 +89,7 @@ impl IntermediateNFA {
                 for &dest in destinations {
                     if dest >= self.nodes.len() {
                         return Err(NFAError::InvalidTransition(format!(
-                            "Byte transition from state {} to invalid state {}",
-                            state_idx, dest
+                            "Byte transition from state {state_idx} to invalid state {dest}"
                         )));
                     }
                 }
@@ -100,8 +99,7 @@ impl IntermediateNFA {
             for &dest in &node.epsilon_transitions {
                 if dest >= self.nodes.len() {
                     return Err(NFAError::InvalidTransition(format!(
-                        "Epsilon transition from state {} to invalid state {}",
-                        state_idx, dest
+                        "Epsilon transition from state {state_idx} to invalid state {dest}"
                     )));
                 }
             }
@@ -220,8 +218,8 @@ impl IntermediateNFA {
                 .unwrap_or(false);
 
             // Only add alternative start states if no start captures would be bypassed
-            if !has_start_captures {
-                if let Some(closure) = closures.get(orig_start) {
+            if !has_start_captures
+                && let Some(closure) = closures.get(orig_start) {
                     for &r_state in &closure.states {
                         if r_state != orig_start
                             && r_state < has_byte_transitions.len()
@@ -231,7 +229,6 @@ impl IntermediateNFA {
                         }
                     }
                 }
-            }
         }
 
         // Apply the changes

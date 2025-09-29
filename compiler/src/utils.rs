@@ -33,7 +33,7 @@ pub fn decomposed_to_composed_regex(
                 combined_parts.push(pattern.clone());
             }
             RegexPart::PublicPattern((pattern, max_len)) => {
-                combined_parts.push(format!("({})", pattern));
+                combined_parts.push(format!("({pattern})"));
                 max_bytes.get_or_insert_with(Vec::new).push(*max_len);
             }
         }
@@ -71,12 +71,12 @@ pub fn save_outputs(
     let snake_case_name = template_name.to_snake_case();
 
     // Save circuit file
-    let circuit_path = output_dir.join(format!("{}_regex.{}", snake_case_name, file_extension));
+    let circuit_path = output_dir.join(format!("{snake_case_name}_regex.{file_extension}"));
     std::fs::write(&circuit_path, circom_code)?;
 
     // Save graph JSON
     let graph_json = nfa.to_json()?;
-    let graph_path = output_dir.join(format!("{}_graph.json", snake_case_name));
+    let graph_path = output_dir.join(format!("{snake_case_name}_graph.json"));
     std::fs::write(&graph_path, graph_json)?;
 
     println!("Generated files:");

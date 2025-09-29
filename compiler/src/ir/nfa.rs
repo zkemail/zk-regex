@@ -73,13 +73,13 @@ impl NFAGraph {
     /// Serialize the NFA graph to JSON
     pub fn to_json(&self) -> NFAResult<String> {
         serde_json::to_string_pretty(self)
-            .map_err(|e| NFAError::Serialization(format!("Failed to serialize NFA to JSON: {}", e)))
+            .map_err(|e| NFAError::Serialization(format!("Failed to serialize NFA to JSON: {e}")))
     }
 
     /// Deserialize the NFA graph from JSON
     pub fn from_json(json: &str) -> NFAResult<Self> {
         serde_json::from_str(json).map_err(|e| {
-            NFAError::Deserialization(format!("Failed to deserialize NFA from JSON: {}", e))
+            NFAError::Deserialization(format!("Failed to deserialize NFA from JSON: {e}"))
         })
     }
 
@@ -127,7 +127,7 @@ impl NFAGraph {
         println!("\nState Details:");
 
         for (idx, node) in self.nodes.iter().enumerate() {
-            println!("\nState {}: ", idx);
+            println!("\nState {idx}: ");
 
             if self.start_states.contains(&idx) {
                 println!("  [START STATE]");
@@ -143,9 +143,9 @@ impl NFAGraph {
                     let char_repr = if byte.is_ascii_graphic() && byte != b' ' {
                         format!("'{}'", byte as char)
                     } else {
-                        format!("0x{:02x}", byte)
+                        format!("0x{byte:02x}")
                     };
-                    println!("    {} -> {:?}", char_repr, destinations);
+                    println!("    {char_repr} -> {destinations:?}");
                 }
             }
 

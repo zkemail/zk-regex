@@ -149,7 +149,8 @@ impl CompilerError {
 
     /// Get a user-friendly error message with suggestions
     pub fn user_message(&self) -> String {
-        let base_message = match self {
+        
+        match self {
             CompilerError::RegexValidation {
                 message,
                 pattern,
@@ -158,10 +159,10 @@ impl CompilerError {
             } => {
                 let mut msg = message.clone();
                 if let Some(pattern) = pattern {
-                    msg.push_str(&format!("\nPattern: '{}'", pattern));
+                    msg.push_str(&format!("\nPattern: '{pattern}'"));
                 }
                 if let Some(suggestion) = suggestion {
-                    msg.push_str(&format!("\nSuggestion: {}", suggestion));
+                    msg.push_str(&format!("\nSuggestion: {suggestion}"));
                 }
                 msg
             }
@@ -172,7 +173,7 @@ impl CompilerError {
             } => {
                 let mut msg = message.clone();
                 if let Some(suggestion) = suggestion {
-                    msg.push_str(&format!("\nSuggestion: {}", suggestion));
+                    msg.push_str(&format!("\nSuggestion: {suggestion}"));
                 }
                 msg
             }
@@ -183,7 +184,7 @@ impl CompilerError {
             } => {
                 let mut msg = message.clone();
                 if let Some(suggestion) = suggestion {
-                    msg.push_str(&format!("\nSuggestion: {}", suggestion));
+                    msg.push_str(&format!("\nSuggestion: {suggestion}"));
                 }
                 msg
             }
@@ -194,7 +195,7 @@ impl CompilerError {
             } => {
                 let mut msg = message.clone();
                 if let Some(suggestion) = suggestion {
-                    msg.push_str(&format!("\nSuggestion: {}", suggestion));
+                    msg.push_str(&format!("\nSuggestion: {suggestion}"));
                 }
                 msg
             }
@@ -205,22 +206,21 @@ impl CompilerError {
             } => {
                 let mut msg = message.clone();
                 if let Some(suggestion) = suggestion {
-                    msg.push_str(&format!("\nSuggestion: {}", suggestion));
+                    msg.push_str(&format!("\nSuggestion: {suggestion}"));
                 }
                 msg
             }
             CompilerError::Internal {
                 message, context, ..
             } => {
-                let mut msg = format!("Internal error: {}", message);
+                let mut msg = format!("Internal error: {message}");
                 if let Some(context) = context {
-                    msg.push_str(&format!("\nContext: {}", context));
+                    msg.push_str(&format!("\nContext: {context}"));
                 }
                 msg.push_str("\nPlease report this issue with your regex pattern.");
                 msg
             }
-        };
-        base_message
+        }
     }
 
     /// Check if this error is recoverable
@@ -249,10 +249,10 @@ impl CompilerError {
     pub fn unsupported_feature(pattern: &str, feature: &str) -> Self {
         CompilerError::RegexValidation {
             code: ErrorCode::E1002,
-            message: format!("Unsupported regex feature: {}", feature),
+            message: format!("Unsupported regex feature: {feature}"),
             pattern: Some(pattern.to_string()),
             position: None,
-            suggestion: Some(format!("Remove {} from your regex pattern", feature)),
+            suggestion: Some(format!("Remove {feature} from your regex pattern")),
         }
     }
 
@@ -279,14 +279,12 @@ impl CompilerError {
         CompilerError::CircuitGeneration {
             code: ErrorCode::E3002,
             message: format!(
-                "Invalid capture group configuration: need {} max_bytes but got {}",
-                group_count, provided
+                "Invalid capture group configuration: need {group_count} max_bytes but got {provided}"
             ),
             template_name: None,
             framework: None,
             suggestion: Some(format!(
-                "Provide exactly {} max_bytes values for capture groups",
-                group_count
+                "Provide exactly {group_count} max_bytes values for capture groups"
             )),
         }
     }
@@ -294,9 +292,9 @@ impl CompilerError {
     pub fn input_too_long(actual: usize, max: usize) -> Self {
         CompilerError::InputProcessing {
             code: ErrorCode::E4001,
-            message: format!("Input length {} exceeds maximum {}", actual, max),
-            input_info: Some(format!("actual: {}, max: {}", actual, max)),
-            limits: Some(format!("max_haystack_len: {}", max)),
+            message: format!("Input length {actual} exceeds maximum {max}"),
+            input_info: Some(format!("actual: {actual}, max: {max}")),
+            limits: Some(format!("max_haystack_len: {max}")),
             suggestion: Some("Increase max_haystack_len or reduce input size".to_string()),
         }
     }
@@ -314,7 +312,7 @@ impl CompilerError {
     pub fn serialization_error(context: &str, source: &str) -> Self {
         CompilerError::Internal {
             code: ErrorCode::E9001,
-            message: format!("Serialization failed: {}", source),
+            message: format!("Serialization failed: {source}"),
             context: Some(context.to_string()),
         }
     }

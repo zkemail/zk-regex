@@ -110,124 +110,90 @@ pub fn generate_noir_code(
     code.push_str(accept_state_fn(&accept_states).as_str());
 
     // regex match function doc
-    code.push_str(&format!("/**\n"));
+    code.push_str("/**\n");
     code.push_str(&format!(
         " * {}Regex matching function\n",
         regex_name.to_upper_camel_case()
     ));
-    code.push_str(&format!(" * Regex: {}\n", display_pattern));
-    code.push_str(&format!(
-        " * @param in_haystack - The input haystack to search from\n"
-    ));
-    code.push_str(&format!(
-        " * @param match_start - The start index in the haystack for the subarray to match from\n"
-    ));
-    code.push_str(&format!(
-        " * @param match_length - The length of the subarray to extract from haystack\n"
-    ));
+    code.push_str(&format!(" * Regex: {display_pattern}\n"));
+    code.push_str(" * @param in_haystack - The input haystack to search from\n");
+    code.push_str(" * @param match_start - The start index in the haystack for the subarray to match from\n");
+    code.push_str(" * @param match_length - The length of the subarray to extract from haystack\n");
     code.push_str(
-        &format!(
-            " * @param current_states - The current states of the NFA at each index in the match subarray\n"
-        )
+        " * @param current_states - The current states of the NFA at each index in the match subarray\n"
     );
-    code.push_str(&format!(
-        " * @param next_states - The next states of the NFA at each index in the match subarray\n"
-    ));
+    code.push_str(" * @param next_states - The next states of the NFA at each index in the match subarray\n");
     if nfa.num_capture_groups > 0 {
         code.push_str(
-            &format!(
-                " * @param capture_group_<group>_ids - The ids of the capture groups in the match subarray\n"
-            )
+            " * @param capture_group_<group>_ids - The ids of the capture groups in the match subarray\n"
         );
         code.push_str(
-            &format!(
-                " * @param capture_group_<group>_starts - The start positions of the capture groups in the match subarray\n"
-            )
+            " * @param capture_group_<group>_starts - The start positions of the capture groups in the match subarray\n"
         );
         code.push_str(
-            &format!(
-                " * @param capture_group_start_indices - The start indices of the capture groups in the match subarray\n"
-            )
+            " * @param capture_group_start_indices - The start indices of the capture groups in the match subarray\n"
         );
-        code.push_str(&format!(
-            " * @return - tuple of substring captures as dictated by the regular expression\n"
-        ));
+        code.push_str(" * @return - tuple of substring captures as dictated by the regular expression\n");
     }
-    code.push_str(&format!(" */\n"));
+    code.push_str(" */\n");
 
-    code.push_str(&format!(
-        "pub fn regex_match<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(\n"
-    ));
-    code.push_str(&format!("    in_haystack: [u8; MAX_HAYSTACK_LEN],\n"));
-    code.push_str(&format!("    match_start: u32,\n"));
-    code.push_str(&format!("    match_length: u32,\n"));
-    code.push_str(&format!("    current_states: [Field; MAX_MATCH_LEN],\n"));
-    code.push_str(&format!("    next_states: [Field; MAX_MATCH_LEN],\n"));
+    code.push_str("pub fn regex_match<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(\n");
+    code.push_str("    in_haystack: [u8; MAX_HAYSTACK_LEN],\n");
+    code.push_str("    match_start: u32,\n");
+    code.push_str("    match_length: u32,\n");
+    code.push_str("    current_states: [Field; MAX_MATCH_LEN],\n");
+    code.push_str("    next_states: [Field; MAX_MATCH_LEN],\n");
     if nfa.num_capture_groups > 0 {
         for i in 1..=nfa.num_capture_groups {
             code.push_str(&format!(
-                "    capture_group_{}_id: [Field; MAX_MATCH_LEN],\n",
-                i
+                "    capture_group_{i}_id: [Field; MAX_MATCH_LEN],\n"
             ));
         }
         for i in 1..=nfa.num_capture_groups {
             code.push_str(&format!(
-                "    capture_group_{}_start: [Field; MAX_MATCH_LEN],\n",
-                i
+                "    capture_group_{i}_start: [Field; MAX_MATCH_LEN],\n"
             ));
         }
-        code.push_str(&format!(
-            "    capture_group_start_indices: [Field; NUM_CAPTURE_GROUPS],\n"
-        ));
+        code.push_str("    capture_group_start_indices: [Field; NUM_CAPTURE_GROUPS],\n");
     }
 
     // define the return type according to existence of / qualities of capture groups
     let return_type = if nfa.num_capture_groups > 0 {
         let mut substrings = Vec::new();
         for i in 1..=nfa.num_capture_groups {
-            substrings.push(format!("BoundedVec<u8, CAPTURE_{}_MAX_LENGTH>", i));
+            substrings.push(format!("BoundedVec<u8, CAPTURE_{i}_MAX_LENGTH>"));
         }
         format!("-> ({}) ", substrings.join(", "))
     } else {
         String::default()
     };
-    code.push_str(&format!(") {}{{\n", return_type));
+    code.push_str(&format!(") {return_type}{{\n"));
 
     // resize haystack to MAX_MATCH_LEN
-    code.push_str(&format!("    // resize haystack \n"));
+    code.push_str("    // resize haystack \n");
     code.push_str(
-        &format!(
-            "    let haystack: [u8; MAX_MATCH_LEN] = select_subarray::<MAX_HAYSTACK_LEN, MAX_MATCH_LEN>(in_haystack, match_start, match_length);\n\n"
-        )
+        "    let haystack: [u8; MAX_MATCH_LEN] = select_subarray::<MAX_HAYSTACK_LEN, MAX_MATCH_LEN>(in_haystack, match_start, match_length);\n\n"
     );
 
     // check start & range
-    code.push_str(&format!("    check_start_state(current_states[0]);\n"));
-    code.push_str(&format!("    for i in 0..MAX_MATCH_LEN-1 {{\n"));
-    code.push_str(&format!(
-        "        // match length - 1 since current states should be 1 less than next states\n"
-    ));
-    code.push_str(&format!(
-        "        let in_range = (i < match_length - 1) as Field;\n"
-    ));
-    code.push_str(&format!(
-        "        let matching_states = current_states[i + 1] - next_states[i];\n"
-    ));
-    code.push_str(&format!(
-        "        assert(in_range * matching_states == 0, \"Invalid Transition Input\");\n"
-    ));
-    code.push_str(&format!("    }}\n"));
+    code.push_str("    check_start_state(current_states[0]);\n");
+    code.push_str("    for i in 0..MAX_MATCH_LEN-1 {\n");
+    code.push_str("        // match length - 1 since current states should be 1 less than next states\n");
+    code.push_str("        let in_range = (i < match_length - 1) as Field;\n");
+    code.push_str("        let matching_states = current_states[i + 1] - next_states[i];\n");
+    code.push_str("        assert(in_range * matching_states == 0, \"Invalid Transition Input\");\n");
+    code.push_str("    }\n");
 
     // iterate through the haystack and check transitions
-    code.push_str(&format!("    let mut reached_end_state = 1;\n"));
-    code.push_str(&format!("    for i in 0..MAX_MATCH_LEN {{\n"));
+    code.push_str("    let mut reached_end_state = 1;\n");
+    code.push_str("    for i in 0..MAX_MATCH_LEN {\n");
     if nfa.num_capture_groups > 0 {
         let active_ids_str = (1..=nfa.num_capture_groups)
-            .map(|i| format!("capture_group_{}_id[i]", i))
+            .map(|i| format!("capture_group_{i}_id[i]"))
             .collect::<Vec<String>>()
             .join(", ");
         let active_starts_str = (1..=nfa.num_capture_groups)
-            .map(|i| format!("capture_group_{}_start[i]", i))
+            .map(|i| format!("capture_group_{i}_start[i]"))
             .collect::<Vec<String>>()
             .join(", ");
 
@@ -239,70 +205,61 @@ pub fn generate_noir_code(
         ));
 
         // if capture groups exist, perform check that unpacks transition values
-        code.push_str(&format!("        check_transition_with_captures(\n"));
-        code.push_str(&format!("            TRANSITION_TABLE,\n"));
-        code.push_str(&format!("            haystack[i] as Field,\n"));
-        code.push_str(&format!("            current_states[i],\n"));
-        code.push_str(&format!("            next_states[i],\n"));
-        code.push_str(&format!("            active_capture_groups_at_index,\n"));
-        code.push_str(&format!(
-            "            active_capture_groups_starts_at_index,\n"
-        ));
-        code.push_str(&format!("            reached_end_state\n"));
-        code.push_str(&format!("        );\n"));
+        code.push_str("        check_transition_with_captures(\n");
+        code.push_str("            TRANSITION_TABLE,\n");
+        code.push_str("            haystack[i] as Field,\n");
+        code.push_str("            current_states[i],\n");
+        code.push_str("            next_states[i],\n");
+        code.push_str("            active_capture_groups_at_index,\n");
+        code.push_str("            active_capture_groups_starts_at_index,\n");
+        code.push_str("            reached_end_state\n");
+        code.push_str("        );\n");
     } else {
         // if no capture groups exist, simple lookup
-        code.push_str(&format!("        check_transition(\n"));
-        code.push_str(&format!("            TRANSITION_TABLE,\n"));
-        code.push_str(&format!("            haystack[i] as Field,\n"));
-        code.push_str(&format!("            current_states[i],\n"));
-        code.push_str(&format!("            next_states[i],\n"));
-        code.push_str(&format!("            reached_end_state\n"));
-        code.push_str(&format!("        );\n"));
+        code.push_str("        check_transition(\n");
+        code.push_str("            TRANSITION_TABLE,\n");
+        code.push_str("            haystack[i] as Field,\n");
+        code.push_str("            current_states[i],\n");
+        code.push_str("            next_states[i],\n");
+        code.push_str("            reached_end_state\n");
+        code.push_str("        );\n");
     }
 
     // toggle off constraints/ set match assertion if end state found
     code.push_str(
-        &format!(
-            "        reached_end_state = reached_end_state * check_accept_state(next_states[i], i as Field, match_length as Field);\n"
-        )
+        "        reached_end_state = reached_end_state * check_accept_state(next_states[i], i as Field, match_length as Field);\n"
     );
-    code.push_str(&format!("    }}\n"));
-    code.push_str(&format!(
-        "    assert(reached_end_state == 0, \"Did not reach a valid end state\");\n\n"
-    ));
+    code.push_str("    }\n");
+    code.push_str("    assert(reached_end_state == 0, \"Did not reach a valid end state\");\n\n");
 
     // add substring capture logic if capture groups exist
     if nfa.num_capture_groups > 0 {
         let mut ids = Vec::new();
         for i in 1..=nfa.num_capture_groups {
-            code.push_str(&format!("    // Capture Group {}\n", i));
+            code.push_str(&format!("    // Capture Group {i}\n"));
             code.push_str(
                 &format!(
-                    "    let capture_{} = capture_substring::<MAX_MATCH_LEN, CAPTURE_{}_MAX_LENGTH, {}>(\n",
-                    i,
-                    i,
-                    i
+                    "    let capture_{i} = capture_substring::<MAX_MATCH_LEN, CAPTURE_{i}_MAX_LENGTH, {i}>(\n"
                 )
             );
-            code.push_str(&format!("       haystack,\n"));
-            code.push_str(&format!("       capture_group_{}_id,\n", i));
-            code.push_str(&format!("       capture_group_{}_start,\n", i));
+            code.push_str("       haystack,\n");
+            code.push_str(&format!("       capture_group_{i}_id,\n"));
+            code.push_str(&format!("       capture_group_{i}_start,\n"));
             code.push_str(&format!("       capture_group_start_indices[{}]\n", i - 1));
-            code.push_str(&format!("    );\n\n"));
-            ids.push(format!("capture_{}", i));
+            code.push_str("    );\n\n");
+            ids.push(format!("capture_{i}"));
         }
 
         // define the return tuple
         let return_vec = ids
             .iter()
-            .map(|id| format!("{}", id))
+            .map(|id| id.to_string())
             .collect::<Vec<_>>()
             .join(", ");
-        code.push_str(&format!("    ({})\n", return_vec));
+        code.push_str(&format!("    ({return_vec})\n"));
     }
 
-    code.push_str(&format!("}}\n\n"));
+    code.push_str("}\n\n");
 
     Ok(code)
 }
@@ -319,7 +276,7 @@ pub fn to_prover_toml(inputs: &CircuitInputs) -> String {
         .collect::<Vec<_>>()
         .join(", ");
 
-    toml.push_str(&format!("in_haystack = [{}]\n", haystack));
+    toml.push_str(&format!("in_haystack = [{haystack}]\n"));
     toml.push_str(&format!("match_start = \"{}\"\n", inputs.match_start));
     toml.push_str(&format!("match_length = \"{}\"\n", inputs.match_length));
 
@@ -329,7 +286,7 @@ pub fn to_prover_toml(inputs: &CircuitInputs) -> String {
         .map(|num| format!("\"{num}\""))
         .collect::<Vec<_>>()
         .join(", ");
-    toml.push_str(&format!("curr_states = [{}]\n", curr_states));
+    toml.push_str(&format!("curr_states = [{curr_states}]\n"));
 
     let next_states = inputs
         .next_states
@@ -337,7 +294,7 @@ pub fn to_prover_toml(inputs: &CircuitInputs) -> String {
         .map(|num| format!("\"{num}\""))
         .collect::<Vec<_>>()
         .join(", ");
-    toml.push_str(&format!("next_states = [{}]\n", next_states));
+    toml.push_str(&format!("next_states = [{next_states}]\n"));
 
     // substring capture inputs
     if let Some(outer_ids_vec) = inputs.capture_group_ids.as_ref() {
@@ -350,7 +307,7 @@ pub fn to_prover_toml(inputs: &CircuitInputs) -> String {
             let ids_for_group = &outer_ids_vec[i];
             let ids_str = ids_for_group
                 .iter()
-                .map(|num| format!("\"{}\"", num))
+                .map(|num| format!("\"{num}\""))
                 .collect::<Vec<_>>()
                 .join(", ");
             toml.push_str(&format!("capture_group_{}_ids = [{}]\n", i + 1, ids_str));
@@ -359,7 +316,7 @@ pub fn to_prover_toml(inputs: &CircuitInputs) -> String {
             let starts_for_group = &outer_starts_vec[i];
             let starts_str = starts_for_group
                 .iter()
-                .map(|num| format!("\"{}\"", num))
+                .map(|num| format!("\"{num}\""))
                 .collect::<Vec<_>>()
                 .join(", ");
             toml.push_str(&format!(
@@ -374,12 +331,11 @@ pub fn to_prover_toml(inputs: &CircuitInputs) -> String {
     if let Some(start_indices_vec) = inputs.capture_group_start_indices.as_ref() {
         let capture_group_start_indices_str = start_indices_vec
             .iter()
-            .map(|num| format!("\"{}\"", num))
+            .map(|num| format!("\"{num}\""))
             .collect::<Vec<_>>()
             .join(", ");
         toml.push_str(&format!(
-            "capture_group_start_indices = [{}]\n",
-            capture_group_start_indices_str
+            "capture_group_start_indices = [{capture_group_start_indices_str}]\n"
         ));
     }
     toml

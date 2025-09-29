@@ -93,8 +93,7 @@ pub fn generate_circuit_data(
     for (src, byte, dst, capture) in transitions {
         if src >= nfa.nodes.len() || dst >= nfa.nodes.len() {
             return Err(NFAError::InvalidStateId(format!(
-                "State {}->{} out of bounds",
-                src, dst
+                "State {src}->{dst} out of bounds"
             )));
         }
         grouped.entry((src, dst, capture)).or_default().push(byte);
@@ -104,8 +103,7 @@ pub fn generate_circuit_data(
     for ((src, dst, capture), mut bytes) in grouped {
         if bytes.is_empty() {
             return Err(NFAError::InvalidTransition(format!(
-                "Found an empty byte list for transition group (src: {}, dst: {}, capture: {:?})",
-                src, dst, capture
+                "Found an empty byte list for transition group (src: {src}, dst: {dst}, capture: {capture:?})"
             )));
         }
 
@@ -151,15 +149,13 @@ pub fn generate_circuit_inputs(
 
     if path_len != match_length {
         return Err(NFAError::InvalidInput(format!(
-            "Path length {} does not equal match length {}",
-            path_len, match_length
+            "Path length {path_len} does not equal match length {match_length}"
         )));
     }
 
     if path_len > max_match_len {
         return Err(NFAError::InvalidInput(format!(
-            "Path length {} exceeds maximum length {}",
-            path_len, max_match_len
+            "Path length {path_len} exceeds maximum length {max_match_len}"
         )));
     }
 
@@ -195,10 +191,10 @@ pub fn generate_circuit_inputs(
             }
 
             let re = Regex::new(&nfa.regex).map_err(|e| {
-                NFAError::RegexCompilation(format!("Failed to compile regex: {}", e))
+                NFAError::RegexCompilation(format!("Failed to compile regex: {e}"))
             })?;
             let mut captures = re.create_captures();
-            re.captures(&haystack, &mut captures);
+            re.captures(haystack, &mut captures);
 
             let start_indices = (1..=captures.group_len())
                 .filter_map(|i| captures.get_group(i))

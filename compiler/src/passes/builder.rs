@@ -21,11 +21,11 @@ impl NFAGraph {
     pub fn build(pattern: &str) -> NFAResult<Self> {
         // Step 1: Create Thompson NFA
         let vm = PikeVM::new(pattern)
-            .map_err(|e| NFAError::RegexCompilation(format!("Failed to create PikeVM: {}", e)))?;
+            .map_err(|e| NFAError::RegexCompilation(format!("Failed to create PikeVM: {e}")))?;
         let thompson_nfa = vm.get_nfa();
 
         // Step 2: Convert to intermediate representation
-        let intermediate = IntermediateNFA::from_thompson(pattern, &thompson_nfa)?;
+        let intermediate = IntermediateNFA::from_thompson(pattern, thompson_nfa)?;
 
         // Step 3: Validate intermediate structure
         intermediate.validate()?;
@@ -66,10 +66,10 @@ impl IntermediateNFA {
         // Process all Thompson states
         for logical_id in 0..logical_state_count {
             let thompson_id = StateID::new(logical_id + start_offset)
-                .map_err(|e| NFAError::InvalidStateId(format!("Invalid state ID: {}", e)))?;
+                .map_err(|e| NFAError::InvalidStateId(format!("Invalid state ID: {e}")))?;
 
             intermediate.process_thompson_state(
-                &thompson,
+                thompson,
                 thompson_id,
                 logical_id,
                 start_offset,
@@ -141,7 +141,7 @@ impl IntermediateNFA {
             self.nodes[state_id]
                 .byte_transitions
                 .entry(byte)
-                .or_insert_with(BTreeSet::new)
+                .or_default()
                 .insert(target);
         }
         Ok(())
@@ -171,7 +171,7 @@ impl IntermediateNFA {
                 self.nodes[state_id]
                     .byte_transitions
                     .entry(byte as u8)
-                    .or_insert_with(BTreeSet::new)
+                    .or_default()
                     .insert(target);
             }
         }
@@ -223,7 +223,7 @@ impl IntermediateNFA {
             self.nodes[state_id]
                 .capture_groups
                 .entry(target)
-                .or_insert_with(BTreeSet::new)
+                .or_default()
                 .insert((group_id, is_start));
         }
         Ok(())
@@ -244,8 +244,7 @@ impl IntermediateNFA {
     fn thompson_to_logical(&self, thompson_id: usize, start_offset: usize) -> NFAResult<usize> {
         if thompson_id < start_offset {
             return Err(NFAError::InvalidStateId(format!(
-                "Thompson state {} is before start offset {}",
-                thompson_id, start_offset
+                "Thompson state {thompson_id} is before start offset {start_offset}"
             )));
         }
 

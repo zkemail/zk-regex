@@ -105,11 +105,10 @@ pub fn generate_circom_code(
     code.push_str("include \"@zk-email/zk-regex-circom/circuits/regex_helpers.circom\";\n\n");
 
     let display_pattern = escape_regex_for_display(regex_pattern);
-    code.push_str(format!("// regex: {}\n", display_pattern).as_str());
+    code.push_str(format!("// regex: {display_pattern}\n").as_str());
     code.push_str(
         format!(
-            "template {}Regex(maxHaystackBytes, maxMatchBytes) {{\n",
-            regex_name
+            "template {regex_name}Regex(maxHaystackBytes, maxMatchBytes) {{\n"
         )
         .as_str(),
     );
@@ -228,11 +227,11 @@ pub fn generate_circom_code(
     if nfa.num_capture_groups > 0 {
         // Prepare strings for input signal arrays, used in each transition's Circom call
         let input_signal_cg_ids_list_str = (1..=nfa.num_capture_groups)
-            .map(|k| format!("captureGroup{}Id[i]", k))
+            .map(|k| format!("captureGroup{k}Id[i]"))
             .collect::<Vec<_>>()
             .join(", ");
         let input_signal_cg_starts_list_str = (1..=nfa.num_capture_groups)
-            .map(|k| format!("captureGroup{}Start[i]", k))
+            .map(|k| format!("captureGroup{k}Start[i]"))
             .collect::<Vec<_>>()
             .join(", ");
 
@@ -264,7 +263,7 @@ pub fn generate_circom_code(
             let capture_comment_segment = if capture_details_for_comment.is_empty() {
                 "Capture Group: []".to_string()
             } else {
-                format!("Capture Group:[ {}]", capture_details_for_comment)
+                format!("Capture Group:[ {capture_details_for_comment}]")
             };
 
             // String representation of this transition's capture group properties
@@ -282,8 +281,7 @@ pub fn generate_circom_code(
             if start == end {
                 code.push_str(
                     format!(
-                        "        // Transition {}: {} -[{}]-> {} | {}\n",
-                        transition_idx, curr_state, start, next_state, capture_comment_segment
+                        "        // Transition {transition_idx}: {curr_state} -[{start}]-> {next_state} | {capture_comment_segment}\n"
                     )
                     .as_str(),
                 );
@@ -304,8 +302,7 @@ pub fn generate_circom_code(
             } else {
                 code.push_str(
                     format!(
-                        "        // Transition {}: {} -[{}-{}]-> {} | {}\n",
-                        transition_idx, curr_state, start, end, next_state, capture_comment_segment
+                        "        // Transition {transition_idx}: {curr_state} -[{start}-{end}]-> {next_state} | {capture_comment_segment}\n"
                     )
                     .as_str(),
                 );
@@ -333,36 +330,25 @@ pub fn generate_circom_code(
             if start == end {
                 code.push_str(
                     format!(
-                        "        // Transition {}: {} -[{}]-> {}\n",
-                        transition_idx, curr_state, start, next_state
+                        "        // Transition {transition_idx}: {curr_state} -[{start}]-> {next_state}\n"
                     )
                     .as_str(),
                 );
                 code.push_str(
                     format!(
-                        "        isValidTransition[{}][i] <== CheckByteTransition()({}, {}, {}, currStates[i], nextStates[i], haystack[i]);\n",
-                        transition_idx,
-                        curr_state,
-                        next_state,
-                        start
+                        "        isValidTransition[{transition_idx}][i] <== CheckByteTransition()({curr_state}, {next_state}, {start}, currStates[i], nextStates[i], haystack[i]);\n"
                     ).as_str()
                 );
             } else {
                 code.push_str(
                     format!(
-                        "        // Transition {}: {} -[{}-{}]-> {}\n",
-                        transition_idx, curr_state, start, end, next_state
+                        "        // Transition {transition_idx}: {curr_state} -[{start}-{end}]-> {next_state}\n"
                     )
                     .as_str(),
                 );
                 code.push_str(
                     format!(
-                        "        isValidTransition[{}][i] <== CheckByteRangeTransition()({}, {}, {}, {}, currStates[i], nextStates[i], haystack[i]);\n",
-                        transition_idx,
-                        curr_state,
-                        next_state,
-                        start,
-                        end
+                        "        isValidTransition[{transition_idx}][i] <== CheckByteRangeTransition()({curr_state}, {next_state}, {start}, {end}, currStates[i], nextStates[i], haystack[i]);\n"
                     ).as_str()
                 );
             }
@@ -420,12 +406,11 @@ pub fn generate_circom_code(
                     max_substring_bytes[capture_group_id - 1]
                 } else {
                     return Err(NFAError::InvalidCapture(format!(
-                        "Max substring bytes not provided for capture group {}",
-                        capture_group_id
+                        "Max substring bytes not provided for capture group {capture_group_id}"
                     )));
                 };
 
-            code.push_str(format!("    // Capture Group {}\n", capture_group_id).as_str());
+            code.push_str(format!("    // Capture Group {capture_group_id}\n").as_str());
             code.push_str(
                 format!(
                     "    signal output capture{}[{}] <== CaptureSubstring(maxMatchBytes, {}, {})(captureGroupStartIndices[{}], haystack, captureGroup{}Id, captureGroup{}Start);\n",
