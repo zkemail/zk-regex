@@ -1,4 +1,7 @@
+
 # ZK-Regex: Verifiable Regular Expressions in Arithmetic Circuits
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15603470.svg)](https://doi.org/10.5281/zenodo.15603470)
 
 `zk-regex` enables proving regular expression matching within zero-knowledge circuits. It compiles standard regex patterns into circuit-friendly Non-deterministic Finite Automata (NFAs) and generates corresponding circuit code for **[Circom](https://docs.circom.io/)** and **[Noir](https://noir-lang.org/)** proving systems.
 
@@ -191,6 +194,7 @@ cargo build --release
 cargo install --path circom
 ```
 
+
 **Bun installation issues:**
 ```bash
 # Install/reinstall Bun
@@ -209,6 +213,19 @@ bun test
 bun run test:scripts  # TypeScript tests only
 bun run test:circom   # Circom circuit tests only
 ```
+
+```bash
+
+@misc{zk-regex,
+  author = {Gupta, Aayush and Londhe, Shreyas and Bisht, Aditya and Panda, Sampriti and Suegami, Sora},
+  title = {ZK Regex},
+  year         = {2025},
+  publisher    = {Zenodo},
+  howpublished = {\url{https://doi.org/10.5281/zenodo.15603470}},
+  note         = {Software; archived via GitHub repository (original 2022)},
+}
+```
+
 
 ## License
 
