@@ -7,7 +7,7 @@
         "url": "git+https://github.com/zkemail/zk-regex.git"
     },
     "scripts": {
-        "build": "cargo build && cargo install --path . && wasm-pack build --target nodejs --out-dir ./pkg/ --scope zk-email",
+        "build": "cargo build && cargo install --path . --force && wasm-pack build --target nodejs --out-dir ./pkg/ --scope zk-email",
         "build-debug": "bun run build --",
         "build-release": "bun run build -- --release",
         "build-web": "cargo build && wasm-pack build --target web --out-dir ./pkg-web/",
