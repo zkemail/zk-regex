@@ -41,21 +41,48 @@ while read local_ref local_sha remote_ref remote_sha; do
             exit 1
         fi
         
+        # Store whether we have uncommitted changes in template directories
+        STASH_CREATED=false
+        if ! git diff --quiet --exit-code circom/circuits/ noir/src/templates/ 2>/dev/null || \
+           ! git diff --cached --quiet --exit-code circom/circuits/ noir/src/templates/ 2>/dev/null; then
+            echo "💾 Stashing uncommitted template changes (including manual tests)..."
+            # Create a stash with a specific message so we can identify it
+            git stash push -u -m "pre-push-hook-temp-stash-$(date +%s)" -- \
+                circom/circuits/ noir/src/templates/
+            STASH_CREATED=true
+            echo "✅ Stashed changes (will be restored after check)"
+        fi
+        
         echo "🏗️  Building release compiler binary..."
         if ! bun run build-release; then
             echo "❌ Error: Failed to build compiler"
+            # Restore stash if we created one
+            if [ "$STASH_CREATED" = true ]; then
+                echo "🔄 Restoring stashed changes..."
+                git stash pop
+            fi
             exit 1
         fi
         
         echo "🎯 Regenerating Circom templates..."
         if ! bun run gen-regex:circom; then
             echo "❌ Error: Failed to generate Circom templates"
+            # Restore stash if we created one
+            if [ "$STASH_CREATED" = true ]; then
+                echo "🔄 Restoring stashed changes..."
+                git stash pop
+            fi
             exit 1
         fi
         
         echo "🎯 Regenerating Noir templates..."
         if ! bun run gen-regex:noir; then
             echo "❌ Error: Failed to generate Noir templates"
+            # Restore stash if we created one
+            if [ "$STASH_CREATED" = true ]; then
+                echo "🔄 Restoring stashed changes..."
+                git stash pop
+            fi
             exit 1
         fi
         
@@ -78,10 +105,27 @@ while read local_ref local_sha remote_ref remote_sha; do
             echo "   3. Push again:"
             echo "      git push"
             echo ""
+            # Restore stash if we created one
+            if [ "$STASH_CREATED" = true ]; then
+                echo "🔄 Restoring your stashed changes (manual tests)..."
+                git stash pop
+            fi
             exit 1
         fi
         
         echo "✅ Templates are up to date with compiler changes"
+        
+        # Restore stashed changes if we created a stash
+        if [ "$STASH_CREATED" = true ]; then
+            echo "🔄 Restoring your manual changes (tests, etc.)..."
+            if ! git stash pop; then
+                echo "⚠️  Warning: Could not automatically restore stashed changes."
+                echo "   Your changes are in the stash. Use 'git stash list' to see them."
+                echo "   Use 'git stash pop' to restore them manually."
+            else
+                echo "✅ Manual changes restored successfully"
+            fi
+        fi
         
     else
         echo "ℹ️  No compiler source changes detected in this push"
