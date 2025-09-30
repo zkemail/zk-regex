@@ -2,6 +2,7 @@ const circom_tester = require("circom_tester");
 import * as path from "path";
 import { readFileSync, writeFileSync } from "fs";
 import { fileURLToPath } from "url";
+import { describe, it, beforeAll, expect } from "bun:test";
 import compiler, {
     genCircuitInputs,
     ProvingFramework,
@@ -84,7 +85,8 @@ describe("Bodyhash Regex", () => {
             path.join(__dirname, "./circuits/test_body_hash_regex.circom"),
             option
         );
-    });
+    // @ts-expect-error - Bun's runtime supports timeout option but types may be outdated
+    }, { timeout: 30000 }); // Add 30 second timeout for circuit compilation
 
     it("bodyhash in the header", async () => {
         const signatureField = `dkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20230601; t=1694989812; x=1695594612; dara=google.com; h=to:subject:message-id:date:from:mime-version:from:to:cc:subject :date:message-id:reply-to; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=`;
@@ -108,11 +110,11 @@ describe("Bodyhash Regex", () => {
 
         const witness = await circuit.calculateWitness(rest);
         await circuit.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
+        expect(1n).toEqual(witness[1]!);
         
         const extractedBodyHash = Array.from(
             { length: bodyHash?.length || 0 },
-            (_, idx) => String.fromCharCode(Number(witness[2 + idx]))
+            (_, idx) => String.fromCharCode(Number(witness[2 + idx]!))
         ).join("");
         expect(bodyHash).toEqual(extractedBodyHash);
     });
@@ -139,11 +141,11 @@ describe("Bodyhash Regex", () => {
         
         const witness = await circuit.calculateWitness(rest);
         await circuit.checkConstraints(witness);
-        expect(1n).toEqual(witness[1]);
+        expect(1n).toEqual(witness[1]!);
         
         const extractedBodyHash = Array.from(
             { length: bodyHash?.length || 0 },
-            (_, idx) => String.fromCharCode(Number(witness[2 + idx]))
+            (_, idx) => String.fromCharCode(Number(witness[2 + idx]!))
         ).join("");
         expect(bodyHash).toEqual(extractedBodyHash);
     });
