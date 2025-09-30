@@ -1,4 +1,4 @@
-use crate::utils::{
+use zkregex::utils::{
    select_subarray,
    sparse_array::SparseArray,
    transitions::check_transition
