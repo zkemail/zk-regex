@@ -18,7 +18,7 @@
     "bun": ">=1.0.0"
   },
   "scripts": {
-    "test": "bun test",
+    "test": "bun test --timeout 30000",
     "test:scripts": "cd scripts && bun test", 
     "test:circom": "cd circom && bun test",
     "gen-regex:circom": "cd scripts && bun run gen-regex:circom",

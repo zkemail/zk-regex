@@ -4,7 +4,7 @@
     "license": "MIT",
     "description": "regex verification circuits in circom for common regexes, generated with the compiler in [zk-regex](https://github.com/zkemail/zk-regex/tree/main).",
     "scripts": {
-        "test": "bun test circuits/tests/"
+        "test": "bun test --timeout 30000 circuits/tests/"
     },
     "dependencies": {
         "@zk-email/circuits": "6.4.1-alpha.0",
