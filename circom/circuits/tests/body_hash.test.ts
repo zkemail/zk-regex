@@ -84,7 +84,7 @@ describe("Bodyhash Regex", () => {
             path.join(__dirname, "./circuits/test_body_hash_regex.circom"),
             option
         );
-    }, 30000); // Add 30 second timeout for circuit compilation
+    });
 
     it("bodyhash in the header", async () => {
         const signatureField = `dkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20230601; t=1694989812; x=1695594612; dara=google.com; h=to:subject:message-id:date:from:mime-version:from:to:cc:subject :date:message-id:reply-to; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=`;
