@@ -197,3 +197,22 @@ export async function globFiles(dirPath: string, pattern: string): Promise<strin
     .filter(file => regex.test(file))
     .map(file => path.join(dirPath, file));
 }
+
+/**
+ * Preserves manual code from existing file and appends to new generated file
+ */
+export async function preserveManualCode(existingFile: string, newFile: string, marker: string): Promise<void> {
+  if (!(await fileExists(existingFile))) return;
+  
+  try {
+    const existing = await readTextFile(existingFile);
+    const markerIndex = existing.indexOf(marker);
+    if (markerIndex === -1) return;
+    
+    const manual = existing.substring(markerIndex);
+    const generated = await readTextFile(newFile);
+    await writeTextFile(newFile, generated + '\n' + manual);
+  } catch (error) {
+    logger.warn(`Could not preserve manual code: ${error}`);
+  }
+}

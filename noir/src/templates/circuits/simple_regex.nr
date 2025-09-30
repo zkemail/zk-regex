@@ -94,6 +94,12 @@ pub fn regex_match<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
 }
 
 
+
+
+// MANUAL CODE - DO NOT REMOVE THIS LINE
+
+
+
 global MAX_HAYSTACK_LEN: u32 = 300;
 global MAX_MATCH_LEN: u32 = 300;
 
