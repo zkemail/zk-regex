@@ -125,18 +125,18 @@ unconstrained fn __unpack_sparse_value<let NUM_CAPTURE_GROUPS: u32>(
     let x = value as u64;
     let is_valid = (x & 1) as Field;
 
-    let mut masks = [0; 2 * NUM_CAPTURE_GROUPS];
+    let mut masks: [u64; 2 * NUM_CAPTURE_GROUPS] = [0; 2 * NUM_CAPTURE_GROUPS];
     let mut is_capture_starts = [0; NUM_CAPTURE_GROUPS];
     let mut capture_participations = [0; NUM_CAPTURE_GROUPS];
 
     for i in 0..2 * NUM_CAPTURE_GROUPS {
-        masks[i] = (1 << (i + 1) as u8);
+        masks[i] = (1 as u64) << ((i + 1) as u64);
     }
 
     for i in 0..NUM_CAPTURE_GROUPS {
-        is_capture_starts[i] = ((x & masks[i]) >> (i + 1) as u8) as Field;
+        is_capture_starts[i] = ((x & masks[i]) >> ((i + 1) as u64)) as Field;
         capture_participations[i] =
-            ((x & masks[NUM_CAPTURE_GROUPS + i]) >> (i + NUM_CAPTURE_GROUPS + 1) as u8) as Field;
+            ((x & masks[NUM_CAPTURE_GROUPS + i]) >> ((i + NUM_CAPTURE_GROUPS + 1) as u64)) as Field;
     }
 
     (is_valid, is_capture_starts, capture_participations)
