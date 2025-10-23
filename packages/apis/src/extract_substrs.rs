@@ -36,6 +36,8 @@ pub enum ExtractSubstrssError {
         regex_def: String,
         error: fancy_regex::Error,
     },
+    #[error("JSON parse error: {0}")]
+    JsonParseError(String),
 }
 
 pub fn extract_substr_idxes(
@@ -54,14 +56,14 @@ pub fn extract_substr_idxes(
 
     // Construct the full regex pattern with groups for each part
     let mut entire_regex_str = String::new();
-    for (_, part) in regex_config.parts.iter().enumerate() {
+    for part in regex_config.parts.iter() {
         let adjusted_regex_def = part.regex_def.replace("(", "(?:");
         entire_regex_str += &format!("({})", adjusted_regex_def);
     }
 
     // Compile the entire regex
     // This should be impossible to fail, since we tested the seperate regex parts before.
-    let entire_regex = Regex::new(&entire_regex_str).unwrap();
+    let entire_regex = Regex::new(&entire_regex_str)?;
 
     // Find the match for the entire regex
     let entire_captures = entire_regex
@@ -103,22 +105,18 @@ pub fn extract_email_addr_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config = include_str!("./decomposed_defs/email_addr.json");
-    extract_substr_idxes(
-        input_str,
-        &serde_json::from_str(regex_config).unwrap(),
-        false,
-    )
+    let config: DecomposedRegexConfig = serde_json::from_str(regex_config)
+        .map_err(|e| ExtractSubstrssError::JsonParseError(e.to_string()))?;
+    extract_substr_idxes(input_str, &config, false)
 }
 
 pub fn extract_email_domain_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config = include_str!("./decomposed_defs/email_domain.json");
-    extract_substr_idxes(
-        input_str,
-        &serde_json::from_str(regex_config).unwrap(),
-        false,
-    )
+    let config: DecomposedRegexConfig = serde_json::from_str(regex_config)
+        .map_err(|e| ExtractSubstrssError::JsonParseError(e.to_string()))?;
+    extract_substr_idxes(input_str, &config, false)
 }
 
 // pub fn extract_email_addr_with_name_idxes(
@@ -132,84 +130,68 @@ pub fn extract_from_all_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config = include_str!("./decomposed_defs/from_all.json");
-    extract_substr_idxes(
-        input_str,
-        &serde_json::from_str(regex_config).unwrap(),
-        false,
-    )
+    let config: DecomposedRegexConfig = serde_json::from_str(regex_config)
+        .map_err(|e| ExtractSubstrssError::JsonParseError(e.to_string()))?;
+    extract_substr_idxes(input_str, &config, false)
 }
 
 pub fn extract_from_addr_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config = include_str!("./decomposed_defs/from_addr.json");
-    extract_substr_idxes(
-        input_str,
-        &serde_json::from_str(regex_config).unwrap(),
-        false,
-    )
+    let config: DecomposedRegexConfig = serde_json::from_str(regex_config)
+        .map_err(|e| ExtractSubstrssError::JsonParseError(e.to_string()))?;
+    extract_substr_idxes(input_str, &config, false)
 }
 
 pub fn extract_to_all_idxes(input_str: &str) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config = include_str!("./decomposed_defs/to_all.json");
-    extract_substr_idxes(
-        input_str,
-        &serde_json::from_str(regex_config).unwrap(),
-        false,
-    )
+    let config: DecomposedRegexConfig = serde_json::from_str(regex_config)
+        .map_err(|e| ExtractSubstrssError::JsonParseError(e.to_string()))?;
+    extract_substr_idxes(input_str, &config, false)
 }
 
 pub fn extract_to_addr_idxes(input_str: &str) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config = include_str!("./decomposed_defs/to_addr.json");
-    extract_substr_idxes(
-        input_str,
-        &serde_json::from_str(regex_config).unwrap(),
-        false,
-    )
+    let config: DecomposedRegexConfig = serde_json::from_str(regex_config)
+        .map_err(|e| ExtractSubstrssError::JsonParseError(e.to_string()))?;
+    extract_substr_idxes(input_str, &config, false)
 }
 
 pub fn extract_subject_all_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config = include_str!("./decomposed_defs/subject_all.json");
-    extract_substr_idxes(
-        input_str,
-        &serde_json::from_str(regex_config).unwrap(),
-        false,
-    )
+    let config: DecomposedRegexConfig = serde_json::from_str(regex_config)
+        .map_err(|e| ExtractSubstrssError::JsonParseError(e.to_string()))?;
+    extract_substr_idxes(input_str, &config, false)
 }
 
 pub fn extract_body_hash_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config = include_str!("./decomposed_defs/body_hash.json");
-    extract_substr_idxes(
-        input_str,
-        &serde_json::from_str(regex_config).unwrap(),
-        false,
-    )
+    let config: DecomposedRegexConfig = serde_json::from_str(regex_config)
+        .map_err(|e| ExtractSubstrssError::JsonParseError(e.to_string()))?;
+    extract_substr_idxes(input_str, &config, false)
 }
 
 pub fn extract_timestamp_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config = include_str!("./decomposed_defs/timestamp.json");
-    extract_substr_idxes(
-        input_str,
-        &serde_json::from_str(regex_config).unwrap(),
-        false,
-    )
+    let config: DecomposedRegexConfig = serde_json::from_str(regex_config)
+        .map_err(|e| ExtractSubstrssError::JsonParseError(e.to_string()))?;
+    extract_substr_idxes(input_str, &config, false)
 }
 
 pub fn extract_message_id_idxes(
     input_str: &str,
 ) -> Result<Vec<(usize, usize)>, ExtractSubstrssError> {
     let regex_config = include_str!("./decomposed_defs/message_id.json");
-    extract_substr_idxes(
-        input_str,
-        &serde_json::from_str(regex_config).unwrap(),
-        false,
-    )
+    let config: DecomposedRegexConfig = serde_json::from_str(regex_config)
+        .map_err(|e| ExtractSubstrssError::JsonParseError(e.to_string()))?;
+    extract_substr_idxes(input_str, &config, false)
 }
 
 #[cfg(test)]
