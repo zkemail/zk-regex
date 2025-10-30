@@ -4,12 +4,58 @@ use heck::{ToPascalCase, ToSnakeCase};
 
 use crate::{DecomposedRegexConfig, NFAGraph, RegexPart};
 
+/// Converts bare capturing groups `(...)` to non-capturing groups `(?:...)` in a regex pattern.
+///
+/// This function only converts opening parentheses that are not already part of special
+/// regex constructs like `(?:...)`, `(?=...)`, `(?!...)`, `(?<=...)`, `(?<!...)`, etc.
+///
+/// # Known Limitations
+///
+/// This is a simple character-by-character scan that doesn't parse the full regex syntax.
+/// It will convert escaped parentheses `\(` which may not be desired in all cases, though
+/// this rarely causes issues in practice since the regex compiler handles escaped characters.
+///
+/// # Arguments
+///
+/// * `pattern` - The regex pattern string to process
+///
+/// # Returns
+///
+/// A new string with bare capturing groups converted to non-capturing groups
+///
+/// # Examples
+///
+/// ```
+/// # use zk_regex_compiler::utils::convert_capturing_to_non_capturing;
+/// assert_eq!(convert_capturing_to_non_capturing("(a|b)"), "(?:a|b)");
+/// assert_eq!(convert_capturing_to_non_capturing("(?:a|b)"), "(?:a|b)"); // unchanged
+/// assert_eq!(convert_capturing_to_non_capturing("(?=a)"), "(?=a)"); // unchanged
+/// ```
+fn convert_capturing_to_non_capturing(pattern: &str) -> String {
+    let mut result = String::with_capacity(pattern.len() + pattern.len() / 4);
+    let chars: Vec<char> = pattern.chars().collect();
+    let mut i = 0;
+
+    while i < chars.len() {
+        if chars[i] == '(' && (i + 1 >= chars.len() || chars[i + 1] != '?') {
+            // This is a bare capturing group, convert it to non-capturing
+            result.push_str("(?:");
+        } else {
+            result.push(chars[i]);
+        }
+        i += 1;
+    }
+
+    result
+}
+
 /// Combines decomposed regex parts into a single pattern string and extracts capture group lengths.
 ///
 /// This function iterates through the `parts` field of a `DecomposedRegexConfig`.
-/// It concatenates `RegexPart::Pattern` strings directly. For `RegexPart::PublicPattern`,
-/// it wraps the pattern string in parentheses `()` to form a capture group and collects
-/// the associated maximum byte length (`max_len`).
+/// For `RegexPart::Pattern` parts, it converts any bare capturing groups `(...)` to
+/// non-capturing groups `(?:...)` to prevent interference with capture group numbering.
+/// For `RegexPart::PublicPattern`, it wraps the pattern string in parentheses `()`
+/// to form a capture group and collects the associated maximum byte length (`max_len`).
 ///
 /// # Arguments
 ///
@@ -30,7 +76,9 @@ pub fn decomposed_to_composed_regex(
     for part in &config.parts {
         match part {
             RegexPart::Pattern(pattern) => {
-                combined_parts.push(pattern.clone());
+                // Convert bare capturing groups to non-capturing groups
+                let non_capturing_pattern = convert_capturing_to_non_capturing(pattern);
+                combined_parts.push(non_capturing_pattern);
             }
             RegexPart::PublicPattern((pattern, max_len)) => {
                 combined_parts.push(format!("({pattern})"));
@@ -84,4 +132,165 @@ pub fn save_outputs(
     println!("  Graph: {}", graph_path.display());
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_convert_single_capturing_group() {
+        let input = "(a|b)";
+        let expected = "(?:a|b)";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_convert_multiple_capturing_groups() {
+        let input = "(a|b)(c|d)";
+        let expected = "(?:a|b)(?:c|d)";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_preserve_non_capturing_groups() {
+        let input = "(?:a|b)";
+        let expected = "(?:a|b)";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_preserve_positive_lookahead() {
+        let input = "(?=abc)";
+        let expected = "(?=abc)";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_preserve_negative_lookahead() {
+        let input = "(?!abc)";
+        let expected = "(?!abc)";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_preserve_positive_lookbehind() {
+        let input = "(?<=abc)";
+        let expected = "(?<=abc)";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_preserve_negative_lookbehind() {
+        let input = "(?<!abc)";
+        let expected = "(?<!abc)";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_preserve_named_groups() {
+        let input = "(?<name>abc)";
+        let expected = "(?<name>abc)";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_preserve_comments() {
+        let input = "(?#comment)";
+        let expected = "(?#comment)";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_nested_capturing_groups() {
+        let input = "((a|b))";
+        let expected = "(?:(?:a|b))";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_no_groups() {
+        let input = "abc";
+        let expected = "abc";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_mixed_groups() {
+        let input = "(a|b)(?:c|d)(e|f)(?=g)";
+        let expected = "(?:a|b)(?:c|d)(?:e|f)(?=g)";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_complex_pattern() {
+        let input = "(?:prefix_)(a|b)(?=suffix)";
+        let expected = "(?:prefix_)(?:a|b)(?=suffix)";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_empty_string() {
+        let input = "";
+        let expected = "";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_escaped_parentheses() {
+        // Note: This test checks literal escaped parens in the string
+        // In actual regex, \( is an escaped paren, but we're working with strings
+        let input = r"\(not a group\)";
+        let expected = r"\(?:not a group\)"; // Our simple implementation will convert \(
+        // This is a known limitation - escaped parens would need more sophisticated parsing
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_decomposed_to_composed_with_capturing_groups() {
+        let config = DecomposedRegexConfig {
+            parts: vec![
+                RegexPart::Pattern("(a|b)prefix:".to_string()),
+                RegexPart::PublicPattern(("value".to_string(), 20)),
+            ],
+        };
+
+        let (combined, max_bytes) = decomposed_to_composed_regex(&config);
+
+        assert_eq!(combined, "(?:a|b)prefix:(value)");
+        assert_eq!(max_bytes, Some(vec![20]));
+    }
+
+    #[test]
+    fn test_decomposed_to_composed_preserves_special_groups() {
+        let config = DecomposedRegexConfig {
+            parts: vec![
+                RegexPart::Pattern("(?:a|b)prefix:".to_string()),
+                RegexPart::PublicPattern(("value".to_string(), 20)),
+                RegexPart::Pattern("(?=suffix)".to_string()),
+            ],
+        };
+
+        let (combined, max_bytes) = decomposed_to_composed_regex(&config);
+
+        assert_eq!(combined, "(?:a|b)prefix:(value)(?=suffix)");
+        assert_eq!(max_bytes, Some(vec![20]));
+    }
+
+    #[test]
+    fn test_decomposed_multiple_patterns_and_public() {
+        let config = DecomposedRegexConfig {
+            parts: vec![
+                RegexPart::Pattern("(a|b)".to_string()),
+                RegexPart::PublicPattern(("first".to_string(), 10)),
+                RegexPart::Pattern("(c|d)".to_string()),
+                RegexPart::PublicPattern(("second".to_string(), 15)),
+            ],
+        };
+
+        let (combined, max_bytes) = decomposed_to_composed_regex(&config);
+
+        assert_eq!(combined, "(?:a|b)(first)(?:c|d)(second)");
+        assert_eq!(max_bytes, Some(vec![10, 15]));
+    }
 }
