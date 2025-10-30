@@ -218,8 +218,8 @@ impl IntermediateNFA {
                 .unwrap_or(false);
 
             // Only add alternative start states if no start captures would be bypassed
-            if !has_start_captures
-                && let Some(closure) = closures.get(orig_start) {
+            if !has_start_captures {
+                if let Some(closure) = closures.get(orig_start) {
                     for &r_state in &closure.states {
                         if r_state != orig_start
                             && r_state < has_byte_transitions.len()
@@ -229,6 +229,7 @@ impl IntermediateNFA {
                         }
                     }
                 }
+            }
         }
 
         // Apply the changes

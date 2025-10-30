@@ -98,10 +98,11 @@ impl NFAGraph {
         // Start from accept states
         let mut stack: Vec<_> = self.accept_states.iter().copied().collect();
         while let Some(state) = stack.pop() {
-            if reaching_accept.insert(state)
-                && let Some(predecessors) = reverse_edges.get(&state) {
+            if reaching_accept.insert(state) {
+                if let Some(predecessors) = reverse_edges.get(&state) {
                     stack.extend(predecessors);
                 }
+            }
         }
 
         reaching_accept
