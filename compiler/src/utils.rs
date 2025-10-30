@@ -6,14 +6,10 @@ use crate::{DecomposedRegexConfig, NFAGraph, RegexPart};
 
 /// Converts bare capturing groups `(...)` to non-capturing groups `(?:...)` in a regex pattern.
 ///
-/// This function only converts opening parentheses that are not already part of special
-/// regex constructs like `(?:...)`, `(?=...)`, `(?!...)`, `(?<=...)`, `(?<!...)`, etc.
-///
-/// # Known Limitations
-///
-/// This is a simple character-by-character scan that doesn't parse the full regex syntax.
-/// It will convert escaped parentheses `\(` which may not be desired in all cases, though
-/// this rarely causes issues in practice since the regex compiler handles escaped characters.
+/// This function properly handles:
+/// - Escaped parentheses like `\(` and `\)` (preserved as-is)
+/// - Parentheses within character classes like `[()]` (preserved as-is)
+/// - Special groups like `(?:...)`, `(?=...)`, `(?!...)`, etc. (preserved as-is)
 ///
 /// # Arguments
 ///
@@ -28,20 +24,48 @@ use crate::{DecomposedRegexConfig, NFAGraph, RegexPart};
 /// ```text
 /// convert_capturing_to_non_capturing("(a|b)")     → "(?:a|b)"
 /// convert_capturing_to_non_capturing("(?:a|b)")   → "(?:a|b)" // unchanged
-/// convert_capturing_to_non_capturing("(?=a)")     → "(?=a)"   // unchanged
+/// convert_capturing_to_non_capturing(r"\(a\)")    → r"\(a\)"  // escaped parens preserved
+/// convert_capturing_to_non_capturing("[()]")      → "[()]"    // char class preserved
 /// ```
 fn convert_capturing_to_non_capturing(pattern: &str) -> String {
     let mut result = String::with_capacity(pattern.len() + pattern.len() / 4);
     let chars: Vec<char> = pattern.chars().collect();
     let mut i = 0;
+    let mut in_char_class = false;
+    let mut escaped = false;
 
     while i < chars.len() {
-        if chars[i] == '(' && (i + 1 >= chars.len() || chars[i + 1] != '?') {
-            // This is a bare capturing group, convert it to non-capturing
-            result.push_str("(?:");
+        let ch = chars[i];
+
+        if escaped {
+            // Previous char was backslash, this char is escaped
+            result.push(ch);
+            escaped = false;
+        } else if ch == '\\' {
+            // Start escape sequence
+            result.push(ch);
+            escaped = true;
+        } else if ch == '[' && !in_char_class {
+            // Entering character class
+            result.push(ch);
+            in_char_class = true;
+        } else if ch == ']' && in_char_class {
+            // Exiting character class
+            result.push(ch);
+            in_char_class = false;
+        } else if ch == '(' && !in_char_class {
+            // Check if this is a bare capturing group
+            if i + 1 >= chars.len() || chars[i + 1] != '?' {
+                // This is a bare capturing group, convert it to non-capturing
+                result.push_str("(?:");
+            } else {
+                // This is already a special group (?...), keep as-is
+                result.push(ch);
+            }
         } else {
-            result.push(chars[i]);
+            result.push(ch);
         }
+
         i += 1;
     }
 
@@ -237,11 +261,41 @@ mod tests {
 
     #[test]
     fn test_escaped_parentheses() {
-        // Note: This test checks literal escaped parens in the string
-        // In actual regex, \( is an escaped paren, but we're working with strings
+        // Escaped parentheses should be preserved as-is (they match literal parens)
         let input = r"\(not a group\)";
-        let expected = r"\(?:not a group\)"; // Our simple implementation will convert \(
-        // This is a known limitation - escaped parens would need more sophisticated parsing
+        let expected = r"\(not a group\)";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_character_class_with_parentheses() {
+        // Parentheses inside character classes should be preserved
+        let input = "[()]";
+        let expected = "[()]";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_character_class_complex() {
+        // Complex pattern with character class containing parens
+        let input = "before[()]after";
+        let expected = "before[()]after";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_mixed_escaped_and_capturing() {
+        // Mix of escaped parens, character classes, and capturing groups
+        let input = r"\((a|b)[()]";
+        let expected = r"\((?:a|b)[()]";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_nested_character_classes() {
+        // Character class followed by capturing group
+        let input = "[()]{2}(abc)";
+        let expected = "[()]{2}(?:abc)";
         assert_eq!(convert_capturing_to_non_capturing(input), expected);
     }
 
