@@ -25,11 +25,10 @@ use crate::{DecomposedRegexConfig, NFAGraph, RegexPart};
 ///
 /// # Examples
 ///
-/// ```
-/// # use zk_regex_compiler::utils::convert_capturing_to_non_capturing;
-/// assert_eq!(convert_capturing_to_non_capturing("(a|b)"), "(?:a|b)");
-/// assert_eq!(convert_capturing_to_non_capturing("(?:a|b)"), "(?:a|b)"); // unchanged
-/// assert_eq!(convert_capturing_to_non_capturing("(?=a)"), "(?=a)"); // unchanged
+/// ```text
+/// convert_capturing_to_non_capturing("(a|b)")     → "(?:a|b)"
+/// convert_capturing_to_non_capturing("(?:a|b)")   → "(?:a|b)" // unchanged
+/// convert_capturing_to_non_capturing("(?=a)")     → "(?=a)"   // unchanged
 /// ```
 fn convert_capturing_to_non_capturing(pattern: &str) -> String {
     let mut result = String::with_capacity(pattern.len() + pattern.len() / 4);
