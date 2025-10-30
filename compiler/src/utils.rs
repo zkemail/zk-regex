@@ -4,7 +4,12 @@ use heck::{ToPascalCase, ToSnakeCase};
 
 use crate::{DecomposedRegexConfig, NFAGraph, RegexPart};
 
-/// Converts bare capturing groups `(...)` to non-capturing groups `(?:...)` in a regex pattern.
+/// Converts capturing groups to non-capturing groups `(?:...)` in a regex pattern.
+///
+/// This function converts:
+/// - Bare capturing groups `(...)` to `(?:...)`
+/// - Named captures `(?<name>...)` (PCRE style) to `(?:...)`
+/// - Named captures `(?P<name>...)` (Rust style) to `(?:...)`
 ///
 /// This function properly handles:
 /// - Escaped parentheses like `\(` and `\)` (preserved as-is)
@@ -17,15 +22,17 @@ use crate::{DecomposedRegexConfig, NFAGraph, RegexPart};
 ///
 /// # Returns
 ///
-/// A new string with bare capturing groups converted to non-capturing groups
+/// A new string with all capturing groups converted to non-capturing groups
 ///
 /// # Examples
 ///
 /// ```text
-/// convert_capturing_to_non_capturing("(a|b)")     → "(?:a|b)"
-/// convert_capturing_to_non_capturing("(?:a|b)")   → "(?:a|b)" // unchanged
-/// convert_capturing_to_non_capturing(r"\(a\)")    → r"\(a\)"  // escaped parens preserved
-/// convert_capturing_to_non_capturing("[()]")      → "[()]"    // char class preserved
+/// convert_capturing_to_non_capturing("(a|b)")         → "(?:a|b)"
+/// convert_capturing_to_non_capturing("(?<name>abc)")  → "(?:abc)"
+/// convert_capturing_to_non_capturing("(?P<name>abc)") → "(?:abc)"
+/// convert_capturing_to_non_capturing("(?:a|b)")       → "(?:a|b)" // unchanged
+/// convert_capturing_to_non_capturing(r"\(a\)")        → r"\(a\)"  // escaped parens preserved
+/// convert_capturing_to_non_capturing("[()]")          → "[()]"    // char class preserved
 /// ```
 fn convert_capturing_to_non_capturing(pattern: &str) -> String {
     let mut result = String::with_capacity(pattern.len() + pattern.len() / 4);
@@ -54,12 +61,43 @@ fn convert_capturing_to_non_capturing(pattern: &str) -> String {
             result.push(ch);
             in_char_class = false;
         } else if ch == '(' && !in_char_class {
-            // Check if this is a bare capturing group
+            // Check if this is a capturing group that needs conversion
             if i + 1 >= chars.len() || chars[i + 1] != '?' {
-                // This is a bare capturing group, convert it to non-capturing
+                // Bare capturing group: (...)
                 result.push_str("(?:");
+            } else if i + 2 < chars.len() && chars[i + 2] == '<' {
+                // Could be: (?<=...) positive lookbehind, or (?<!...) negative lookbehind, or (?<name>...) PCRE named capture
+                if i + 3 < chars.len() && (chars[i + 3] == '=' || chars[i + 3] == '!') {
+                    // Lookbehind assertion: (?<=...) or (?<!...)
+                    // These are special groups, preserve as-is
+                    result.push(ch);
+                } else {
+                    // PCRE named capture: (?<name>...)
+                    // Convert to non-capturing and skip the name
+                    result.push_str("(?:");
+                    i += 2; // Skip '?' and '<'
+                    // Skip until we find the closing '>'
+                    while i + 1 < chars.len() && chars[i + 1] != '>' {
+                        i += 1;
+                    }
+                    if i + 1 < chars.len() && chars[i + 1] == '>' {
+                        i += 1; // Skip the '>'
+                    }
+                }
+            } else if i + 3 < chars.len() && chars[i + 2] == 'P' && chars[i + 3] == '<' {
+                // Rust named capture: (?P<name>...)
+                // Convert to non-capturing and skip the name
+                result.push_str("(?:");
+                i += 3; // Skip '?', 'P', and '<'
+                // Skip until we find the closing '>'
+                while i + 1 < chars.len() && chars[i + 1] != '>' {
+                    i += 1;
+                }
+                if i + 1 < chars.len() && chars[i + 1] == '>' {
+                    i += 1; // Skip the '>'
+                }
             } else {
-                // This is already a special group (?...), keep as-is
+                // Other special group like (?:...), (?=...), etc.
                 result.push(ch);
             }
         } else {
@@ -211,9 +249,9 @@ mod tests {
     }
 
     #[test]
-    fn test_preserve_named_groups() {
+    fn test_convert_pcre_named_groups() {
         let input = "(?<name>abc)";
-        let expected = "(?<name>abc)";
+        let expected = "(?:abc)";
         assert_eq!(convert_capturing_to_non_capturing(input), expected);
     }
 
@@ -296,6 +334,55 @@ mod tests {
         // Character class followed by capturing group
         let input = "[()]{2}(abc)";
         let expected = "[()]{2}(?:abc)";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_convert_rust_named_groups() {
+        let input = "(?P<name>abc)";
+        let expected = "(?:abc)";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_convert_multiple_named_groups() {
+        let input = "(?<first>[0-9]+)(?P<second>[a-z]+)";
+        let expected = "(?:[0-9]+)(?:[a-z]+)";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_convert_mixed_bare_and_named_groups() {
+        let input = "(bare)(?<pcre>abc)(?P<rust>def)";
+        let expected = "(?:bare)(?:abc)(?:def)";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_convert_named_groups_with_complex_content() {
+        let input = "(?<email>[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})";
+        let expected = "(?:[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_convert_nested_named_and_bare_groups() {
+        let input = "(?<outer>(inner))";
+        let expected = "(?:(?:inner))";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_convert_named_groups_with_underscores_and_numbers() {
+        let input = "(?<group_1>a)(?P<group_2>b)";
+        let expected = "(?:a)(?:b)";
+        assert_eq!(convert_capturing_to_non_capturing(input), expected);
+    }
+
+    #[test]
+    fn test_mixed_named_and_special_groups() {
+        let input = "(?<name>abc)(?:def)(?=ghi)(?P<name2>jkl)";
+        let expected = "(?:abc)(?:def)(?=ghi)(?:jkl)";
         assert_eq!(convert_capturing_to_non_capturing(input), expected);
     }
 
