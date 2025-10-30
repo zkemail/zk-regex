@@ -292,4 +292,32 @@ mod tests {
         assert_eq!(combined, "(?:a|b)(first)(?:c|d)(second)");
         assert_eq!(max_bytes, Some(vec![10, 15]));
     }
+
+    /// This test verifies that capturing groups in Pattern parts are automatically
+    /// converted to non-capturing groups, preventing interference with PublicPattern
+    /// capture group numbering.
+    #[test]
+    fn test_wrap_capture_group_into_non_capturing_group_in_private_pattern() {
+        use crate::{gen_from_decomposed, ProvingFramework};
+
+        // This is the pattern that contains a private capture group that should be wrapped into a non-capturing group
+        let regex_with_private_capture_group = DecomposedRegexConfig {
+            parts: vec![
+                // Pattern with capturing group - should be converted to non-capturing
+                RegexPart::Pattern("(a|b)prefix:".to_string()),
+                // This should be capture group 1 for the circuit
+                RegexPart::PublicPattern((".+?".to_string(), 20)),
+            ],
+        };
+
+        let (nfa, _circuit_code) = gen_from_decomposed(
+            regex_with_private_capture_group,
+            "TestCapture1",
+            ProvingFramework::Circom,
+        )
+        .expect("Should compile successfully");
+
+        assert_eq!(nfa.regex, "(?:a|b)prefix:(.+?)");
+        assert_eq!(nfa.num_capture_groups, 1);
+    }
 }
