@@ -7,18 +7,17 @@
 
 import * as path from 'path';
 import { fileURLToPath } from 'url';
-import { 
-  logger, 
+import {
+  logger,
   toSnakeCase,
-  ensureDirectory, 
+  ensureDirectory,
   listFilesWithExtension,
   fileExists,
   directoryExists,
   moveFile,
   removeDirectory,
   executeCargo,
-  ScriptError,
-  preserveManualCode
+  ScriptError
 } from '../../scripts/utils/index.ts';
 
 // Get current file directory
@@ -35,7 +34,6 @@ const NOIR_COMMON_DIR = path.join(PROJECT_ROOT, 'noir', 'common');
 const CIRCUITS_DIR = path.join(PROJECT_ROOT, 'noir', 'src', 'templates', 'circuits');
 const GRAPHS_DIR = path.join(PROJECT_ROOT, 'noir', 'src', 'templates', 'graphs');
 const TEMP_OUTPUT_DIR = path.join(PROJECT_ROOT, 'noir', 'src', 'templates', 'temp_gen');
-const MANUAL_CODE_MARKER = '\n\n// MANUAL CODE - DO NOT REMOVE THIS LINE\n';
 
 /**
  * Generate files for a specific regex JSON file
@@ -111,7 +109,6 @@ async function generateFiles(regexJsonPath: string): Promise<void> {
 
   // Move the generated regex.nr file
   if (await fileExists(generatedRegexNrSource)) {
-    await preserveManualCode(targetRegexNr, generatedRegexNrSource, MANUAL_CODE_MARKER);
     await moveFile(generatedRegexNrSource, targetRegexNr);
   } else {
     logger.error(`Error: Generated regex file ${generatedRegexNrSource} not found!`);
