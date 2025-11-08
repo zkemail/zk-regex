@@ -16,3 +16,4 @@ scripts/dist/
 **/scripts/*.d.ts.map
 
 .claude
+thoughts/
