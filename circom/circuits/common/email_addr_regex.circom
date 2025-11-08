@@ -74,26 +74,26 @@ template EmailAddrRegex(maxHaystackBytes, maxMatchBytes) {
         isValidTransition[5][i] <== CheckByteTransitionWithCapture(1)(4, 5, 111, [0], [0], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
         // Transition 6: 5 -[58]-> 6 | Capture Group: []
         isValidTransition[6][i] <== CheckByteTransitionWithCapture(1)(5, 6, 58, [0], [0], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
-        // Transition 7: 6 -[194-223]-> 7 | Capture Group:[ (1, 1)]
-        isValidTransition[7][i] <== CheckByteRangeTransitionWithCapture(1)(6, 7, 194, 223, [1], [1], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
-        // Transition 8: 6 -[224]-> 8 | Capture Group:[ (1, 1)]
-        isValidTransition[8][i] <== CheckByteTransitionWithCapture(1)(6, 8, 224, [1], [1], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
-        // Transition 9: 6 -[225-236]-> 9 | Capture Group:[ (1, 1)]
-        isValidTransition[9][i] <== CheckByteRangeTransitionWithCapture(1)(6, 9, 225, 236, [1], [1], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
-        // Transition 10: 6 -[238-239]-> 9 | Capture Group:[ (1, 1)]
-        isValidTransition[10][i] <== CheckByteRangeTransitionWithCapture(1)(6, 9, 238, 239, [1], [1], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
-        // Transition 11: 6 -[237]-> 10 | Capture Group:[ (1, 1)]
-        isValidTransition[11][i] <== CheckByteTransitionWithCapture(1)(6, 10, 237, [1], [1], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
-        // Transition 12: 6 -[240]-> 11 | Capture Group:[ (1, 1)]
-        isValidTransition[12][i] <== CheckByteTransitionWithCapture(1)(6, 11, 240, [1], [1], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
-        // Transition 13: 6 -[241-243]-> 12 | Capture Group:[ (1, 1)]
-        isValidTransition[13][i] <== CheckByteRangeTransitionWithCapture(1)(6, 12, 241, 243, [1], [1], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
-        // Transition 14: 6 -[244]-> 13 | Capture Group:[ (1, 1)]
-        isValidTransition[14][i] <== CheckByteTransitionWithCapture(1)(6, 13, 244, [1], [1], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
-        // Transition 15: 6 -[0-59]-> 14 | Capture Group:[ (1, 1)]
-        isValidTransition[15][i] <== CheckByteRangeTransitionWithCapture(1)(6, 14, 0, 59, [1], [1], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
-        // Transition 16: 6 -[61-127]-> 14 | Capture Group:[ (1, 1)]
-        isValidTransition[16][i] <== CheckByteRangeTransitionWithCapture(1)(6, 14, 61, 127, [1], [1], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
+        // Transition 7: 6 -[194-223]-> 7 | Capture Group: []
+        isValidTransition[7][i] <== CheckByteRangeTransitionWithCapture(1)(6, 7, 194, 223, [0], [0], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
+        // Transition 8: 6 -[224]-> 8 | Capture Group: []
+        isValidTransition[8][i] <== CheckByteTransitionWithCapture(1)(6, 8, 224, [0], [0], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
+        // Transition 9: 6 -[225-236]-> 9 | Capture Group: []
+        isValidTransition[9][i] <== CheckByteRangeTransitionWithCapture(1)(6, 9, 225, 236, [0], [0], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
+        // Transition 10: 6 -[238-239]-> 9 | Capture Group: []
+        isValidTransition[10][i] <== CheckByteRangeTransitionWithCapture(1)(6, 9, 238, 239, [0], [0], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
+        // Transition 11: 6 -[237]-> 10 | Capture Group: []
+        isValidTransition[11][i] <== CheckByteTransitionWithCapture(1)(6, 10, 237, [0], [0], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
+        // Transition 12: 6 -[240]-> 11 | Capture Group: []
+        isValidTransition[12][i] <== CheckByteTransitionWithCapture(1)(6, 11, 240, [0], [0], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
+        // Transition 13: 6 -[241-243]-> 12 | Capture Group: []
+        isValidTransition[13][i] <== CheckByteRangeTransitionWithCapture(1)(6, 12, 241, 243, [0], [0], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
+        // Transition 14: 6 -[244]-> 13 | Capture Group: []
+        isValidTransition[14][i] <== CheckByteTransitionWithCapture(1)(6, 13, 244, [0], [0], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
+        // Transition 15: 6 -[0-59]-> 14 | Capture Group: []
+        isValidTransition[15][i] <== CheckByteRangeTransitionWithCapture(1)(6, 14, 0, 59, [0], [0], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
+        // Transition 16: 6 -[61-127]-> 14 | Capture Group: []
+        isValidTransition[16][i] <== CheckByteRangeTransitionWithCapture(1)(6, 14, 61, 127, [0], [0], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
         // Transition 17: 6 -[33]-> 16 | Capture Group:[ (1, 1)]
         isValidTransition[17][i] <== CheckByteTransitionWithCapture(1)(6, 16, 33, [1], [1], currStates[i], nextStates[i], haystack[i], [captureGroup1Id[i]], [captureGroup1Start[i]]);
         // Transition 18: 6 -[35-38]-> 16 | Capture Group:[ (1, 1)]

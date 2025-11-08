@@ -186,17 +186,23 @@ impl IntermediateNFA {
                                 .or_insert_with(BTreeSet::new);
 
                             // Add start captures from epsilon path before byte transition
-                            for &(_, (group_id, is_start)) in &closure.captures {
-                                if is_start {
-                                    captures_for_transition.insert((group_id, true));
+                            // CRITICAL FIX: Only add captures from the specific epsilon path to r_state
+                            if let Some(path_captures) = closure.per_state_captures.get(&r_state) {
+                                for &(group_id, is_start) in path_captures {
+                                    if is_start {
+                                        captures_for_transition.insert((group_id, true));
+                                    }
                                 }
                             }
 
                             // Add end captures from epsilon path after byte transition
+                            // For end markers, we need ALL end captures reachable from actual_target
                             let target_closure = &closures[actual_target];
-                            for &(_, (group_id, is_start)) in &target_closure.captures {
-                                if !is_start {
-                                    captures_for_transition.insert((group_id, false));
+                            for path_captures in target_closure.per_state_captures.values() {
+                                for &(group_id, is_start) in path_captures {
+                                    if !is_start {
+                                        captures_for_transition.insert((group_id, false));
+                                    }
                                 }
                             }
                         }
@@ -211,10 +217,15 @@ impl IntermediateNFA {
         for &orig_start in &original_starts {
             new_start_states.insert(orig_start);
 
-            // Check if start state's closure has start captures
+            // Check if start state's closure has start captures on any epsilon path
             let has_start_captures = closures
                 .get(orig_start)
-                .map(|closure| closure.captures.iter().any(|(_, (_, is_start))| *is_start))
+                .map(|closure| {
+                    closure
+                        .per_state_captures
+                        .values()
+                        .any(|captures| captures.iter().any(|(_, is_start)| *is_start))
+                })
                 .unwrap_or(false);
 
             // Only add alternative start states if no start captures would be bypassed
@@ -264,7 +275,7 @@ impl IntermediateNFA {
     fn compute_epsilon_closure(&self, start: usize) -> NFAResult<EpsilonClosure> {
         let mut closure = EpsilonClosure {
             states: BTreeSet::new(),
-            captures: BTreeSet::new(),
+            per_state_captures: BTreeMap::new(),
             is_accept: false,
         };
 
@@ -273,6 +284,7 @@ impl IntermediateNFA {
             state: usize,
             closure: &mut EpsilonClosure,
             visited: &mut BTreeSet<usize>,
+            current_path_captures: &BTreeSet<(usize, bool)>,
         ) -> NFAResult<()> {
             if !visited.insert(state) {
                 return Ok(());
@@ -280,28 +292,39 @@ impl IntermediateNFA {
 
             closure.states.insert(state);
 
-            // Collect capture information
+            // Build up captures for the current path
+            let mut path_captures = current_path_captures.clone();
+
+            // Add captures from this state's epsilon transitions
             for (&capture_state, captures) in &nfa.nodes[state].capture_groups {
                 for capture in captures {
-                    closure.captures.insert((capture_state, *capture));
+                    path_captures.insert(*capture);
                 }
             }
+
+            // Store the captures for this specific path to this state
+            closure
+                .per_state_captures
+                .entry(state)
+                .or_insert_with(BTreeSet::new)
+                .extend(path_captures.iter().cloned());
 
             // Check if this state is accepting
             if nfa.accept_states.contains(&state) {
                 closure.is_accept = true;
             }
 
-            // Follow epsilon transitions
+            // Follow epsilon transitions, passing accumulated captures
             for &next in &nfa.nodes[state].epsilon_transitions {
-                dfs(nfa, next, closure, visited)?;
+                dfs(nfa, next, closure, visited, &path_captures)?;
             }
 
             Ok(())
         }
 
         let mut visited = BTreeSet::new();
-        dfs(self, start, &mut closure, &mut visited)?;
+        let initial_captures = BTreeSet::new();
+        dfs(self, start, &mut closure, &mut visited, &initial_captures)?;
 
         Ok(closure)
     }
@@ -400,6 +423,74 @@ impl IntermediateNFA {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct EpsilonClosure {
     states: BTreeSet<usize>,
-    captures: BTreeSet<(usize, (usize, bool))>,
+    /// Map from reachable state to the captures encountered on epsilon path to that state
+    per_state_captures: BTreeMap<usize, BTreeSet<(usize, bool)>>,
     is_accept: bool,
+}
+
+/// Information about captures encountered on a specific epsilon path
+#[derive(Debug, Clone)]
+struct PathInfo {
+    /// The destination state of this path
+    target_state: usize,
+    /// Captures encountered on epsilon transitions along this path
+    captures: BTreeSet<(usize, bool)>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_epsilon_elimination_optional_pattern_before_capture() {
+        // Test pattern similar to email_addr: optional(?:...)? followed by capture group (...)
+        // This is a regression test for the epsilon elimination bug where optional patterns
+        // before capture groups caused duplicate capture markers.
+        let pattern = r"(?:a)?([bc])";
+
+        // Use the public API through compile function
+        let nfa = crate::compile(pattern).expect("Failed to compile pattern");
+
+        // Test that both paths work correctly
+        let test_cases = vec![
+            ("ab", true),  // Takes optional path
+            ("ac", true),  // Takes optional path
+            ("b", true),   // Skips optional path
+            ("c", true),   // Skips optional path
+            ("d", false),  // Should not match
+        ];
+
+        for (input, should_match) in test_cases {
+            let result = nfa.get_path_to_accept(input.as_bytes());
+            assert_eq!(
+                result.is_ok(),
+                should_match,
+                "Pattern {:?} with input {:?}: expected match={}",
+                pattern,
+                input,
+                should_match
+            );
+
+            if should_match {
+                let path = result.unwrap();
+                // Verify exactly ONE capture start event in the path
+                let capture_start_count = path
+                    .path
+                    .iter()
+                    .filter(|(_, _, _, captures)| {
+                        captures
+                            .as_ref()
+                            .map(|c| c.iter().any(|&(id, is_start)| id == 1 && is_start))
+                            .unwrap_or(false)
+                    })
+                    .count();
+
+                assert_eq!(
+                    capture_start_count, 1,
+                    "Expected exactly 1 capture start event for input {:?}, got {}. This test verifies the epsilon elimination fix.",
+                    input, capture_start_count
+                );
+            }
+        }
+    }
 }
