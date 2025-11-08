@@ -1,4 +1,4 @@
-import { spawn, execSync } from 'child_process';
+import { spawn, execSync, spawnSync } from 'child_process';
 import { ProcessResult } from './types.js';
 import { logger } from './logger.js';
 import * as fs from 'fs';
@@ -17,38 +17,41 @@ export function executeCommand(
 ): ProcessResult {
   try {
     const { cwd, captureOutput = true, timeout = 120000 } = options;
-    
+
     logger.debug(`Executing: ${command} ${args.join(' ')}`, { cwd });
 
-    if (captureOutput) {
-      const result = execSync(`${command} ${args.join(' ')}`, {
-        cwd,
-        timeout,
-        encoding: 'utf8',
-      });
-      
-      return {
-        success: true,
-        stdout: result,
-      };
-    } else {
-      // For non-captured output, use spawn to show real-time output
-      execSync(`${command} ${args.join(' ')}`, {
-        cwd,
-        timeout,
-        stdio: 'inherit',
-      });
-      
-      return {
-        success: true,
-        stdout: undefined,
-        stderr: undefined,
-        error: undefined,
-      };
+    // Use spawnSync instead of execSync to properly handle argument escaping
+    const result = spawnSync(command, args, {
+      cwd,
+      timeout,
+      encoding: 'utf8',
+      stdio: captureOutput ? ['pipe', 'pipe', 'pipe'] : 'inherit',
+    });
+
+    if (result.error) {
+      throw result.error;
     }
+
+    if (result.status !== 0) {
+      const error = new Error(`Process exited with code ${result.status}`) as Error & {
+        stdout?: string;
+        stderr?: string;
+        status?: number
+      };
+      error.stdout = result.stdout?.toString();
+      error.stderr = result.stderr?.toString();
+      error.status = result.status;
+      throw error;
+    }
+
+    return {
+      success: true,
+      stdout: captureOutput ? (result.stdout?.toString() || undefined) : undefined,
+      stderr: captureOutput ? (result.stderr?.toString() || undefined) : undefined,
+    };
   } catch (error) {
     const err = error as Error & { stdout?: string; stderr?: string; status?: number };
-    
+
     logger.error(`Command failed: ${command} ${args.join(' ')}`, {
       error: err.message,
       stdout: err.stdout,
