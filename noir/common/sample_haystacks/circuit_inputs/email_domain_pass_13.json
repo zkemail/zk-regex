@@ -1,6 +1,7 @@
 {
   "type": "noir",
   "in_haystack": [
+    32,
     108,
     101,
     97,
@@ -299,13 +300,12 @@
     0,
     0,
     0,
-    0,
     0
   ],
-  "match_start": 0,
+  "match_start": 1,
   "match_length": 29,
   "curr_states": [
-    0,
+    1,
     2,
     2,
     2,
