@@ -1,0 +1,14 @@
+{
+    "pass": [
+        "a_hello",
+        "x_y",
+        "a_bcdef",
+        "Z_testing123"
+    ],
+    "fail": [
+        "_hello",
+        "a_",
+        "ab_c",
+        "nounderscorehere"
+    ]
+}
