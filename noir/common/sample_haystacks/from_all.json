@@ -7,7 +7,8 @@
         "from:word\r\n",
         "from: Name with spaces <spaces@example.com>\r\nAnd other content afterwards.",
         "from: line1\r\nline2@example.com\r\n",
-        "This is some text before.\r\nfrom:sender@example.com\r\nThis is some text after."
+        "This is some text before.\r\nfrom:sender@example.com\r\nThis is some text after.",
+        "from:x\r\n"
     ],
     "fail": [
         "From: Test User <test@example.com>\r\n",

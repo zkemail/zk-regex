@@ -177,6 +177,12 @@ pub fn generate_circuit_inputs(
             let mut capture_group_starts: Vec<Vec<u8>> =
                 vec![vec![0; max_match_len]; nfa.num_capture_groups];
 
+            // IMPORTANT: BTreeSet iterates in sorted order. For 1-char captures where both
+            // (group_id, false) and (group_id, true) exist at the same position, iteration
+            // order is (false, true). The later write (is_start=true) overwrites the earlier,
+            // which is the correct behavior - the single byte should be marked as start=1.
+            // Do not change to HashMap/Vec without considering this dependency.
+            // TODO: remove order dependency
             for step_idx in 0..path_len {
                 if let Some(capture_set) = &path[step_idx].3 {
                     for (group_id, is_start) in capture_set.iter() {

@@ -284,9 +284,154 @@ const logger = new Logger(LogLevel.Debug);
 - Leverage Bun's built-in APIs when available
 - Test with `bun test` before committing
 
+## Testing New Regex Patterns
+
+This section explains the complete workflow for testing new regex patterns in both Circom and Noir proving systems.
+
+### Step 1: Create the Regex Configuration
+
+Create a JSON file defining your regex pattern using the decomposed regex format:
+
+**For Circom**: `circom/regexes/<pattern_name>.json`
+**For Noir**: `noir/common/regexes/<pattern_name>.json`
+
+```json
+{
+  "parts": [
+    { "Pattern": "prefix:" },
+    { "PublicPattern": ["[a-z]+", 32] },
+    { "Pattern": ";" }
+  ]
+}
+```
+
+- **`Pattern`**: A literal pattern that must match but is not captured
+- **`PublicPattern`**: An array with `[regex_pattern, max_match_length]` - the captured/revealed portion
+
+### Step 2: Create Sample Haystacks (Test Inputs)
+
+Create a JSON file with test inputs:
+
+**For Circom**: `circom/common/sample_haystacks/<pattern_name>.json`
+**For Noir**: `noir/common/sample_haystacks/<pattern_name>.json`
+
+```json
+{
+  "pass": [
+    "prefix:hello;",
+    "prefix:world;",
+    "some text prefix:test; more text"
+  ],
+  "fail": [
+    "prefix:;",
+    "PREFIX:hello;",
+    "prefix:hello"
+  ]
+}
+```
+
+- **`pass`**: Strings that should match the regex
+- **`fail`**: Strings that should NOT match the regex
+
+### Step 3: Build the Compiler
+
+```bash
+# Build the release version of the zk-regex compiler
+bun run build-release
+```
+
+### Step 4: Generate Circuits and Run Tests
+
+#### For Noir
+
+```bash
+# 1. Generate Noir circuits from regex definitions
+bun run gen-regex:noir
+
+# 2. Generate test inputs AND transform imports (REQUIRED!)
+#    This script:
+#    - Generates circuit inputs from sample haystacks
+#    - Transforms imports from `zkregex::` to `crate::`
+#    - Adds test functions to circuit files
+bun run gen-inputs:noir
+
+# 3. Run Noir tests
+cd noir && nargo test
+```
+
+#### For Circom
+
+```bash
+# 1. Generate Circom circuits from regex definitions
+bun run gen-regex:circom
+
+# 2. Run Circom-specific tests
+bun run test:circom
+```
+
+### Common Configuration Issues
+
+#### "Invalid substring length" Error
+This error occurs when the `max_match_length` in your `PublicPattern` is smaller than the actual matched substring in your test input.
+
+**Solution**: Increase the second value in `PublicPattern`:
+```json
+{ "PublicPattern": ["[a-z]+", 64] }  // Increase from 32 to 64
+```
+
+#### Import Resolution Errors in Noir
+If you see `use zkregex::` cannot be resolved errors, you forgot to run:
+```bash
+bun run gen-inputs:noir
+```
+This script transforms imports from `zkregex::` to `crate::` for the library context.
+
+#### Missing Module Declarations
+When adding new patterns, the `mod.nr` file may need updating. The gen-regex script generates circuit files but doesn't automatically update module declarations.
+
+**Solution**: Add your new module to `noir/src/templates/circuits/mod.nr`:
+```rust
+pub mod your_new_pattern_regex;
+```
+
+### Example: Adding a New Pattern
+
+```bash
+# 1. Create regex config
+cat > noir/common/regexes/my_pattern.json << 'EOF'
+{
+  "parts": [
+    { "Pattern": "id:" },
+    { "PublicPattern": ["[0-9]+", 10] }
+  ]
+}
+EOF
+
+# 2. Create sample haystacks
+cat > noir/common/sample_haystacks/my_pattern.json << 'EOF'
+{
+  "pass": ["id:123", "prefix id:456 suffix"],
+  "fail": ["id:", "ID:123", "id:abc"]
+}
+EOF
+
+# 3. Build compiler
+bun run build-release
+
+# 4. Generate and test (Noir)
+bun run gen-regex:noir
+bun run gen-inputs:noir
+
+# 5. Add module declaration (if needed)
+echo 'pub mod my_pattern_regex;' >> noir/src/templates/circuits/mod.nr
+
+# 6. Run tests
+cd noir && nargo test
+```
+
 ## Related
 
 - [Migration Documentation](./MIGRATION.md) - Details on Python → TypeScript migration
-- [ZK Regex Compiler](../compiler/) - Rust compiler that these scripts invoke  
+- [ZK Regex Compiler](../compiler/) - Rust compiler that these scripts invoke
 - [Circom Circuits](../circom/) - Generated Circom circuit outputs
 - [Noir Circuits](../noir/) - Generated Noir circuit outputs

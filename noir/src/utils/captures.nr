@@ -168,8 +168,7 @@ fn build_capture_start_end_mask<let MAX_MATCH_LENGTH: u32>(
     let expected_start_mask = ((is_capture[0] * is_capture_start_temp) == 1) as Field;
     assert(start_mask[0] == expected_start_mask, "Invalid Capture Start Mask");
 
-    let is_capture_end_temp = (capture_starts[MAX_MATCH_LENGTH - 1] == 0) as Field;
-    let expected_end_mask = (is_capture[MAX_MATCH_LENGTH - 1] * is_capture_end_temp == 1) as Field;
+    let expected_end_mask = is_capture[MAX_MATCH_LENGTH - 1];
     assert(end_mask[MAX_MATCH_LENGTH - 1] == expected_end_mask, "Invalid Capture End Mask");
 
     for i in 1..MAX_MATCH_LENGTH {
@@ -180,8 +179,7 @@ fn build_capture_start_end_mask<let MAX_MATCH_LENGTH: u32>(
         assert(start_mask[i] == expected_start_mask, "Invalid Capture Start Mask");
 
         let j = MAX_MATCH_LENGTH - 1 - i;
-        let is_capture_end_temp = (capture_starts[j] == 0) as Field;
-        let is_capture_end_valid_temp = (is_capture[j] * is_capture_end_temp == 1) as Field;
+        let is_capture_end_valid_temp = is_capture[j];
         let expected_end_mask =
             (1 - (1 - is_capture_end_valid_temp) * (1 - end_mask[j + 1]) == 1) as Field;
         assert(end_mask[j] == expected_end_mask, "Invalid Capture End Mask");
@@ -221,9 +219,7 @@ unconstrained fn __build_capture_start_end_mask<let MAX_MATCH_LENGTH: u32>(
     let is_capture_start_temp = (capture_starts[0] - 1 == 0) as Field;
     capture_start_mask[0] = ((is_capture[0] * is_capture_start_temp) == 1) as Field;
 
-    let is_capture_end_temp = (capture_starts[MAX_MATCH_LENGTH - 1] == 0) as Field;
-    capture_end_mask[MAX_MATCH_LENGTH - 1] =
-        (is_capture[MAX_MATCH_LENGTH - 1] * is_capture_end_temp == 1) as Field;
+    capture_end_mask[MAX_MATCH_LENGTH - 1] = is_capture[MAX_MATCH_LENGTH - 1];
 
     for i in 1..MAX_MATCH_LENGTH {
         let is_capture_start_temp = (capture_starts[i] - 1 == 0) as Field;
@@ -232,8 +228,7 @@ unconstrained fn __build_capture_start_end_mask<let MAX_MATCH_LENGTH: u32>(
             (1 - (1 - is_capture_start_valid_temp) * (1 - capture_start_mask[i - 1]) == 1) as Field;
 
         let j = MAX_MATCH_LENGTH - 1 - i;
-        let is_capture_end_temp = (capture_starts[j] == 0) as Field;
-        let is_capture_end_valid_temp = (is_capture[j] * is_capture_end_temp == 1) as Field;
+        let is_capture_end_valid_temp = is_capture[j];
         capture_end_mask[j] =
             (1 - (1 - is_capture_end_valid_temp) * (1 - capture_end_mask[j + 1]) == 1) as Field;
     }
