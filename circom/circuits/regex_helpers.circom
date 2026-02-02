@@ -144,8 +144,6 @@ template CaptureSubstring(maxBytes, maxSubstringBytes, captureId) {
     signal isValidCaptureStartTemp[maxBytes];
     // Backward sweep: cumulative OR — 1 at any position where capture content exists at or after it
     signal isValidCaptureEnd[maxBytes];
-    // Temporary: 1 only at positions that are captured bytes of our capture group
-    signal isValidCaptureEndTemp[maxBytes];
 
     // AND of both sweeps — 1 only within the exact capture range
     signal captureMask[maxBytes];
@@ -180,14 +178,12 @@ template CaptureSubstring(maxBytes, maxSubstringBytes, captureId) {
     //   "At position i, does any captured byte exist at or after this position?"
     // Scans from the end; once a byte of our group is found, the flag propagates left.
     for (var i = maxBytes - 1; i >= 0; i--) {
-        // Is this a byte of *our* capture group?
-        isValidCaptureEndTemp[i] <== isCapture[i];
         if (i == maxBytes - 1) {
             // Base case: no positions to the right to inherit from
-            isValidCaptureEnd[i] <== isValidCaptureEndTemp[i];
+            isValidCaptureEnd[i] <== isCapture[i];
         } else {
             // Cumulative OR: propagates rightmost capture content leftward
-            isValidCaptureEnd[i] <== OR()(isValidCaptureEndTemp[i], isValidCaptureEnd[i+1]);
+            isValidCaptureEnd[i] <== OR()(isCapture[i], isValidCaptureEnd[i+1]);
         }
     }
 
