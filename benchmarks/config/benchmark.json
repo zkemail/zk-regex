@@ -1,0 +1,38 @@
+{
+  "$schema": "./benchmark.schema.json",
+  "description": "Configuration for zk-regex benchmark runs",
+  "config": {
+    "warmupRuns": 3,
+    "minRuns": 10,
+    "maxRuns": 30,
+    "timeoutMs": 600000,
+    "inputLengths": [64, 128, 256, 512]
+  },
+  "hyperfine": {
+    "warmup": 3,
+    "minRuns": 10,
+    "maxRuns": 30,
+    "exportJson": true
+  },
+  "ptau": {
+    "url": "https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_15.ptau",
+    "filename": "pot15.ptau",
+    "maxConstraints": 32768
+  },
+  "providers": {
+    "circom-v1": {
+      "enabled": true,
+      "worktreeBranch": "main",
+      "circuitPath": "packages/circom/circuits/common"
+    },
+    "circom-v2": {
+      "enabled": true,
+      "circuitPath": "circom/circuits/common"
+    },
+    "noir-v2": {
+      "enabled": true,
+      "templatePath": "noir/src/templates"
+    }
+  },
+  "outputFormats": ["json", "markdown", "latex"]
+}

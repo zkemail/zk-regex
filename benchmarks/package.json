@@ -1,0 +1,29 @@
+{
+  "name": "@zk-regex/benchmarks",
+  "version": "0.1.0",
+  "description": "Benchmarking suite for zk-regex v1 vs v2 comparison",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "bench": "bun scripts/bench.ts",
+    "bench:circom-v1": "bun scripts/bench.ts --provider circom-v1",
+    "bench:circom-v2": "bun scripts/bench.ts --provider circom-v2",
+    "bench:noir": "bun scripts/bench.ts --provider noir-v2",
+    "collect": "bun scripts/collect-results.ts",
+    "outputs": "bun scripts/generate-outputs.ts",
+    "clean": "rm -rf results/* outputs/*",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "snarkjs": "^0.7.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "bun-types": "latest",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "bun": ">=1.0.0"
+  }
+}

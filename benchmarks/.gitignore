@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+
+# Results (generated, not committed)
+results/*.json
+results/*.csv
+!results/.gitkeep
+
+# Outputs (generated, not committed)
+outputs/*.md
+outputs/*.tex
+outputs/*.json
+!outputs/.gitkeep
+
+# Cache
+.zk-regex-bench-cache/
+
+# Temporary files
+*.tmp
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
