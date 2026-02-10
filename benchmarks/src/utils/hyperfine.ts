@@ -105,11 +105,20 @@ export async function runHyperfine(
 
     args.push(finalCommand);
 
+    // Filter out Bun's node shim paths (like /tmp/bun-node-*) that would
+    // override nvm's node and cause npm/npx to fail when hyperfine runs
+    // shell commands that use snarkjs
+    const cleanPath = (process.env.PATH || '')
+      .split(':')
+      .filter(p => !p.includes('bun-node'))
+      .join(':');
+
     // Run hyperfine
     const proc = Bun.spawn(args, {
       cwd: opts.cwd,
       stdout: 'pipe',
       stderr: 'pipe',
+      env: { ...process.env, PATH: cleanPath },
     });
 
     const exitCode = await proc.exited;

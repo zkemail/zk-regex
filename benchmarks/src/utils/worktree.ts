@@ -27,10 +27,19 @@ async function execAsync(
       [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
       ${command}
     `;
+
+    // Filter out Bun's node shim paths (like /tmp/bun-node-*) that would
+    // override nvm's node and cause npm/yarn commands to fail
+    const cleanPath = (process.env.PATH || '')
+      .split(':')
+      .filter(p => !p.includes('bun-node'))
+      .join(':');
+
     const proc = Bun.spawn(['bash', '-c', nvmCommand], {
       cwd: options.cwd,
       stdout: 'pipe',
       stderr: 'pipe',
+      env: { ...process.env, PATH: cleanPath },
     });
 
     const stdout = await new Response(proc.stdout).text();

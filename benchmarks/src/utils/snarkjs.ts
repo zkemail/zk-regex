@@ -47,15 +47,25 @@ async function execCommand(
 ): Promise<Result<string>> {
   try {
     // Source nvm to get npx/node in PATH, then run the command
+    // IMPORTANT: Filter out Bun's node shim paths from PATH to avoid conflicts with npm/npx
     const nvmCommand = `
       export NVM_DIR="$HOME/.nvm"
       [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
       ${command}
     `;
+
+    // Filter out Bun's node shim paths (like /tmp/bun-node-*) that would
+    // override nvm's node and cause npm/npx to fail
+    const cleanPath = (process.env.PATH || '')
+      .split(':')
+      .filter(p => !p.includes('bun-node'))
+      .join(':');
+
     const proc = Bun.spawn(['bash', '-c', nvmCommand], {
       cwd: options.cwd,
       stdout: 'pipe',
       stderr: 'pipe',
+      env: { ...process.env, PATH: cleanPath },
     });
 
     const stdout = await new Response(proc.stdout).text();
