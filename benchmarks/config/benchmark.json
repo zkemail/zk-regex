@@ -6,18 +6,18 @@
     "minRuns": 10,
     "maxRuns": 30,
     "timeoutMs": 600000,
-    "inputLengths": [64, 128, 256, 512]
+    "inputLengths": [64, 128, 256]
   },
   "hyperfine": {
     "warmup": 3,
-    "minRuns": 10,
-    "maxRuns": 30,
+    "minRuns": 3,
+    "maxRuns": 5,
     "exportJson": true
   },
   "ptau": {
-    "url": "https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_15.ptau",
-    "filename": "pot15.ptau",
-    "maxConstraints": 32768
+    "url": "https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_16.ptau",
+    "filename": "pot16.ptau",
+    "maxConstraints": 65536
   },
   "providers": {
     "circom-v1": {

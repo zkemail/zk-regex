@@ -3,10 +3,10 @@
  * Main benchmark entry point.
  *
  * Usage:
- *   bun scripts/bench.ts                    # Run all providers
- *   bun scripts/bench.ts --provider circom-v1
- *   bun scripts/bench.ts --provider circom-v2
- *   bun scripts/bench.ts --provider noir-v2
+ *   bun scripts/bench.ts                              # Run all providers, all patterns
+ *   bun scripts/bench.ts --provider circom-v2         # Run specific provider
+ *   bun scripts/bench.ts --pattern simple_regex       # Run specific pattern
+ *   bun scripts/bench.ts --provider circom-v2 --pattern simple_regex  # Both
  */
 
 import * as fs from 'fs/promises';
@@ -21,17 +21,23 @@ import { registerCleanupHandler } from '../src/utils/worktree.js';
 import { formatError } from '../src/errors.js';
 
 // Parse command line arguments
-function parseArgs(): { providers: ProviderType[] } {
+function parseArgs(): { providers: ProviderType[]; patternFilter: string | null } {
   const args = process.argv.slice(2);
-  const providerIndex = args.indexOf('--provider');
 
+  let providers: ProviderType[] = ['circom-v2', 'noir-v2', 'circom-v1'];
+  let patternFilter: string | null = null;
+
+  const providerIndex = args.indexOf('--provider');
   if (providerIndex !== -1 && args[providerIndex + 1]) {
-    const provider = args[providerIndex + 1] as ProviderType;
-    return { providers: [provider] };
+    providers = [args[providerIndex + 1] as ProviderType];
   }
 
-  // Default: run all providers
-  return { providers: ['circom-v2', 'noir-v2', 'circom-v1'] };
+  const patternIndex = args.indexOf('--pattern');
+  if (patternIndex !== -1 && args[patternIndex + 1]) {
+    patternFilter = args[patternIndex + 1];
+  }
+
+  return { providers, patternFilter };
 }
 
 // Load patterns from config
@@ -81,8 +87,12 @@ async function main() {
   registerCleanupHandler();
 
   // Parse arguments
-  const { providers } = parseArgs();
-  console.log(`Providers: ${providers.join(', ')}\n`);
+  const { providers, patternFilter } = parseArgs();
+  console.log(`Providers: ${providers.join(', ')}`);
+  if (patternFilter) {
+    console.log(`Pattern filter: ${patternFilter}`);
+  }
+  console.log();
 
   // Collect hardware info
   console.log('Collecting system information...');
@@ -98,9 +108,22 @@ async function main() {
   console.log();
 
   // Load configurations
-  const patterns = await loadPatterns();
+  let patterns = await loadPatterns();
   const config = await loadBenchmarkConfig();
-  console.log(`Loaded ${patterns.length} patterns to benchmark`);
+
+  // Filter patterns if --pattern flag was provided
+  if (patternFilter) {
+    patterns = patterns.filter(p =>
+      p.name.includes(patternFilter) ||
+      p.circuitName.includes(patternFilter)
+    );
+    if (patterns.length === 0) {
+      console.error(`No patterns found matching "${patternFilter}"`);
+      process.exit(1);
+    }
+  }
+
+  console.log(`Loaded ${patterns.length} pattern(s) to benchmark`);
   console.log(`Input lengths: ${config.inputLengths.join(', ')} bytes`);
   console.log();
 

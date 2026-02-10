@@ -1,49 +1,20 @@
 /**
  * snarkjs integration for R1CS constraint extraction and proving.
  *
- * Uses the programmatic API for better integration and error handling.
+ * Uses CLI instead of programmatic API due to Bun compatibility issues
+ * with snarkjs's web workers.
  */
 
 import * as fs from 'fs/promises';
+import * as path from 'path';
 import type { Result } from '../errors.js';
 import { ok, err, errors } from '../errors.js';
 
-// snarkjs is CommonJS without types, define minimal interface
-interface SnarkjsR1csInfo {
-  nConstraints: bigint | number;
-}
-
-interface Snarkjs {
-  r1cs: {
-    info(r1csPath: string, logger?: Console): Promise<SnarkjsR1csInfo>;
-  };
-  zKey: {
-    newZKey(r1csPath: string, ptauPath: string, zkeyPath: string, logger?: Console): Promise<void>;
-    contribute(zkeyPath: string, zkeyFinalPath: string, name: string, entropy: string): Promise<void>;
-    exportVerificationKey(zkeyPath: string): Promise<unknown>;
-  };
-  groth16: {
-    prove(zkeyPath: string, witnessPath: string): Promise<{ proof: unknown; publicSignals: string[] }>;
-    verify(vkey: unknown, publicSignals: string[], proof: unknown): Promise<boolean>;
-  };
-  wtns: {
-    calculate(wasm: Buffer, input: unknown, witnessPath: string): Promise<void>;
-  };
-}
-
-// snarkjs is CommonJS, use dynamic import
-let snarkjs: Snarkjs | null = null;
-
-async function getSnarkjs(): Promise<Snarkjs> {
-  if (!snarkjs) {
-    // @ts-expect-error snarkjs has no type declarations
-    snarkjs = await import('snarkjs');
-  }
-  return snarkjs!;
-}
-
 /**
- * Get the constraint count from an R1CS file.
+ * Get the constraint count from an R1CS file using CLI.
+ *
+ * Note: We use CLI instead of programmatic API due to Bun compatibility
+ * issues with snarkjs's web workers.
  */
 export async function getConstraintCount(r1csPath: string): Promise<Result<number>> {
   try {
@@ -52,17 +23,57 @@ export async function getConstraintCount(r1csPath: string): Promise<Result<numbe
     return err(errors.fileNotFound(r1csPath));
   }
 
+  const result = await execCommand(`npx snarkjs r1cs info "${r1csPath}"`);
+  if (!result.ok) {
+    return result;
+  }
+
+  // Parse constraint count from output like "# of Constraints: 12345"
+  const match = result.value.match(/# of Constraints:\s+(\d+)/i);
+  if (!match) {
+    return err(errors.invalidOutput('snarkjs r1cs info', result.value));
+  }
+
+  return ok(parseInt(match[1], 10));
+}
+
+/**
+ * Execute a CLI command and return result.
+ * Sources nvm to ensure npx is available, then runs the command.
+ */
+async function execCommand(
+  command: string,
+  options: { cwd?: string } = {}
+): Promise<Result<string>> {
   try {
-    const snarky = await getSnarkjs();
-    const r1csInfo = await snarky.r1cs.info(r1csPath, console);
-    return ok(Number(r1csInfo.nConstraints));
+    // Source nvm to get npx/node in PATH, then run the command
+    const nvmCommand = `
+      export NVM_DIR="$HOME/.nvm"
+      [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+      ${command}
+    `;
+    const proc = Bun.spawn(['bash', '-c', nvmCommand], {
+      cwd: options.cwd,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+
+    const stdout = await new Response(proc.stdout).text();
+    const stderr = await new Response(proc.stderr).text();
+    const exitCode = await proc.exited;
+
+    if (exitCode !== 0) {
+      return err(errors.compilationFailed(command, stderr || stdout));
+    }
+
+    return ok(stdout.trim());
   } catch (error) {
-    return err(errors.invalidOutput('snarkjs', String(error)));
+    return err(errors.compilationFailed(command, String(error)));
   }
 }
 
 /**
- * Full Groth16 setup (create zkey from R1CS and Powers of Tau).
+ * Full Groth16 setup (create zkey from R1CS and Powers of Tau) using CLI.
  *
  * This is expensive (30s-5min). Cache the result.
  */
@@ -71,67 +82,135 @@ export async function groth16Setup(
   ptauPath: string,
   zkeyPath: string
 ): Promise<Result<void>> {
-  try {
-    const snarky = await getSnarkjs();
-
-    // Phase 1: Create zkey
-    await snarky.zKey.newZKey(r1csPath, ptauPath, zkeyPath, console);
-
-    // Phase 2: Contribute entropy
-    const zkeyFinalPath = zkeyPath.replace('.zkey', '_final.zkey');
-    await snarky.zKey.contribute(
-      zkeyPath,
-      zkeyFinalPath,
-      'benchmark',
-      'random_entropy_for_benchmark'
-    );
-
-    // Replace original with final
-    await fs.rename(zkeyFinalPath, zkeyPath);
-
-    return ok(undefined);
-  } catch (error) {
-    return err(errors.compilationFailed('zkey setup', String(error)));
+  // Phase 1: Create zkey (initial ceremony)
+  const zkeyInitPath = zkeyPath.replace('.zkey', '_init.zkey');
+  const result1 = await execCommand(
+    `npx snarkjs groth16 setup "${r1csPath}" "${ptauPath}" "${zkeyInitPath}"`
+  );
+  if (!result1.ok) {
+    return result1;
   }
+
+  // Phase 2: Contribute entropy
+  const result2 = await execCommand(
+    `npx snarkjs zkey contribute "${zkeyInitPath}" "${zkeyPath}" --name=benchmark -e=random_entropy`
+  );
+  if (!result2.ok) {
+    return result2;
+  }
+
+  // Clean up intermediate file
+  await fs.unlink(zkeyInitPath).catch(() => {});
+
+  return ok(undefined);
 }
 
 /**
- * Export verification key from zkey.
+ * Export verification key from zkey using CLI.
  */
 export async function exportVkey(
   zkeyPath: string,
   vkeyPath: string
 ): Promise<Result<void>> {
-  try {
-    const snarky = await getSnarkjs();
-    const vkey = await snarky.zKey.exportVerificationKey(zkeyPath);
-    await fs.writeFile(vkeyPath, JSON.stringify(vkey, null, 2));
-    return ok(undefined);
-  } catch (error) {
-    return err(errors.invalidOutput('snarkjs exportVkey', String(error)));
+  const result = await execCommand(
+    `npx snarkjs zkey export verificationkey "${zkeyPath}" "${vkeyPath}"`
+  );
+  if (!result.ok) {
+    return result;
   }
+  return ok(undefined);
 }
 
 /**
- * Generate witness using the WASM circuit.
+ * Generate witness using CLI.
+ *
+ * Uses snarkjs wtns calculate via CLI to avoid Bun worker issues.
  */
 export async function generateWitness(
   wasmPath: string,
   inputPath: string,
   witnessPath: string
 ): Promise<Result<void>> {
+  const result = await execCommand(
+    `npx snarkjs wtns calculate "${wasmPath}" "${inputPath}" "${witnessPath}"`
+  );
+  if (!result.ok) {
+    return result;
+  }
+  return ok(undefined);
+}
+
+/**
+ * Generate proof using CLI.
+ *
+ * Runs snarkjs groth16 prove and outputs to proof.json and public.json.
+ */
+export async function prove(
+  zkeyPath: string,
+  witnessPath: string,
+  proofPath?: string,
+  publicPath?: string
+): Promise<Result<{ proof: unknown; publicSignals: string[] }>> {
+  const dir = path.dirname(zkeyPath);
+  const finalProofPath = proofPath ?? path.join(dir, 'proof.json');
+  const finalPublicPath = publicPath ?? path.join(dir, 'public.json');
+
+  const result = await execCommand(
+    `npx snarkjs groth16 prove "${zkeyPath}" "${witnessPath}" "${finalProofPath}" "${finalPublicPath}"`
+  );
+
+  if (!result.ok) {
+    return result;
+  }
+
   try {
-    const snarky = await getSnarkjs();
-    const input = JSON.parse(await fs.readFile(inputPath, 'utf-8'));
-    await snarky.wtns.calculate(await fs.readFile(wasmPath), input, witnessPath);
-    return ok(undefined);
+    const proof = JSON.parse(await fs.readFile(finalProofPath, 'utf-8'));
+    const publicSignals = JSON.parse(await fs.readFile(finalPublicPath, 'utf-8'));
+    return ok({ proof, publicSignals });
   } catch (error) {
-    return err(errors.compilationFailed('witness generation', String(error)));
+    return err(errors.invalidOutput('snarkjs prove', String(error)));
   }
 }
 
 /**
- * Generate and verify a Groth16 proof.
+ * Verify proof using CLI.
+ */
+export async function verify(
+  vkeyPath: string,
+  publicSignals: string[],
+  proof: unknown
+): Promise<Result<boolean>> {
+  const dir = path.dirname(vkeyPath);
+  const tempProofPath = path.join(dir, 'temp_proof.json');
+  const tempPublicPath = path.join(dir, 'temp_public.json');
+
+  try {
+    // Write temporary files for CLI
+    await fs.writeFile(tempProofPath, JSON.stringify(proof, null, 2));
+    await fs.writeFile(tempPublicPath, JSON.stringify(publicSignals, null, 2));
+
+    const result = await execCommand(
+      `npx snarkjs groth16 verify "${vkeyPath}" "${tempPublicPath}" "${tempProofPath}"`
+    );
+
+    // Clean up temp files
+    await fs.unlink(tempProofPath).catch(() => {});
+    await fs.unlink(tempPublicPath).catch(() => {});
+
+    if (!result.ok) {
+      return result;
+    }
+
+    // Parse verification result - snarkjs outputs "OK!" or "INVALID"
+    const verified = result.value.includes('OK!');
+    return ok(verified);
+  } catch (error) {
+    return err(errors.invalidOutput('snarkjs verify', String(error)));
+  }
+}
+
+/**
+ * Generate and verify a Groth16 proof using CLI.
  *
  * Returns the proof and public signals.
  */
@@ -140,52 +219,17 @@ export async function proveAndVerify(
   witnessPath: string,
   vkeyPath: string
 ): Promise<Result<{ proof: unknown; publicSignals: string[]; verified: boolean }>> {
-  try {
-    const snarky = await getSnarkjs();
-
-    // Generate proof
-    const { proof, publicSignals } = await snarky.groth16.prove(zkeyPath, witnessPath);
-
-    // Verify proof
-    const vkey = JSON.parse(await fs.readFile(vkeyPath, 'utf-8'));
-    const verified = await snarky.groth16.verify(vkey, publicSignals, proof);
-
-    return ok({ proof, publicSignals, verified });
-  } catch (error) {
-    return err(errors.compilationFailed('prove/verify', String(error)));
+  const proveResult = await prove(zkeyPath, witnessPath);
+  if (!proveResult.ok) {
+    return proveResult;
   }
-}
 
-/**
- * Just generate proof (for timing).
- */
-export async function prove(
-  zkeyPath: string,
-  witnessPath: string
-): Promise<Result<{ proof: unknown; publicSignals: string[] }>> {
-  try {
-    const snarky = await getSnarkjs();
-    const result = await snarky.groth16.prove(zkeyPath, witnessPath);
-    return ok(result);
-  } catch (error) {
-    return err(errors.compilationFailed('prove', String(error)));
-  }
-}
+  const { proof, publicSignals } = proveResult.value;
 
-/**
- * Just verify proof (for timing).
- */
-export async function verify(
-  vkeyPath: string,
-  publicSignals: string[],
-  proof: unknown
-): Promise<Result<boolean>> {
-  try {
-    const snarky = await getSnarkjs();
-    const vkey = JSON.parse(await fs.readFile(vkeyPath, 'utf-8'));
-    const verified = await snarky.groth16.verify(vkey, publicSignals, proof);
-    return ok(verified);
-  } catch (error) {
-    return err(errors.invalidOutput('snarkjs verify', String(error)));
+  const verifyResult = await verify(vkeyPath, publicSignals, proof);
+  if (!verifyResult.ok) {
+    return verifyResult;
   }
+
+  return ok({ proof, publicSignals, verified: verifyResult.value });
 }

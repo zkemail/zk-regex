@@ -6,11 +6,11 @@ Benchmarking suite for comparing zk-regex v1 (DFA-based) vs v2 (NFA-based) acros
 
 This package measures:
 - **R1CS constraint count** (Circom)
-- **Gate count** (Noir)
-- **Proving time** (Groth16, UltraHonk)
+- **ACIR opcodes / gate count** (Noir)
+- **Proving time** (Groth16 for Circom, UltraHonk for Noir)
 - **Verification time**
-- **Memory usage**
-- **Scaling behavior** across input lengths
+- **Witness generation time**
+- **NFA graph metrics** (states, transitions)
 
 ## Prerequisites
 
@@ -24,80 +24,166 @@ cargo install circom
 curl -L https://raw.githubusercontent.com/noir-lang/noirup/refs/heads/main/install | bash
 noirup
 
-# Hyperfine (benchmarking)
+# Barretenberg (for Noir proving)
+# Installed automatically with nargo, or:
+# bbup install
+
+# Hyperfine (optional, for more accurate timing)
 brew install hyperfine  # macOS
 # or: apt install hyperfine  # Linux
 
-# Yarn (for v1 worktree)
-npm install -g yarn
+# Node.js (for snarkjs CLI) - via nvm recommended
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+nvm install 20
+```
+
+## Installation
+
+```bash
+cd benchmarks
+bun install
 ```
 
 ## Running Benchmarks
 
+### Basic Usage
+
 ```bash
-# Run all benchmarks
+# Run all benchmarks (all providers, all patterns)
 bun run bench
 
-# Run specific provider
-bun run bench:circom-v1
+# Or directly:
+bun scripts/bench.ts
+```
+
+### Filter by Provider
+
+```bash
+# Run only Circom v2 (NFA-based, current implementation)
 bun run bench:circom-v2
+
+# Run only Circom v1 (DFA-based, main branch via worktree)
+bun run bench:circom-v1
+
+# Run only Noir v2
 bun run bench:noir
-
-# Collect and generate outputs
-bun run collect
-bun run outputs
-
-# Clean results
-bun run clean
 ```
 
-Or from the repository root:
+### Filter by Pattern
 
 ```bash
-bun run bench
+# Run specific pattern
+bun scripts/bench.ts --pattern simple_regex
+bun scripts/bench.ts --pattern body_hash
+bun scripts/bench.ts --pattern email_addr
+bun scripts/bench.ts --pattern subject_all
+
+# Combine provider and pattern filters
+bun scripts/bench.ts --provider circom-v2 --pattern simple_regex
 ```
 
-## Output Formats
+### Available Patterns
 
-Results are generated in multiple formats:
+| Pattern | Name in CLI | Description | Capture Groups | v1 Support |
+|---------|-------------|-------------|:--------------:|:----------:|
+| `simple` | `simple` or `simple_regex` | `a*b` baseline | No | No |
+| `body_hash` | `body_hash` | DKIM body hash extraction | Yes | Yes |
+| `email_addr` | `email_addr` | Email address from To header | Yes | Yes |
+| `subject_all` | `subject_all` | Full Subject header | Yes | Yes |
+
+## Configuration
+
+Edit `config/benchmark.json` to customize:
+
+```json
+{
+  "config": {
+    "warmupRuns": 3,
+    "minRuns": 10,
+    "inputLengths": [64, 128, 256]
+  }
+}
+```
+
+### Input Lengths
+
+The default input lengths are `[64, 128, 256]` bytes. Larger inputs require larger Powers of Tau files:
+
+| Input Size | Approx. Constraints (simple) | Required ptau |
+|------------|------------------------------|---------------|
+| 64-256 bytes | ~41K | pot16 (65K max) |
+| 512 bytes | ~70K | pot17 (131K max) |
+
+### Powers of Tau
+
+The benchmark automatically downloads a Powers of Tau file on first run. The default is `pot16` (~76MB).
+
+To use larger circuits, edit `src/utils/ptau.ts`:
+
+```typescript
+// For pot17 (supports up to 131K constraints):
+const PTAU_URL = 'https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_17.ptau';
+```
+
+Available sizes:
+| ptau | Max Constraints | File Size |
+|------|-----------------|-----------|
+| pot15 | 32K | ~38MB |
+| pot16 | 65K | ~76MB |
+| pot17 | 131K | ~151MB |
+| pot18 | 262K | ~302MB |
+| pot19 | 524K | ~604MB |
+| pot20 | 1M | ~1.1GB |
+
+## Output
+
+Currently outputs to console. Example output:
+
+```
+  Benchmarking simple...
+    Input length: 64 bytes
+    NFA: 5 states, 6 transitions
+    Compiling simple_regex...
+    Constraints: 41096
+    Setting up Groth16...
+    Measuring witness generation (10 runs)...
+    Measuring proof generation...
+    Measuring verification (10 runs)...
+      Done (placeholder metrics)
+```
+
+### Planned Output Formats
 
 - **JSON**: `results/comparison.json` - Machine-readable raw data
 - **Markdown**: `outputs/results.md` - Human-readable tables
 - **LaTeX**: `outputs/tables.tex` - Academic paper tables
 
-## Patterns Benchmarked
+## Providers
 
-| Pattern | Description | v1 | v2 Circom | v2 Noir |
-|---------|-------------|:--:|:---------:|:-------:|
-| body_hash | DKIM body hash extraction | ✓ | ✓ | ✓ |
-| email_addr | Email address from To header | ✓ | ✓ | ✓ |
-| subject_all | Full Subject header | ✓ | ✓ | ✓ |
-| simple | `a*b` baseline | - | ✓ | ✓ |
+### circom-v2 (default)
+Benchmarks the current NFA-based v2 implementation in `circom/circuits/common/`.
 
-## Input Lengths
+### circom-v1
+Sets up a git worktree from the `main` branch to benchmark the legacy DFA-based implementation. Requires the pattern to have `availableInV1: true` in `config/patterns.json`.
 
-Scaling analysis uses: 64, 128, 256, 512 bytes
+### noir-v2
+Benchmarks Noir circuits in `noir/src/templates/` using nargo and Barretenberg's UltraHonk prover.
 
-## Configuration
+## Troubleshooting
 
-Edit `config/benchmark.json` to customize:
-- Number of runs
-- Warmup iterations
-- Input lengths
-- Patterns to benchmark
+### "Constraint count exceeds ptau limit"
+The circuit has more constraints than the Powers of Tau file supports. Either:
+1. Reduce `inputLengths` in `config/benchmark.json`
+2. Use a larger ptau file (see Powers of Tau section above)
 
-## Hardware Requirements
+### "npx: command not found"
+Node.js isn't in PATH. The benchmark uses snarkjs CLI which requires Node.js. Ensure nvm is properly configured.
 
-- **RAM**: 8GB minimum, 16GB recommended for 512-byte inputs
-- **Disk**: 2GB for Powers of Tau cache
+### "Hyperfine failed, using in-process measurement"
+Hyperfine isn't installed or available. The benchmark will fall back to in-process timing, which is less accurate but functional.
 
-## Reproducing Results
-
-Results include hardware specifications and tool versions for reproducibility:
-
-```bash
-cat results/comparison.json | jq '.hardware'
-```
+### Slow first run
+The first run downloads the Powers of Tau file and generates zkey files for each circuit. Subsequent runs use cached files and are much faster.
 
 ## Architecture
 
@@ -105,24 +191,27 @@ cat results/comparison.json | jq '.hardware'
 benchmarks/
   src/
     types.ts           # TypeScript interfaces
-    errors.ts          # Error handling
+    errors.ts          # Error handling (Result type)
     providers/
       base.ts          # BenchmarkProvider interface
-      circom-v1.ts     # v1 Circom metrics
-      circom-v2.ts     # v2 Circom metrics
+      circom-v1.ts     # v1 DFA-based metrics
+      circom-v2.ts     # v2 NFA-based metrics
       noir-v2.ts       # v2 Noir metrics
     utils/
-      timing.ts        # In-process timing
+      timing.ts        # In-process timing utilities
       hardware.ts      # System info collection
-      hyperfine.ts     # Hyperfine wrapper
-      worktree.ts      # Git worktree management
-      snarkjs.ts       # R1CS info extraction
-      ptau.ts          # Powers of Tau caching
+      hyperfine.ts     # Hyperfine CLI wrapper
+      worktree.ts      # Git worktree for v1
+      snarkjs.ts       # snarkjs CLI wrapper
+      ptau.ts          # Powers of Tau download/cache
   scripts/
     bench.ts           # Main entry point
-    collect-results.ts # Aggregate results
-    generate-outputs.ts # LaTeX + markdown
   config/
-    patterns.json      # Regex patterns
+    patterns.json      # Regex pattern definitions
     benchmark.json     # Benchmark settings
 ```
+
+## Hardware Requirements
+
+- **RAM**: 8GB minimum, 16GB recommended
+- **Disk**: 500MB - 2GB for Powers of Tau cache (depending on ptau size)

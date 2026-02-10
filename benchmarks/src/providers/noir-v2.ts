@@ -5,21 +5,109 @@
  * encoding for O(1) transition lookup (~14.5 gates per lookup).
  */
 
+import * as path from 'path';
+import * as fs from 'fs/promises';
+import * as os from 'os';
 import type {
   NoirMetrics,
   PatternDefinition,
   BenchmarkConfig,
+  TimingStats,
 } from '../types.js';
 import type { Result } from '../errors.js';
-import { ok } from '../errors.js';
+import { ok, err, errors } from '../errors.js';
 import { BaseBenchmarkProvider, type BenchmarkMetrics } from './base.js';
+import { runHyperfine } from '../utils/hyperfine.js';
+import { measureAsync, calculateStats } from '../utils/timing.js';
+
+/** Parsed nargo info output */
+interface NargoInfo {
+  acirOpcodes: number;
+  backendGates: number;
+}
+
+/**
+ * Execute a shell command and return result.
+ */
+async function execAsync(
+  command: string,
+  options: { cwd?: string; timeout?: number } = {}
+): Promise<Result<string>> {
+  try {
+    const proc = Bun.spawn(['sh', '-c', command], {
+      cwd: options.cwd,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+
+    const stdout = await new Response(proc.stdout).text();
+    const stderr = await new Response(proc.stderr).text();
+    const exitCode = await proc.exited;
+
+    if (exitCode !== 0) {
+      return err(errors.compilationFailed(command, stderr || stdout));
+    }
+
+    return ok(stdout.trim());
+  } catch (error) {
+    return err(errors.compilationFailed(command, String(error)));
+  }
+}
+
+/**
+ * Get the project root directory.
+ */
+function getProjectRoot(): string {
+  return path.resolve(import.meta.dir, '..', '..', '..');
+}
 
 export class NoirV2Provider extends BaseBenchmarkProvider {
   readonly name = 'noir-v2';
+  private buildDir: string;
+  private projectRoot: string;
+  private nargoVersion: string | null = null;
+  private bbVersion: string | null = null;
+
+  constructor() {
+    super();
+    this.buildDir = path.join(os.tmpdir(), 'zk-regex-noir-bench');
+    this.projectRoot = getProjectRoot();
+  }
 
   async setup(): Promise<Result<void>> {
-    // TODO: Verify nargo is installed
-    // TODO: Verify barretenberg (bb) is installed
+    console.log('Setting up Noir v2 provider...');
+
+    // 1. Verify nargo is installed
+    const nargoResult = await execAsync('nargo --version');
+    if (!nargoResult.ok) {
+      return err(
+        errors.missingBinary(
+          'nargo',
+          'curl -L https://raw.githubusercontent.com/noir-lang/noirup/refs/heads/main/install | bash && noirup'
+        )
+      );
+    }
+    this.nargoVersion = nargoResult.value;
+    console.log(`  Nargo version: ${this.nargoVersion}`);
+
+    // 2. Verify barretenberg (bb) is installed
+    const bbResult = await execAsync('bb --version');
+    if (!bbResult.ok) {
+      return err(
+        errors.missingBinary('bb', 'Installed with nargo via noirup')
+      );
+    }
+    this.bbVersion = bbResult.value;
+    console.log(`  Barretenberg version: ${this.bbVersion}`);
+
+    // 3. Create build directory
+    try {
+      await fs.mkdir(this.buildDir, { recursive: true });
+    } catch {
+      // Directory might already exist
+    }
+
+    console.log('  Noir v2 provider setup complete');
     return ok(undefined);
   }
 
@@ -28,25 +116,69 @@ export class NoirV2Provider extends BaseBenchmarkProvider {
     inputLengthBytes: number,
     config: BenchmarkConfig
   ): Promise<Result<BenchmarkMetrics>> {
-    // TODO: Implement Noir benchmarking
-    // 1. Create temporary benchmark harness (Noir circuits are libraries)
+    // Create a unique benchmark harness for this pattern/size combination
+    const benchName = `${pattern.circuitName}_${inputLengthBytes}`;
+    const benchDir = path.join(this.buildDir, benchName);
+
+    // 1. Create benchmark harness project
+    console.log(`    Creating benchmark harness for ${benchName}...`);
+    const harnessResult = await this.createBenchmarkHarness(
+      pattern,
+      inputLengthBytes,
+      benchDir
+    );
+    if (!harnessResult.ok) {
+      return harnessResult;
+    }
+
     // 2. Clean target/ for accurate compile timing
+    const targetDir = path.join(benchDir, 'target');
+    await fs.rm(targetDir, { recursive: true, force: true }).catch(() => {});
+
     // 3. Compile with nargo compile
-    // 4. Parse nargo info text output (no --json flag!)
+    console.log(`    Compiling Noir circuit...`);
+    const compileStats = await this.measureCompile(benchDir, config.minRuns);
+
+    // 4. Parse nargo info text output
+    console.log(`    Getting circuit info...`);
+    const infoResult = await this.getNargoInfo(benchDir);
+    if (!infoResult.ok) {
+      return infoResult;
+    }
+    const { acirOpcodes, backendGates } = infoResult.value;
+    console.log(`    ACIR opcodes: ${acirOpcodes}, Backend gates: ${backendGates}`);
+
     // 5. Execute with nargo execute
+    console.log(`    Measuring execution (${config.minRuns} runs)...`);
+    const executeStats = await this.measureExecute(benchDir, config.minRuns);
+
     // 6. Prove with bb prove_ultra_honk
+    console.log(`    Measuring proof generation...`);
+    const proveStats = await this.measureProve(benchDir, benchName, config);
+
     // 7. Verify with bb verify_ultra_honk
+    console.log(`    Measuring verification...`);
+    const verifyStats = await this.measureVerify(benchDir, benchName, config);
+
     // 8. Get proof size
+    const proofPath = path.join(benchDir, 'target', 'proof');
+    let proofSizeBytes = 0;
+    try {
+      const stats = await fs.stat(proofPath);
+      proofSizeBytes = stats.size;
+    } catch {
+      // Proof might not exist if proving failed
+    }
 
     const metrics: NoirMetrics = {
-      acirOpcodes: 0,
-      backendGates: 0,
-      gatesPerByte: 0,
-      compileMs: { mean: 0, stddev: 0, min: 0, max: 0, runs: 0, coefficientOfVariation: 0 },
-      executeMs: { mean: 0, stddev: 0, min: 0, max: 0, runs: 0, coefficientOfVariation: 0 },
-      proveMs: { mean: 0, stddev: 0, min: 0, max: 0, runs: 0, coefficientOfVariation: 0 },
-      verifyMs: { mean: 0, stddev: 0, min: 0, max: 0, runs: 0, coefficientOfVariation: 0 },
-      proofSizeBytes: 0,
+      acirOpcodes,
+      backendGates,
+      gatesPerByte: inputLengthBytes > 0 ? backendGates / inputLengthBytes : 0,
+      compileMs: compileStats,
+      executeMs: executeStats,
+      proveMs: proveStats,
+      verifyMs: verifyStats,
+      proofSizeBytes,
     };
 
     return ok(metrics);
@@ -56,4 +188,481 @@ export class NoirV2Provider extends BaseBenchmarkProvider {
     // v2 Noir supports all patterns
     return true;
   }
+
+  async cleanup(): Promise<void> {
+    console.log('Cleaning up Noir v2 provider...');
+
+    // Clean up build directory
+    try {
+      await fs.rm(this.buildDir, { recursive: true, force: true });
+    } catch {
+      // Ignore cleanup errors
+    }
+
+    console.log('  Noir v2 cleanup complete');
+  }
+
+  /**
+   * Create a Noir benchmark harness project.
+   *
+   * Noir circuits in this repo are libraries, so we need to create
+   * a binary project that imports and calls the regex_match function.
+   */
+  private async createBenchmarkHarness(
+    pattern: PatternDefinition,
+    inputLengthBytes: number,
+    benchDir: string
+  ): Promise<Result<void>> {
+    // Create directory structure
+    await fs.mkdir(path.join(benchDir, 'src'), { recursive: true });
+
+    // Map circuit name to module name
+    const moduleName = pattern.circuitName;
+
+    // Create Nargo.toml that imports the main zkregex library
+    const nargoToml = `[package]
+name = "bench_${moduleName}"
+type = "bin"
+authors = [""]
+compiler_version = ">=1.0.0"
+
+[dependencies]
+zkregex = { path = "${this.projectRoot}/noir" }
+`;
+    await fs.writeFile(path.join(benchDir, 'Nargo.toml'), nargoToml);
+
+    // Read NUM_CAPTURE_GROUPS from the circuit file (same as gen-inputs.ts does)
+    const numCaptureGroups = await this.getNumCaptureGroups(pattern.circuitName);
+
+    // Create test input using pre-generated circuit inputs
+    const inputResult = await this.loadOrGenerateInput(pattern, inputLengthBytes);
+    if (!inputResult.ok) {
+      return inputResult;
+    }
+    const input = inputResult.value;
+
+    // Create main.nr that calls the regex_match function
+    // The function signature varies based on NUM_CAPTURE_GROUPS (same logic as gen-inputs.ts)
+    const mainNr = this.generateMainNr(moduleName, input, numCaptureGroups);
+    await fs.writeFile(path.join(benchDir, 'src', 'main.nr'), mainNr);
+
+    // Create Prover.toml with test inputs
+    const proverToml = this.formatProverToml(input, numCaptureGroups);
+    await fs.writeFile(path.join(benchDir, 'Prover.toml'), proverToml);
+
+    return ok(undefined);
+  }
+
+  /**
+   * Read NUM_CAPTURE_GROUPS from the circuit .nr file.
+   */
+  private async getNumCaptureGroups(circuitName: string): Promise<number> {
+    const circuitPath = path.join(
+      this.projectRoot,
+      'noir',
+      'src',
+      'templates',
+      'circuits',
+      `${circuitName}.nr`
+    );
+
+    try {
+      const content = await fs.readFile(circuitPath, 'utf-8');
+      const match = content.match(/pub global NUM_CAPTURE_GROUPS: u32\s*=\s*(\d+);/);
+      if (match) {
+        return parseInt(match[1], 10);
+      }
+    } catch {
+      // File not found or parse error
+    }
+
+    return 0;
+  }
+
+  /**
+   * Generate main.nr content based on number of capture groups.
+   * Mirrors the logic in noir/scripts/gen-inputs.ts generateTestFunction().
+   */
+  private generateMainNr(
+    moduleName: string,
+    input: NoirCircuitInput,
+    numCaptureGroups: number
+  ): string {
+    const lines: string[] = [];
+    lines.push(`use zkregex::templates::circuits::${moduleName}::regex_match;`);
+    lines.push('');
+    lines.push('fn main(');
+    lines.push(`    in_haystack: [u8; ${input.in_haystack.length}],`);
+    lines.push('    match_start: u32,');
+    lines.push('    match_length: u32,');
+    lines.push(`    current_states: [Field; ${input.curr_states.length}],`);
+    lines.push(`    next_states: [Field; ${input.next_states.length}],`);
+
+    // Add capture group parameters if needed
+    if (numCaptureGroups > 0) {
+      // Add capture_group_N_id for each capture group
+      for (let i = 1; i <= numCaptureGroups; i++) {
+        const cgIds = input.capture_group_ids?.[i - 1] ?? input.curr_states;
+        lines.push(`    capture_group_${i}_id: [Field; ${cgIds.length}],`);
+      }
+      // Add capture_group_N_start for each capture group
+      for (let i = 1; i <= numCaptureGroups; i++) {
+        const cgStarts = input.capture_group_starts?.[i - 1] ?? input.curr_states;
+        lines.push(`    capture_group_${i}_start: [Field; ${cgStarts.length}],`);
+      }
+      // Add capture_group_start_indices
+      const cgStartIndices = input.capture_group_start_indices ?? [];
+      lines.push(`    capture_group_start_indices: [Field; ${cgStartIndices.length}],`);
+    }
+
+    lines.push(') {');
+
+    // Build the function call parameters
+    const callParams = ['in_haystack', 'match_start', 'match_length', 'current_states', 'next_states'];
+    if (numCaptureGroups > 0) {
+      for (let i = 1; i <= numCaptureGroups; i++) {
+        callParams.push(`capture_group_${i}_id`);
+      }
+      for (let i = 1; i <= numCaptureGroups; i++) {
+        callParams.push(`capture_group_${i}_start`);
+      }
+      callParams.push('capture_group_start_indices');
+    }
+
+    const callParamsStr = callParams.join(', ');
+    if (numCaptureGroups > 0) {
+      lines.push(`    let _ = regex_match(${callParamsStr});`);
+    } else {
+      lines.push(`    regex_match(${callParamsStr});`);
+    }
+
+    lines.push('}');
+    lines.push('');
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Load pre-generated circuit input or generate a simple one.
+   */
+  private async loadOrGenerateInput(
+    pattern: PatternDefinition,
+    inputLengthBytes: number
+  ): Promise<Result<NoirCircuitInput>> {
+    // Try to load a pre-generated input
+    const inputDir = path.join(
+      this.projectRoot,
+      'noir',
+      'common',
+      'sample_haystacks',
+      'circuit_inputs'
+    );
+
+    // Pattern name without _regex suffix for input files
+    const baseName = pattern.circuitName.replace('_regex', '');
+
+    try {
+      const files = await fs.readdir(inputDir);
+      const matchingFile = files.find(
+        (f) => f.startsWith(`${baseName}_pass_`) && f.endsWith('.json')
+      );
+
+      if (matchingFile) {
+        const inputPath = path.join(inputDir, matchingFile);
+        const content = await fs.readFile(inputPath, 'utf-8');
+        const input = JSON.parse(content) as NoirCircuitInput;
+        return ok(input);
+      }
+    } catch {
+      // Fall through to generate input
+    }
+
+    // Generate a simple input if no pre-generated one exists
+    return ok(this.generateSimpleInput(inputLengthBytes));
+  }
+
+  /**
+   * Generate a simple test input for benchmarking.
+   */
+  private generateSimpleInput(inputLengthBytes: number): NoirCircuitInput {
+    // Use 300 as the default max length (matching the Noir templates)
+    const maxLen = Math.max(300, inputLengthBytes);
+
+    // Create a simple 'b' input that matches a*b
+    const haystack = new Array(maxLen).fill(0);
+    haystack[0] = 98; // 'b'
+
+    return {
+      type: 'noir',
+      in_haystack: haystack,
+      match_start: 0,
+      match_length: 1,
+      curr_states: new Array(maxLen).fill(0),
+      next_states: [4, ...new Array(maxLen - 1).fill(0)],
+      capture_group_ids: [],
+      capture_group_starts: [],
+      capture_group_start_indices: [],
+    };
+  }
+
+  /**
+   * Format circuit input as TOML for Prover.toml.
+   */
+  private formatProverToml(input: NoirCircuitInput, numCaptureGroups: number): string {
+    const lines: string[] = [];
+
+    lines.push(`in_haystack = [${input.in_haystack.join(', ')}]`);
+    lines.push(`match_start = ${input.match_start}`);
+    lines.push(`match_length = ${input.match_length}`);
+    lines.push(`current_states = [${input.curr_states.join(', ')}]`);
+    lines.push(`next_states = [${input.next_states.join(', ')}]`);
+
+    // Add capture group fields if needed
+    if (numCaptureGroups > 0) {
+      for (let i = 1; i <= numCaptureGroups; i++) {
+        const cgIds = input.capture_group_ids?.[i - 1] ?? [];
+        lines.push(`capture_group_${i}_id = [${cgIds.join(', ')}]`);
+      }
+      for (let i = 1; i <= numCaptureGroups; i++) {
+        const cgStarts = input.capture_group_starts?.[i - 1] ?? [];
+        lines.push(`capture_group_${i}_start = [${cgStarts.join(', ')}]`);
+      }
+      const cgStartIndices = input.capture_group_start_indices ?? [];
+      lines.push(`capture_group_start_indices = [${cgStartIndices.join(', ')}]`);
+    }
+
+    return lines.join('\n') + '\n';
+  }
+
+  /**
+   * Measure compile time.
+   */
+  private async measureCompile(benchDir: string, runs: number): Promise<TimingStats> {
+    const times: number[] = [];
+
+    for (let i = 0; i < runs; i++) {
+      // Clean target between runs for accurate timing
+      await fs.rm(path.join(benchDir, 'target'), { recursive: true, force: true }).catch(() => {});
+
+      const start = performance.now();
+      const result = await execAsync('nargo compile --silence-warnings', { cwd: benchDir });
+      const end = performance.now();
+
+      if (result.ok) {
+        times.push(end - start);
+      }
+    }
+
+    return calculateStats(times);
+  }
+
+  /**
+   * Get circuit info from nargo info (parse text output).
+   */
+  private async getNargoInfo(benchDir: string): Promise<Result<NargoInfo>> {
+    const result = await execAsync('nargo info --silence-warnings', { cwd: benchDir });
+    if (!result.ok) {
+      return result;
+    }
+
+    // Parse the text output - format varies but typically includes:
+    // "ACIR opcodes: N" and "Backend gates: N"
+    const output = result.value;
+
+    // Try to extract ACIR opcodes
+    let acirOpcodes = 0;
+    const acirMatch = output.match(/ACIR opcodes[:\s]+(\d+)/i);
+    if (acirMatch) {
+      acirOpcodes = parseInt(acirMatch[1], 10);
+    }
+
+    // Try to extract backend gates - nargo info shows this after compile
+    let backendGates = 0;
+    const gatesMatch = output.match(/(?:Backend gates|Circuit size)[:\s]+(\d+)/i);
+    if (gatesMatch) {
+      backendGates = parseInt(gatesMatch[1], 10);
+    }
+
+    // If we couldn't parse gates from nargo info, try bb gates
+    if (backendGates === 0) {
+      const bbResult = await this.getBbGates(benchDir);
+      if (bbResult.ok) {
+        backendGates = bbResult.value;
+      }
+    }
+
+    return ok({ acirOpcodes, backendGates });
+  }
+
+  /**
+   * Get backend gate count using bb gates command.
+   */
+  private async getBbGates(benchDir: string): Promise<Result<number>> {
+    // Find the compiled bytecode
+    const targetDir = path.join(benchDir, 'target');
+
+    try {
+      const files = await fs.readdir(targetDir);
+      const jsonFile = files.find((f) => f.endsWith('.json') && !f.includes('vk'));
+
+      if (!jsonFile) {
+        return err(errors.fileNotFound(path.join(targetDir, '*.json')));
+      }
+
+      const bytecodeFile = path.join(targetDir, jsonFile);
+      const result = await execAsync(
+        `bb gates -b "${bytecodeFile}"`,
+        { cwd: benchDir }
+      );
+
+      if (!result.ok) {
+        return result;
+      }
+
+      // Parse gate count from output
+      const match = result.value.match(/(\d+)/);
+      if (match) {
+        return ok(parseInt(match[1], 10));
+      }
+
+      return ok(0);
+    } catch {
+      return ok(0);
+    }
+  }
+
+  /**
+   * Measure execute time.
+   */
+  private async measureExecute(benchDir: string, runs: number): Promise<TimingStats> {
+    const times: number[] = [];
+
+    for (let i = 0; i < runs; i++) {
+      const start = performance.now();
+      const result = await execAsync('nargo execute --silence-warnings', { cwd: benchDir });
+      const end = performance.now();
+
+      if (result.ok) {
+        times.push(end - start);
+      }
+    }
+
+    return calculateStats(times);
+  }
+
+  /**
+   * Measure proof generation time.
+   */
+  private async measureProve(
+    benchDir: string,
+    benchName: string,
+    config: BenchmarkConfig
+  ): Promise<TimingStats> {
+    const targetDir = path.join(benchDir, 'target');
+
+    // Find the compiled bytecode and witness
+    try {
+      const files = await fs.readdir(targetDir);
+      const jsonFile = files.find((f) => f.endsWith('.json') && !f.includes('vk'));
+      const witnessFile = files.find((f) => f.endsWith('.gz'));
+
+      if (!jsonFile || !witnessFile) {
+        console.log(`    Warning: Bytecode or witness not found`);
+        return calculateStats([]);
+      }
+
+      const bytecodeFile = path.join(targetDir, jsonFile);
+      const witnessPath = path.join(targetDir, witnessFile);
+      const proofPath = path.join(targetDir, 'proof');
+      const vkPath = path.join(targetDir, 'vk');
+
+      // Generate VK first (needed for verification)
+      await execAsync(
+        `bb write_vk_ultra_honk -b "${bytecodeFile}" -o "${vkPath}"`,
+        { cwd: benchDir }
+      );
+
+      // Use hyperfine for prove measurement
+      const proveCommand = `bb prove_ultra_honk -b "${bytecodeFile}" -w "${witnessPath}" -o "${proofPath}"`;
+      const result = await runHyperfine(proveCommand, {
+        warmup: config.warmupRuns,
+        minRuns: config.minRuns,
+        shell: 'default',
+        cwd: benchDir,
+      });
+
+      if (!result.ok) {
+        // Fallback to in-process measurement
+        console.log(`    Warning: Hyperfine failed, using in-process measurement`);
+        const { stats } = await measureAsync(
+          async () => {
+            await execAsync(proveCommand, { cwd: benchDir });
+          },
+          config.minRuns
+        );
+        return stats;
+      }
+
+      return result.value;
+    } catch (error) {
+      console.log(`    Warning: Prove measurement failed: ${error}`);
+      return calculateStats([]);
+    }
+  }
+
+  /**
+   * Measure verification time.
+   */
+  private async measureVerify(
+    benchDir: string,
+    benchName: string,
+    config: BenchmarkConfig
+  ): Promise<TimingStats> {
+    const targetDir = path.join(benchDir, 'target');
+    const proofPath = path.join(targetDir, 'proof');
+    const vkPath = path.join(targetDir, 'vk');
+
+    // Check if proof and vk exist
+    try {
+      await fs.access(proofPath);
+      await fs.access(vkPath);
+    } catch {
+      console.log(`    Warning: Proof or VK not found`);
+      return calculateStats([]);
+    }
+
+    const verifyCommand = `bb verify_ultra_honk -p "${proofPath}" -k "${vkPath}"`;
+    const result = await runHyperfine(verifyCommand, {
+      warmup: config.warmupRuns,
+      minRuns: config.minRuns,
+      shell: 'default',
+      cwd: benchDir,
+    });
+
+    if (!result.ok) {
+      // Fallback to in-process measurement
+      const { stats } = await measureAsync(
+        async () => {
+          await execAsync(verifyCommand, { cwd: benchDir });
+        },
+        config.minRuns
+      );
+      return stats;
+    }
+
+    return result.value;
+  }
+}
+
+/** Structure of Noir circuit input */
+interface NoirCircuitInput {
+  type: string;
+  in_haystack: number[];
+  match_start: number;
+  match_length: number;
+  curr_states: number[];
+  next_states: number[];
+  capture_group_ids: number[];
+  capture_group_starts: number[];
+  capture_group_start_indices: number[];
 }

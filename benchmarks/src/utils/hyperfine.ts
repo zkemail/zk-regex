@@ -19,6 +19,10 @@ export interface HyperfineOptions {
   warmup?: number;
   minRuns?: number;
   maxRuns?: number;
+  /**
+   * Shell to use: 'none' (no shell, -N flag), 'default' (hyperfine default /bin/sh),
+   * 'bash' (use bash), or a custom shell path.
+   */
   shell?: string;
   cwd?: string;
 }
@@ -27,8 +31,33 @@ const DEFAULT_OPTIONS: Required<Omit<HyperfineOptions, 'cwd'>> = {
   warmup: 3,
   minRuns: 10,
   maxRuns: 30,
-  shell: 'none',
+  shell: 'default',
 };
+
+/**
+ * Check if hyperfine is available.
+ */
+async function isHyperfineAvailable(): Promise<boolean> {
+  try {
+    const proc = Bun.spawn(['which', 'hyperfine'], {
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    const exitCode = await proc.exited;
+    return exitCode === 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Wrap a command to source nvm before execution.
+ * This ensures snarkjs and other node tools are available.
+ */
+function wrapCommandWithNvm(command: string): string {
+  // Source nvm and then run the command
+  return `export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"; ${command}`;
+}
 
 /**
  * Run a hyperfine benchmark and return timing statistics.
@@ -38,6 +67,11 @@ export async function runHyperfine(
   options: HyperfineOptions = {}
 ): Promise<Result<TimingStats>> {
   const opts = { ...DEFAULT_OPTIONS, ...options };
+
+  // Check if hyperfine is available
+  if (!(await isHyperfineAvailable())) {
+    return err(errors.hyperfineFailed(command, 'hyperfine not found. Install with: brew install hyperfine'));
+  }
 
   // Create temporary file for JSON output
   const tempFile = path.join(os.tmpdir(), `hyperfine-${Date.now()}.json`);
@@ -52,12 +86,24 @@ export async function runHyperfine(
       `--export-json=${tempFile}`,
     ];
 
-    // Use shell=none for commands without shell features
+    // Handle shell configuration
+    let finalCommand = command;
     if (opts.shell === 'none') {
+      // No shell - direct execution (can't use shell features like &&)
       args.push('-N');
+    } else if (opts.shell === 'default') {
+      // Use bash with nvm sourcing for node tools to be available
+      args.push('--shell=bash');
+      finalCommand = wrapCommandWithNvm(command);
+    } else if (opts.shell === 'bash') {
+      args.push('--shell=bash');
+      finalCommand = wrapCommandWithNvm(command);
+    } else {
+      // Custom shell path
+      args.push(`--shell=${opts.shell}`);
     }
 
-    args.push(command);
+    args.push(finalCommand);
 
     // Run hyperfine
     const proc = Bun.spawn(args, {
