@@ -454,47 +454,24 @@ zkregex = { path = "${this.projectRoot}/noir" }
   }
 
   /**
-   * Get circuit info from nargo info (parse text output).
+   * Get circuit info using bb gates command.
+   *
+   * Uses bb gates to get both ACIR opcodes and circuit size (backend gates).
+   * This is more reliable than parsing nargo info table output.
    */
   private async getNargoInfo(benchDir: string): Promise<Result<NargoInfo>> {
-    const result = await execAsync('nargo info --silence-warnings', { cwd: benchDir });
-    if (!result.ok) {
-      return result;
-    }
-
-    // Parse the text output - format varies but typically includes:
-    // "ACIR opcodes: N" and "Backend gates: N"
-    const output = result.value;
-
-    // Try to extract ACIR opcodes
-    let acirOpcodes = 0;
-    const acirMatch = output.match(/ACIR opcodes[:\s]+(\d+)/i);
-    if (acirMatch) {
-      acirOpcodes = parseInt(acirMatch[1], 10);
-    }
-
-    // Try to extract backend gates - nargo info shows this after compile
-    let backendGates = 0;
-    const gatesMatch = output.match(/(?:Backend gates|Circuit size)[:\s]+(\d+)/i);
-    if (gatesMatch) {
-      backendGates = parseInt(gatesMatch[1], 10);
-    }
-
-    // If we couldn't parse gates from nargo info, try bb gates
-    if (backendGates === 0) {
-      const bbResult = await this.getBbGates(benchDir);
-      if (bbResult.ok) {
-        backendGates = bbResult.value;
-      }
-    }
-
-    return ok({ acirOpcodes, backendGates });
+    // Get both ACIR opcodes and backend gates from bb gates
+    return this.getBbGates(benchDir);
   }
 
   /**
-   * Get backend gate count using bb gates command.
+   * Get circuit metrics using bb gates command.
+   *
+   * Returns both ACIR opcodes and circuit size (backend gates).
+   * The JSON output format is:
+   * {"functions": [{"acir_opcodes": N, "circuit_size": M}]}
    */
-  private async getBbGates(benchDir: string): Promise<Result<number>> {
+  private async getBbGates(benchDir: string): Promise<Result<NargoInfo>> {
     // Find the compiled bytecode
     const targetDir = path.join(benchDir, 'target');
 
@@ -516,15 +493,30 @@ zkregex = { path = "${this.projectRoot}/noir" }
         return result;
       }
 
-      // Parse gate count from output
-      const match = result.value.match(/(\d+)/);
-      if (match) {
-        return ok(parseInt(match[1], 10));
+      // Parse JSON output from bb gates
+      // Format: Scheme is: ultra_honk\n{"functions": [{"acir_opcodes": N, "circuit_size": M}]}
+      const output = result.value;
+
+      // Find the JSON part (starts with {)
+      const jsonStart = output.indexOf('{');
+      if (jsonStart === -1) {
+        return ok({ acirOpcodes: 0, backendGates: 0 });
       }
 
-      return ok(0);
+      const jsonStr = output.slice(jsonStart);
+      const parsed = JSON.parse(jsonStr);
+
+      if (parsed.functions && parsed.functions.length > 0) {
+        const fn = parsed.functions[0];
+        return ok({
+          acirOpcodes: fn.acir_opcodes ?? 0,
+          backendGates: fn.circuit_size ?? 0,
+        });
+      }
+
+      return ok({ acirOpcodes: 0, backendGates: 0 });
     } catch {
-      return ok(0);
+      return ok({ acirOpcodes: 0, backendGates: 0 });
     }
   }
 
@@ -670,7 +662,9 @@ interface NoirCircuitInput {
   match_length: number;
   curr_states: number[];
   next_states: number[];
-  capture_group_ids: number[];
-  capture_group_starts: number[];
+  /** Array of arrays - one per capture group, each containing field values */
+  capture_group_ids: number[][];
+  /** Array of arrays - one per capture group, each containing start positions */
+  capture_group_starts: number[][];
   capture_group_start_indices: number[];
 }

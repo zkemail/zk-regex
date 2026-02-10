@@ -428,7 +428,7 @@ component main {public [inHaystack]} = ${templateName}(${maxHaystackBytes}, ${ma
 
     if (times.length === 0) {
       // Return placeholder stats if all runs failed
-      return { mean: 0, stddev: 0, min: 0, max: 0 };
+      return { mean: 0, stddev: 0, min: 0, max: 0, runs: 0, coefficientOfVariation: 0 };
     }
 
     return calculateStats(times);

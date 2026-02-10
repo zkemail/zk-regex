@@ -11,14 +11,30 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import type { ProviderType, PatternDefinition, BenchmarkConfig } from '../src/types.js';
-import type { BenchmarkProvider } from '../src/providers/base.js';
+import type {
+  ProviderType,
+  PatternDefinition,
+  BenchmarkConfig,
+  NoirMetrics,
+  CircomMetrics,
+  CircomV2Metrics,
+} from '../src/types.js';
+import type { BenchmarkProvider, BenchmarkMetrics } from '../src/providers/base.js';
 import { CircomV1Provider } from '../src/providers/circom-v1.js';
 import { CircomV2Provider } from '../src/providers/circom-v2.js';
 import { NoirV2Provider } from '../src/providers/noir-v2.js';
 import { getHardwareSpec, getToolVersions, verifyDependencies } from '../src/utils/hardware.js';
 import { registerCleanupHandler } from '../src/utils/worktree.js';
 import { formatError } from '../src/errors.js';
+
+/** Result for a single benchmark run */
+interface BenchmarkResult {
+  provider: ProviderType;
+  pattern: string;
+  inputLengthBytes: number;
+  timestamp: string;
+  metrics: BenchmarkMetrics;
+}
 
 // Parse command line arguments
 function parseArgs(): { providers: ProviderType[]; patternFilter: string | null } {
@@ -77,6 +93,46 @@ function getRequiredBinaries(type: ProviderType): string[] {
     case 'noir-v2':
       return ['nargo', 'bb', 'hyperfine'];
   }
+}
+
+// Save a benchmark result to file
+async function saveResult(result: BenchmarkResult): Promise<void> {
+  const resultsDir = path.join(import.meta.dir, '..', 'results');
+  await fs.mkdir(resultsDir, { recursive: true });
+
+  const filename = `${result.provider}_${result.pattern}_${result.inputLengthBytes}.json`;
+  const filepath = path.join(resultsDir, filename);
+
+  await fs.writeFile(filepath, JSON.stringify(result, null, 2));
+}
+
+// Format metrics for console output
+function formatMetrics(metrics: BenchmarkMetrics, provider: ProviderType): string {
+  const lines: string[] = [];
+
+  if (provider === 'noir-v2') {
+    const m = metrics as NoirMetrics;
+    lines.push(`ACIR opcodes: ${m.acirOpcodes}, Backend gates: ${m.backendGates}`);
+    lines.push(`Compile: ${m.compileMs.mean.toFixed(0)}ms (±${m.compileMs.stddev.toFixed(0)})`);
+    lines.push(`Execute: ${m.executeMs.mean.toFixed(0)}ms (±${m.executeMs.stddev.toFixed(0)})`);
+    lines.push(`Prove: ${m.proveMs.mean.toFixed(0)}ms (±${m.proveMs.stddev.toFixed(0)})`);
+    lines.push(`Verify: ${m.verifyMs.mean.toFixed(0)}ms (±${m.verifyMs.stddev.toFixed(0)})`);
+    lines.push(`Proof size: ${m.proofSizeBytes} bytes`);
+  } else if (provider === 'circom-v2') {
+    const m = metrics as CircomV2Metrics;
+    lines.push(`Constraints: ${m.constraints}, States: ${m.states}, Transitions: ${m.transitions}`);
+    lines.push(`Witness gen: ${m.witnessGenMs.mean.toFixed(0)}ms (±${m.witnessGenMs.stddev.toFixed(0)})`);
+    lines.push(`Prove: ${m.proveMs.mean.toFixed(0)}ms (±${m.proveMs.stddev.toFixed(0)})`);
+    lines.push(`Verify: ${m.verifyMs.mean.toFixed(0)}ms (±${m.verifyMs.stddev.toFixed(0)})`);
+  } else {
+    const m = metrics as CircomMetrics;
+    lines.push(`Constraints: ${m.constraints}`);
+    lines.push(`Witness gen: ${m.witnessGenMs.mean.toFixed(0)}ms (±${m.witnessGenMs.stddev.toFixed(0)})`);
+    lines.push(`Prove: ${m.proveMs.mean.toFixed(0)}ms (±${m.proveMs.stddev.toFixed(0)})`);
+    lines.push(`Verify: ${m.verifyMs.mean.toFixed(0)}ms (±${m.verifyMs.stddev.toFixed(0)})`);
+  }
+
+  return lines.map(l => `        ${l}`).join('\n');
 }
 
 async function main() {
@@ -166,8 +222,18 @@ async function main() {
             continue;
           }
 
-          // TODO: Save results to file
-          console.log(`      Done (placeholder metrics)`);
+          // Save result to file
+          const benchResult: BenchmarkResult = {
+            provider: providerType,
+            pattern: pattern.circuitName,
+            inputLengthBytes: inputLength,
+            timestamp: new Date().toISOString(),
+            metrics: result.value,
+          };
+          await saveResult(benchResult);
+
+          // Display metrics summary
+          console.log(formatMetrics(result.value, providerType));
         }
       }
     } finally {
