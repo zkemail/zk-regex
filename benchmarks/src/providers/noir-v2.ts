@@ -160,11 +160,11 @@ export class NoirV2Provider extends BaseBenchmarkProvider {
     console.log(`    Measuring verification...`);
     const verifyStats = await this.measureVerify(benchDir, benchName, config);
 
-    // 8. Get proof size
-    const proofPath = path.join(benchDir, 'target', 'proof');
+    // 8. Get proof size (bb v0.84.0+ stores proof in proof/proof)
+    const proofFile = path.join(benchDir, 'target', 'proof', 'proof');
     let proofSizeBytes = 0;
     try {
-      const stats = await fs.stat(proofPath);
+      const stats = await fs.stat(proofFile);
       proofSizeBytes = stats.size;
     } catch {
       // Proof might not exist if proving failed
@@ -191,14 +191,11 @@ export class NoirV2Provider extends BaseBenchmarkProvider {
 
   async cleanup(): Promise<void> {
     console.log('Cleaning up Noir v2 provider...');
-
-    // Clean up build directory
     try {
       await fs.rm(this.buildDir, { recursive: true, force: true });
     } catch {
       // Ignore cleanup errors
     }
-
     console.log('  Noir v2 cleanup complete');
   }
 
@@ -573,17 +570,24 @@ zkregex = { path = "${this.projectRoot}/noir" }
 
       const bytecodeFile = path.join(targetDir, jsonFile);
       const witnessPath = path.join(targetDir, witnessFile);
-      const proofPath = path.join(targetDir, 'proof');
-      const vkPath = path.join(targetDir, 'vk');
+      // bb v0.84.0+ uses directories for output - creates vk/vk, proof/proof, proof/public_inputs
+      const proofDir = path.join(targetDir, 'proof');
+      const vkDir = path.join(targetDir, 'vk');
+
+      // Create output directories
+      await fs.mkdir(proofDir, { recursive: true });
+      await fs.mkdir(vkDir, { recursive: true });
 
       // Generate VK first (needed for verification)
+      // bb v0.84.0+ API: bb write_vk -s ultra_honk -o <dir> creates <dir>/vk
       await execAsync(
-        `bb write_vk_ultra_honk -b "${bytecodeFile}" -o "${vkPath}"`,
+        `bb write_vk -s ultra_honk -b "${bytecodeFile}" -o "${vkDir}"`,
         { cwd: benchDir }
       );
 
       // Use hyperfine for prove measurement
-      const proveCommand = `bb prove_ultra_honk -b "${bytecodeFile}" -w "${witnessPath}" -o "${proofPath}"`;
+      // bb v0.84.0+ API: bb prove -s ultra_honk -o <dir> creates <dir>/proof and <dir>/public_inputs
+      const proveCommand = `bb prove -s ultra_honk -b "${bytecodeFile}" -w "${witnessPath}" -o "${proofDir}"`;
       const result = await runHyperfine(proveCommand, {
         warmup: config.warmupRuns,
         minRuns: config.minRuns,
@@ -619,19 +623,23 @@ zkregex = { path = "${this.projectRoot}/noir" }
     config: BenchmarkConfig
   ): Promise<TimingStats> {
     const targetDir = path.join(benchDir, 'target');
-    const proofPath = path.join(targetDir, 'proof');
-    const vkPath = path.join(targetDir, 'vk');
+    // bb v0.84.0+ uses directories: vk/vk, proof/proof, proof/public_inputs
+    const proofFile = path.join(targetDir, 'proof', 'proof');
+    const publicInputsFile = path.join(targetDir, 'proof', 'public_inputs');
+    const vkFile = path.join(targetDir, 'vk', 'vk');
 
-    // Check if proof and vk exist
+    // Check if proof, public_inputs, and vk exist
     try {
-      await fs.access(proofPath);
-      await fs.access(vkPath);
+      await fs.access(proofFile);
+      await fs.access(publicInputsFile);
+      await fs.access(vkFile);
     } catch {
-      console.log(`    Warning: Proof or VK not found`);
+      console.log(`    Warning: Proof, public_inputs, or VK not found`);
       return calculateStats([]);
     }
 
-    const verifyCommand = `bb verify_ultra_honk -p "${proofPath}" -k "${vkPath}"`;
+    // bb v0.84.0+ API: bb verify -s ultra_honk -p <proof> -k <vk> -i <public_inputs>
+    const verifyCommand = `bb verify -s ultra_honk -p "${proofFile}" -k "${vkFile}" -i "${publicInputsFile}"`;
     const result = await runHyperfine(verifyCommand, {
       warmup: config.warmupRuns,
       minRuns: config.minRuns,
