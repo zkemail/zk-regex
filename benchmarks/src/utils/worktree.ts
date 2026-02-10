@@ -21,7 +21,13 @@ async function execAsync(
   options: { cwd?: string } = {}
 ): Promise<Result<string>> {
   try {
-    const proc = Bun.spawn(['sh', '-c', command], {
+    // Source nvm to get yarn/npm/node in PATH
+    const nvmCommand = `
+      export NVM_DIR="$HOME/.nvm"
+      [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+      ${command}
+    `;
+    const proc = Bun.spawn(['bash', '-c', nvmCommand], {
       cwd: options.cwd,
       stdout: 'pipe',
       stderr: 'pipe',
