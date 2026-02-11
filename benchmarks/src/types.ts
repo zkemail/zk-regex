@@ -87,13 +87,16 @@ export interface PatternBenchmark {
 
 /**
  * Data point for scaling analysis.
+ * Includes data from all three providers where available.
  */
 export interface ScalingDataPoint {
   readonly pattern: string;
   readonly inputLengthBytes: number;
-  readonly circomConstraints: number;
+  readonly circomV1Constraints?: number;
+  readonly circomV2Constraints: number;
   readonly noirGates: number;
-  readonly circomProveMs: number;
+  readonly circomV1ProveMs?: number;
+  readonly circomV2ProveMs: number;
   readonly noirProveMs: number;
 }
 

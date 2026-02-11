@@ -204,15 +204,15 @@ function displayResultsSummary(
     console.log(`Test Input (Noir):   ${escapeForDisplay(meta?.sampleInputNoir ?? 'N/A')}`);
     console.log('');
 
-    // Build table rows
+    // Build table rows with explicit provider labels
     const rows = benchmarks.map((b) => ({
       'Input (bytes)': b.inputLengthBytes,
-      'Circom R1CS': formatNumber(b.v2Circom.constraints),
-      'Noir Gates': formatNumber(b.v2Noir.backendGates),
-      'Circom Prove (ms)': formatNumber(b.v2Circom.proveMs.mean),
-      'Noir Prove (ms)': formatNumber(b.v2Noir.proveMs.mean),
-      'Circom Verify (ms)': formatNumber(b.v2Circom.verifyMs.mean),
-      'Noir Verify (ms)': formatNumber(b.v2Noir.verifyMs.mean),
+      'Circom v1 R1CS': formatNumber(b.v1Circom?.constraints),
+      'Circom v2 R1CS': formatNumber(b.v2Circom.constraints),
+      'Noir v2 Gates': formatNumber(b.v2Noir.backendGates),
+      'Circom v1 Prove (ms)': formatNumber(b.v1Circom?.proveMs.mean),
+      'Circom v2 Prove (ms)': formatNumber(b.v2Circom.proveMs.mean),
+      'Noir v2 Prove (ms)': formatNumber(b.v2Noir.proveMs.mean),
     }));
 
     console.table(rows);
@@ -384,13 +384,15 @@ async function main() {
     };
 
     // Add scaling data point if we have enough data
-    if (v2Circom.constraints > 0 || v2Noir.backendGates > 0) {
+    if (v2Circom.constraints > 0 || v2Noir.backendGates > 0 || v1Circom) {
       scaling.push({
         pattern: entry.pattern,
         inputLengthBytes: entry.inputLength,
-        circomConstraints: v2Circom.constraints,
+        circomV1Constraints: v1Circom?.constraints,
+        circomV2Constraints: v2Circom.constraints,
         noirGates: v2Noir.backendGates,
-        circomProveMs: v2Circom.proveMs.mean,
+        circomV1ProveMs: v1Circom?.proveMs.mean,
+        circomV2ProveMs: v2Circom.proveMs.mean,
         noirProveMs: v2Noir.proveMs.mean,
       });
     }
