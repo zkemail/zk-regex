@@ -2,30 +2,44 @@
  * Powers of Tau file management.
  *
  * Downloads and caches the ptau file needed for Groth16 setup.
+ * Configuration is read from benchmarks/config/benchmark.json.
  */
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
 import * as crypto from 'crypto';
+import { fileURLToPath } from 'url';
 import type { Result } from '../errors.js';
 import { ok, err, errors } from '../errors.js';
-
-// pot16 (65K constraints max) - sufficient for simple_regex testing
-// For larger patterns, use pot19 (524K) or pot20 (1M)
-// Available sizes: pot15=32K, pot16=65K, pot17=131K, pot18=262K, pot19=524K, pot20=1M
-const PTAU_URL = 'https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_16.ptau';
-const PTAU_FILENAME = 'pot16.ptau';
-const PTAU_EXPECTED_SIZE = 0; // Skip size validation - files can vary
+import type { PtauConfig } from '../types.js';
 
 // Cache in user home directory
 const CACHE_DIR = path.join(os.homedir(), '.zk-regex-bench-cache');
 
+// Cached config to avoid repeated file reads
+let cachedConfig: PtauConfig | null = null;
+
+/**
+ * Load PTAU configuration from benchmark.json.
+ */
+async function loadPtauConfig(): Promise<PtauConfig> {
+  if (cachedConfig) return cachedConfig;
+
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const configPath = path.join(__dirname, '../../config/benchmark.json');
+  const configContent = await fs.readFile(configPath, 'utf-8');
+  const config = JSON.parse(configContent);
+  cachedConfig = config.ptau as PtauConfig;
+  return cachedConfig;
+}
+
 /**
  * Get the path to the cached ptau file.
  */
-export function getPtauCachePath(): string {
-  return path.join(CACHE_DIR, PTAU_FILENAME);
+export async function getPtauCachePath(): Promise<string> {
+  const config = await loadPtauConfig();
+  return path.join(CACHE_DIR, config.filename);
 }
 
 /**
@@ -48,7 +62,7 @@ async function validatePtauFile(filePath: string): Promise<boolean> {
 async function downloadWithProgress(url: string, destPath: string): Promise<Result<void>> {
   try {
     console.log(`Downloading Powers of Tau from ${url}...`);
-    console.log('This may take a moment (~76MB file).');
+    console.log('This may take a moment depending on the pot file size.');
 
     const response = await fetch(url);
 
@@ -105,7 +119,8 @@ async function downloadWithProgress(url: string, destPath: string): Promise<Resu
  * Downloads if not cached, validates if cached.
  */
 export async function ensurePtauFile(): Promise<Result<string>> {
-  const ptauPath = getPtauCachePath();
+  const config = await loadPtauConfig();
+  const ptauPath = path.join(CACHE_DIR, config.filename);
 
   // Create cache directory if needed
   try {
@@ -121,7 +136,7 @@ export async function ensurePtauFile(): Promise<Result<string>> {
   }
 
   // Download
-  const downloadResult = await downloadWithProgress(PTAU_URL, ptauPath);
+  const downloadResult = await downloadWithProgress(config.url, ptauPath);
   if (!downloadResult.ok) {
     return downloadResult;
   }
@@ -129,7 +144,7 @@ export async function ensurePtauFile(): Promise<Result<string>> {
   // Validate downloaded file
   if (!await validatePtauFile(ptauPath)) {
     await fs.unlink(ptauPath).catch(() => {});
-    return err(errors.ptauDownloadFailed(PTAU_URL, 'Downloaded file validation failed'));
+    return err(errors.ptauDownloadFailed(config.url, 'Downloaded file validation failed'));
   }
 
   return ok(ptauPath);
@@ -144,9 +159,30 @@ export async function hashFile(filePath: string): Promise<string> {
 }
 
 /**
- * Get the maximum constraint count supported by the ptau file.
+ * Extract the power from a ptau filename (e.g., "pot16.ptau" -> 16).
+ * The power determines max constraints as 2^power.
  */
-export function getMaxConstraints(): number {
-  // pot16 supports 2^16 = 65,536 constraints
-  return Math.pow(2, 16);
+function extractPowerFromFilename(filename: string): number | null {
+  // Match patterns like "pot16.ptau", "powersOfTau28_hez_final_16.ptau"
+  const match = filename.match(/(\d+)\.ptau$/);
+  if (match) {
+    return parseInt(match[1], 10);
+  }
+  return null;
+}
+
+/**
+ * Get the maximum constraint count supported by the ptau file.
+ * Calculated from the pot power in the filename (e.g., pot16 = 2^16 = 65536).
+ */
+export async function getMaxConstraints(): Promise<number> {
+  const config = await loadPtauConfig();
+  const power = extractPowerFromFilename(config.filename);
+  if (power === null) {
+    throw new Error(
+      `Cannot determine max constraints from ptau filename "${config.filename}". ` +
+      `Expected format like "pot16.ptau" where 16 is the power of 2.`
+    );
+  }
+  return Math.pow(2, power);
 }

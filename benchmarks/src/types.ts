@@ -135,6 +135,15 @@ export interface PatternDefinition {
 export type ProviderType = 'circom-v1' | 'circom-v2' | 'noir-v2';
 
 /**
+ * Powers of Tau file configuration.
+ * Note: maxConstraints is auto-calculated from the filename (e.g., pot16 = 2^16).
+ */
+export interface PtauConfig {
+  readonly url: string;
+  readonly filename: string;
+}
+
+/**
  * Raw hyperfine JSON output structure.
  */
 export interface HyperfineResult {

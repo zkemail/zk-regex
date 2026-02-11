@@ -15,9 +15,8 @@
     "exportJson": true
   },
   "ptau": {
-    "url": "https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_16.ptau",
-    "filename": "pot16.ptau",
-    "maxConstraints": 65536
+    "url": "https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_18.ptau",
+    "filename": "pot18.ptau"
   },
   "providers": {
     "circom-v1": {

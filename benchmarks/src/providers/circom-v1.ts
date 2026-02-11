@@ -168,11 +168,12 @@ component main {public [msg]} = ${templateName}(${inputLengthBytes});
     console.log(`    Constraints: ${constraints}`);
 
     // Check if constraints exceed ptau limit
-    if (constraints > getMaxConstraints()) {
+    const maxConstraints = await getMaxConstraints();
+    if (constraints > maxConstraints) {
       return err(
         errors.compilationFailed(
           pattern.name,
-          `Constraint count ${constraints} exceeds ptau limit ${getMaxConstraints()}. Use a larger ptau file.`
+          `Constraint count ${constraints} exceeds ptau limit ${maxConstraints}. Use a larger ptau file.`
         )
       );
     }
