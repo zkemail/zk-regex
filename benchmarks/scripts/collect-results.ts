@@ -20,6 +20,17 @@ import { getHardwareSpec, getToolVersions } from '../src/utils/hardware.js';
 
 const RESULTS_DIR = path.join(import.meta.dir, '..', 'results');
 const OUTPUT_FILE = path.join(RESULTS_DIR, 'comparison.json');
+const PROJECT_ROOT = path.join(import.meta.dir, '..', '..');
+
+/**
+ * Pattern metadata for display purposes.
+ */
+interface PatternMetadata {
+  name: string;
+  regex: string;
+  sampleInputCircom: string;
+  sampleInputNoir: string;
+}
 
 /**
  * Raw result file structure from providers.
@@ -89,6 +100,125 @@ function defaultCircomV2Metrics(): CircomV2Metrics {
     verifyMs: defaultTimingStats(),
     peakMemoryMB: 0,
   };
+}
+
+/**
+ * Get sample input strings for each pattern.
+ * These match the inputs used by the benchmark providers.
+ */
+function getSampleInputs(): Record<string, { circom: string; noir: string }> {
+  return {
+    body_hash_regex: {
+      circom: '\r\ndkim-signature:v=1; a=rsa-sha256; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=',
+      noir: '\r\ndkim-signature:v=1; a=rsa-sha256; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=',
+    },
+    email_addr_regex: {
+      circom: '\r\nto:test@example.com\r\n',
+      noir: '\r\nto:test@example.com\r\n',
+    },
+    subject_all_regex: {
+      circom: '\r\nsubject:Hello World\r\n',
+      noir: '\r\nsubject:Hello World\r\n',
+    },
+    simple_regex: {
+      circom: 'b',
+      noir: 'b',
+    },
+  };
+}
+
+/**
+ * Load regex pattern from graph JSON file.
+ */
+async function loadPatternRegex(patternName: string): Promise<string> {
+  // Remove _regex suffix to get base name for graph file
+  const baseName = patternName.replace('_regex', '');
+  const graphPath = path.join(
+    PROJECT_ROOT,
+    'circom',
+    'circuits',
+    'common',
+    `${baseName}_graph.json`
+  );
+
+  try {
+    const content = await fs.readFile(graphPath, 'utf-8');
+    const graph = JSON.parse(content);
+    return graph.regex || 'N/A';
+  } catch {
+    return 'N/A';
+  }
+}
+
+/**
+ * Escape control characters for terminal display.
+ */
+function escapeForDisplay(str: string): string {
+  return str
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n');
+}
+
+/**
+ * Format a number for display, returning '-' if zero or undefined.
+ */
+function formatNumber(value: number | undefined): string {
+  if (!value || value === 0) return '-';
+  return value.toFixed(0);
+}
+
+/**
+ * Display a summary table of benchmark results.
+ */
+function displayResultsSummary(
+  patterns: Record<string, PatternBenchmark>,
+  metadata: Map<string, PatternMetadata>
+): void {
+  console.log('\n' + '='.repeat(60));
+  console.log('BENCHMARK RESULTS SUMMARY');
+  console.log('='.repeat(60));
+
+  // Group by pattern name for cleaner display
+  const byPattern = new Map<string, PatternBenchmark[]>();
+  for (const benchmark of Object.values(patterns)) {
+    const name = benchmark.pattern;
+    if (!byPattern.has(name)) {
+      byPattern.set(name, []);
+    }
+    byPattern.get(name)!.push(benchmark);
+  }
+
+  // Sort each pattern's benchmarks by input length
+  for (const benchmarks of byPattern.values()) {
+    benchmarks.sort((a, b) => a.inputLengthBytes - b.inputLengthBytes);
+  }
+
+  for (const [patternName, benchmarks] of byPattern) {
+    const meta = metadata.get(patternName);
+
+    console.log('\n' + '-'.repeat(60));
+    console.log(`Pattern: ${patternName}`);
+    console.log('-'.repeat(60));
+    console.log(`Regex: ${escapeForDisplay(meta?.regex ?? 'N/A')}`);
+    console.log(`Test Input (Circom): ${escapeForDisplay(meta?.sampleInputCircom ?? 'N/A')}`);
+    console.log(`Test Input (Noir):   ${escapeForDisplay(meta?.sampleInputNoir ?? 'N/A')}`);
+    console.log('');
+
+    // Build table rows
+    const rows = benchmarks.map((b) => ({
+      'Input (bytes)': b.inputLengthBytes,
+      'Circom R1CS': formatNumber(b.v2Circom.constraints),
+      'Noir Gates': formatNumber(b.v2Noir.backendGates),
+      'Circom Prove (ms)': formatNumber(b.v2Circom.proveMs.mean),
+      'Noir Prove (ms)': formatNumber(b.v2Noir.proveMs.mean),
+      'Circom Verify (ms)': formatNumber(b.v2Circom.verifyMs.mean),
+      'Noir Verify (ms)': formatNumber(b.v2Noir.verifyMs.mean),
+    }));
+
+    console.table(rows);
+  }
+
+  console.log('\n' + '='.repeat(60));
 }
 
 async function main() {
@@ -272,6 +402,24 @@ async function main() {
     return a.inputLengthBytes - b.inputLengthBytes;
   });
 
+  // Load pattern metadata for display
+  const sampleInputs = getSampleInputs();
+  const metadata = new Map<string, PatternMetadata>();
+  const uniquePatterns = [...new Set(rawResults.map((r) => r.pattern))];
+
+  for (const pattern of uniquePatterns) {
+    const regex = await loadPatternRegex(pattern);
+    metadata.set(pattern, {
+      name: pattern,
+      regex,
+      sampleInputCircom: sampleInputs[pattern]?.circom ?? 'N/A',
+      sampleInputNoir: sampleInputs[pattern]?.noir ?? 'N/A',
+    });
+  }
+
+  // Display summary table
+  displayResultsSummary(patterns, metadata);
+
   const results: BenchmarkResults = {
     version: '1.0.0',
     hardware,
@@ -282,7 +430,7 @@ async function main() {
 
   // Write output
   await fs.writeFile(OUTPUT_FILE, JSON.stringify(results, null, 2));
-  console.log(`\nResults written to: ${OUTPUT_FILE}`);
+  console.log(`Results written to: ${OUTPUT_FILE}`);
   console.log(`  - ${Object.keys(patterns).length} pattern benchmarks`);
   console.log(`  - ${scaling.length} scaling data points`);
 }
