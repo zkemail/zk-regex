@@ -13,6 +13,7 @@ import type {
   CircomMetrics,
   CircomV2Metrics,
   NoirMetrics,
+  PatternMetadataEntry,
   ScalingDataPoint,
   TimingStats,
 } from '../src/types.js';
@@ -204,18 +205,25 @@ function displayResultsSummary(
     console.log(`Test Input (Noir):   ${escapeForDisplay(meta?.sampleInputNoir ?? 'N/A')}`);
     console.log('');
 
-    // Build table rows with explicit provider labels
-    const rows = benchmarks.map((b) => ({
+    // Table 1: Circuit Compilation
+    console.log('Circuit Compilation:');
+    const compilationRows = benchmarks.map((b) => ({
       'Input (bytes)': b.inputLengthBytes,
       'Circom v1 R1CS': formatNumber(b.v1Circom?.constraints),
       'Circom v2 R1CS': formatNumber(b.v2Circom.constraints),
       'Noir v2 Gates': formatNumber(b.v2Noir.backendGates),
-      'Circom v1 Prove (ms)': formatNumber(b.v1Circom?.proveMs.mean),
-      'Circom v2 Prove (ms)': formatNumber(b.v2Circom.proveMs.mean),
-      'Noir v2 Prove (ms)': formatNumber(b.v2Noir.proveMs.mean),
     }));
+    console.table(compilationRows);
 
-    console.table(rows);
+    // Table 2: Proof Generation
+    console.log('\nProof Generation:');
+    const provingRows = benchmarks.map((b) => ({
+      'Input (bytes)': b.inputLengthBytes,
+      'Circom v1 (ms)': formatNumber(b.v1Circom?.proveMs.mean),
+      'Circom v2 (ms)': formatNumber(b.v2Circom.proveMs.mean),
+      'Noir v2 (ms)': formatNumber(b.v2Noir.proveMs.mean),
+    }));
+    console.table(provingRows);
   }
 
   console.log('\n' + '='.repeat(60));
@@ -422,12 +430,22 @@ async function main() {
   // Display summary table
   displayResultsSummary(patterns, metadata);
 
+  // Build patternMetadata for output
+  const patternMetadata: Record<string, PatternMetadataEntry> = {};
+  for (const [pattern, meta] of metadata) {
+    patternMetadata[pattern] = {
+      regex: meta.regex,
+      sampleInput: meta.sampleInputCircom,
+    };
+  }
+
   const results: BenchmarkResults = {
     version: '1.0.0',
     hardware,
     toolVersions,
     patterns,
     scaling,
+    patternMetadata,
   };
 
   // Write output

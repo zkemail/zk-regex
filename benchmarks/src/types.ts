@@ -101,6 +101,15 @@ export interface ScalingDataPoint {
 }
 
 /**
+ * Pattern metadata for documentation purposes.
+ * Contains regex definition and sample input used for benchmarking.
+ */
+export interface PatternMetadataEntry {
+  readonly regex: string;
+  readonly sampleInput: string;
+}
+
+/**
  * Complete benchmark results with metadata.
  */
 export interface BenchmarkResults {
@@ -109,6 +118,7 @@ export interface BenchmarkResults {
   readonly toolVersions: ToolVersions;
   readonly patterns: Record<string, PatternBenchmark>;
   readonly scaling: ScalingDataPoint[];
+  readonly patternMetadata?: Record<string, PatternMetadataEntry>;
 }
 
 /**

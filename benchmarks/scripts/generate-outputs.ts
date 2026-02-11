@@ -50,6 +50,37 @@ function escapeLatex(name: string): string {
 }
 
 /**
+ * Escape control characters for Markdown display.
+ */
+function escapeForMarkdown(str: string): string {
+  return str
+    .replace(/\\/g, '\\\\')
+    .replace(/\|/g, '\\|')
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n')
+    .replace(/`/g, '\\`');
+}
+
+/**
+ * Escape special characters for LaTeX verbatim/texttt display.
+ */
+function escapeLatexVerbatim(str: string): string {
+  return str
+    .replace(/\\/g, '\\textbackslash{}')
+    .replace(/\{/g, '\\{')
+    .replace(/\}/g, '\\}')
+    .replace(/_/g, '\\_')
+    .replace(/\^/g, '\\textasciicircum{}')
+    .replace(/~/g, '\\textasciitilde{}')
+    .replace(/\$/g, '\\$')
+    .replace(/%/g, '\\%')
+    .replace(/&/g, '\\&')
+    .replace(/#/g, '\\#')
+    .replace(/\r/g, '\\textbackslash{}r')
+    .replace(/\n/g, '\\textbackslash{}n');
+}
+
+/**
  * Extract pattern name from key (removes @inputLength suffix).
  */
 function getPatternName(key: string): string {
@@ -99,6 +130,22 @@ function generateMarkdown(results: BenchmarkResults): string {
     `- **Barretenberg**: ${results.toolVersions.barretenberg ?? 'N/A'}`,
     '',
   ];
+
+  // Pattern Definitions table
+  if (results.patternMetadata && Object.keys(results.patternMetadata).length > 0) {
+    lines.push('## Pattern Definitions');
+    lines.push('');
+    lines.push('| Pattern | Regex | Sample Input |');
+    lines.push('|---------|-------|--------------|');
+
+    const sortedPatterns = Object.entries(results.patternMetadata).sort(([a], [b]) => a.localeCompare(b));
+    for (const [pattern, meta] of sortedPatterns) {
+      const escapedRegex = escapeForMarkdown(meta.regex);
+      const escapedInput = escapeForMarkdown(meta.sampleInput);
+      lines.push(`| ${pattern} | \`${escapedRegex}\` | \`${escapedInput}\` |`);
+    }
+    lines.push('');
+  }
 
   // Table 1: Circuit Size Comparison - All Three Providers (64-byte input only)
   const defaultPatterns = getDefaultInputPatterns(results.patterns);
@@ -160,22 +207,35 @@ function generateMarkdown(results: BenchmarkResults): string {
     lines.push('');
   }
 
-  // Table 4: Scaling Analysis - All Three Providers
+  // Table 4a: Scaling Circuit Size
   if (results.scaling.length > 0) {
-    lines.push('## Scaling by Input Length');
+    lines.push('## Scaling: Circuit Size by Input Length');
     lines.push('');
-    lines.push('| Pattern | Input (bytes) | Circom v1 R1CS | Circom v2 R1CS | Noir v2 Gates | Circom v1 (ms) | Circom v2 (ms) | Noir v2 (ms) |');
-    lines.push('|---------|---------------|----------------|----------------|---------------|----------------|----------------|--------------|');
+    lines.push('| Pattern | Input (bytes) | Circom v1 R1CS | Circom v2 R1CS | Noir v2 Gates |');
+    lines.push('|---------|---------------|----------------|----------------|---------------|');
 
     for (const point of results.scaling) {
       const v1R1CS = point.circomV1Constraints ?? '—';
       const v2R1CS = point.circomV2Constraints || '—';
       const noirGates = point.noirGates || '—';
+      lines.push(
+        `| ${point.pattern} | ${point.inputLengthBytes} | ${v1R1CS} | ${v2R1CS} | ${noirGates} |`
+      );
+    }
+    lines.push('');
+
+    // Table 4b: Scaling Proving Time
+    lines.push('## Scaling: Proving Time by Input Length');
+    lines.push('');
+    lines.push('| Pattern | Input (bytes) | Circom v1 (ms) | Circom v2 (ms) | Noir v2 (ms) |');
+    lines.push('|---------|---------------|----------------|----------------|--------------|');
+
+    for (const point of results.scaling) {
       const v1Prove = point.circomV1ProveMs && point.circomV1ProveMs > 0 ? point.circomV1ProveMs.toFixed(0) : '—';
       const v2Prove = point.circomV2ProveMs > 0 ? point.circomV2ProveMs.toFixed(0) : '—';
       const noirProve = point.noirProveMs > 0 ? point.noirProveMs.toFixed(0) : '—';
       lines.push(
-        `| ${point.pattern} | ${point.inputLengthBytes} | ${v1R1CS} | ${v2R1CS} | ${noirGates} | ${v1Prove} | ${v2Prove} | ${noirProve} |`
+        `| ${point.pattern} | ${point.inputLengthBytes} | ${v1Prove} | ${v2Prove} | ${noirProve} |`
       );
     }
     lines.push('');
@@ -194,6 +254,32 @@ function generateLatex(results: BenchmarkResults): string {
     '% Generated: ' + results.hardware.timestamp,
     '',
   ];
+
+  // Table 0: Pattern Definitions
+  if (results.patternMetadata && Object.keys(results.patternMetadata).length > 0) {
+    lines.push('% Table 0: Pattern Definitions');
+    lines.push('\\begin{table}[htbp]');
+    lines.push('\\centering');
+    lines.push('\\caption{Pattern Definitions and Sample Inputs}');
+    lines.push('\\label{tab:patterns}');
+    lines.push('\\begin{tabular}{@{}lp{0.4\\textwidth}p{0.35\\textwidth}@{}}');
+    lines.push('\\toprule');
+    lines.push('Pattern & Regex & Sample Input \\\\');
+    lines.push('\\midrule');
+
+    const sortedPatterns = Object.entries(results.patternMetadata).sort(([a], [b]) => a.localeCompare(b));
+    for (const [pattern, meta] of sortedPatterns) {
+      const escapedPattern = escapeLatex(pattern);
+      const escapedRegex = escapeLatexVerbatim(meta.regex);
+      const escapedInput = escapeLatexVerbatim(meta.sampleInput);
+      lines.push(`${escapedPattern} & \\texttt{${escapedRegex}} & \\texttt{${escapedInput}} \\\\`);
+    }
+
+    lines.push('\\bottomrule');
+    lines.push('\\end{tabular}');
+    lines.push('\\end{table}');
+    lines.push('');
+  }
 
   const defaultPatterns = getDefaultInputPatterns(results.patterns);
 
@@ -301,7 +387,7 @@ function generateLatex(results: BenchmarkResults): string {
     lines.push('');
   }
 
-  // Table 4: Scaling Analysis - All Three Providers
+  // Table 4a: Scaling Circuit Size
   if (results.scaling.length > 0) {
     // Group scaling data by pattern for cleaner presentation
     const patternGroups = new Map<string, ScalingDataPoint[]>();
@@ -312,24 +398,21 @@ function generateLatex(results: BenchmarkResults): string {
       patternGroups.get(point.pattern)!.push(point);
     }
 
-    lines.push('% Table 4: Scaling by Input Length');
+    lines.push('% Table 4a: Circuit Size Scaling by Input Length');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
-    lines.push('\\caption{Circuit Size and Proving Time Scaling by Input Length}');
-    lines.push('\\label{tab:scaling}');
+    lines.push('\\caption{Circuit Size Scaling by Input Length}');
+    lines.push('\\label{tab:scaling-size}');
     lines.push('\\sisetup{');
-    lines.push('  table-format = 5.0,');
+    lines.push('  table-format = 6.0,');
     lines.push('}');
     lines.push('\\begin{tabular}{@{}l');
     lines.push('  S[table-format=3.0]');   // Input (bytes)
     lines.push('  S[table-format=6.0]');   // Circom v1 R1CS
     lines.push('  S[table-format=6.0]');   // Circom v2 R1CS
-    lines.push('  S[table-format=6.0]');   // Noir Gates
-    lines.push('  S[table-format=4.0]');   // Circom v1 Prove
-    lines.push('  S[table-format=4.0]');   // Circom v2 Prove
-    lines.push('  S[table-format=4.0]@{}}');  // Noir Prove
+    lines.push('  S[table-format=6.0]@{}}');   // Noir Gates
     lines.push('\\toprule');
-    lines.push('Pattern & {Input (B)} & {Circom v1} & {Circom v2} & {Noir v2} & {v1 (ms)} & {v2 (ms)} & {Noir (ms)} \\\\');
+    lines.push('Pattern & {Input (B)} & {Circom v1 R1CS} & {Circom v2 R1CS} & {Noir v2 Gates} \\\\');
     lines.push('\\midrule');
 
     for (const [pattern, points] of patternGroups) {
@@ -339,12 +422,46 @@ function generateLatex(results: BenchmarkResults): string {
         const v1R1CS = point.circomV1Constraints ?? '{---}';
         const v2R1CS = point.circomV2Constraints || '{---}';
         const noirGates = point.noirGates || '{---}';
+        lines.push(`${patternCol} & ${point.inputLengthBytes} & ${v1R1CS} & ${v2R1CS} & ${noirGates} \\\\`);
+      }
+      lines.push('\\addlinespace');
+    }
+
+    // Remove last addlinespace
+    lines.pop();
+
+    lines.push('\\bottomrule');
+    lines.push('\\end{tabular}');
+    lines.push('\\end{table}');
+    lines.push('');
+
+    // Table 4b: Proving Time Scaling
+    lines.push('% Table 4b: Proving Time Scaling by Input Length');
+    lines.push('\\begin{table}[htbp]');
+    lines.push('\\centering');
+    lines.push('\\caption{Proving Time Scaling by Input Length}');
+    lines.push('\\label{tab:scaling-time}');
+    lines.push('\\sisetup{');
+    lines.push('  table-format = 4.0,');
+    lines.push('}');
+    lines.push('\\begin{tabular}{@{}l');
+    lines.push('  S[table-format=3.0]');   // Input (bytes)
+    lines.push('  S[table-format=4.0]');   // Circom v1 Prove
+    lines.push('  S[table-format=4.0]');   // Circom v2 Prove
+    lines.push('  S[table-format=4.0]@{}}');  // Noir Prove
+    lines.push('\\toprule');
+    lines.push('Pattern & {Input (B)} & {Circom v1 (ms)} & {Circom v2 (ms)} & {Noir v2 (ms)} \\\\');
+    lines.push('\\midrule');
+
+    for (const [pattern, points] of patternGroups) {
+      for (let i = 0; i < points.length; i++) {
+        const point = points[i];
+        const patternCol = i === 0 ? escapeLatex(pattern) : '';
         const v1Prove = point.circomV1ProveMs && point.circomV1ProveMs > 0 ? point.circomV1ProveMs.toFixed(0) : '{---}';
         const v2Prove = point.circomV2ProveMs > 0 ? point.circomV2ProveMs.toFixed(0) : '{---}';
         const noirProve = point.noirProveMs > 0 ? point.noirProveMs.toFixed(0) : '{---}';
-        lines.push(`${patternCol} & ${point.inputLengthBytes} & ${v1R1CS} & ${v2R1CS} & ${noirGates} & ${v1Prove} & ${v2Prove} & ${noirProve} \\\\`);
+        lines.push(`${patternCol} & ${point.inputLengthBytes} & ${v1Prove} & ${v2Prove} & ${noirProve} \\\\`);
       }
-      // Add a small space between pattern groups
       lines.push('\\addlinespace');
     }
 

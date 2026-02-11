@@ -393,9 +393,8 @@ component main {public [inHaystack]} = ${templateName}(${maxHaystackBytes}, ${ma
     delete inputs.captureGroupIds;
     delete inputs.captureGroupStarts;
 
-    // Remove type and other metadata fields if present
+    // Remove type metadata field if present
     delete inputs.type;
-    delete inputs.captureGroupStartIndices;
 
     return inputs;
   }
