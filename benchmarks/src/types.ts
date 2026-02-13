@@ -30,6 +30,36 @@ export interface TimingStats {
 }
 
 /**
+ * Statistical summary of memory measurements.
+ * Parallel to TimingStats but for memory (MB).
+ */
+export interface MemoryStats {
+  readonly mean: number; // MB
+  readonly stddev: number; // MB
+  readonly min: number; // MB
+  readonly max: number; // MB
+  readonly runs: number;
+  readonly measured: boolean; // true = /usr/bin/time, false = estimated/unavailable
+}
+
+/**
+ * Per-phase memory usage - unified interface for all backends.
+ * Uses framework-agnostic names for cross-framework comparison.
+ *
+ * Phase mapping:
+ * - compile: circom CLI / nargo compile
+ * - witnessGen: node wasm witness calc / nargo execute (generates witness)
+ * - prove: snarkjs groth16 prove / bb prove
+ * - verify: snarkjs groth16 verify / bb verify
+ */
+export interface PhaseMemory {
+  readonly compile?: MemoryStats;
+  readonly witnessGen?: MemoryStats;
+  readonly prove?: MemoryStats;
+  readonly verify?: MemoryStats;
+}
+
+/**
  * Tool versions for reproducibility.
  */
 export interface ToolVersions {
@@ -49,7 +79,7 @@ export interface CircomMetrics {
   readonly witnessGenMs: TimingStats;
   readonly proveMs: TimingStats;
   readonly verifyMs: TimingStats;
-  readonly peakMemoryMB: number;
+  readonly memoryByPhase: PhaseMemory;
 }
 
 /**
@@ -68,10 +98,11 @@ export interface NoirMetrics {
   readonly backendGates: number;
   readonly gatesPerByte: number;
   readonly compileMs: TimingStats;
-  readonly executeMs: TimingStats;
+  readonly witnessGenMs: TimingStats; // Renamed from executeMs for cross-framework consistency
   readonly proveMs: TimingStats;
   readonly verifyMs: TimingStats;
   readonly proofSizeBytes: number;
+  readonly memoryByPhase: PhaseMemory;
 }
 
 /**

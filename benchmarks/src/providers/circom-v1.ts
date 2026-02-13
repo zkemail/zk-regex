@@ -13,6 +13,8 @@ import type {
   PatternDefinition,
   BenchmarkConfig,
   TimingStats,
+  PhaseMemory,
+  MemoryStats,
 } from '../types.js';
 import type { Result } from '../errors.js';
 import { ok, err, errors } from '../errors.js';
@@ -27,6 +29,7 @@ import { ensurePtauFile, getMaxConstraints } from '../utils/ptau.js';
 import { getConstraintCount, groth16Setup, generateWitness, prove, verify, exportVkey } from '../utils/snarkjs.js';
 import { runHyperfine } from '../utils/hyperfine.js';
 import { measureAsync, calculateStats } from '../utils/timing.js';
+import { runWithMemoryTracking, defaultMemoryStats } from '../utils/memory.js';
 
 /**
  * Execute a shell command and return result.
@@ -205,62 +208,121 @@ component main {public [msg]} = ${templateName}(${inputLengthBytes});
       return vkeyResult;
     }
 
-    // 5. Measure witness generation
+    // 5. Measure compilation with memory tracking
+    console.log(`    Measuring circuit compilation (${config.minRuns} runs)...`);
+    const compileCommand = `circom "${wrapperPath}" --r1cs --wasm -l "${nodeModulesDir}" -o "${patternBuildDir}"`;
+    const compileMeasurement = await runWithMemoryTracking(compileCommand, {
+      cwd: this.worktreePath,
+      runs: config.minRuns,
+    });
+    const compileMemory = compileMeasurement?.memory ?? defaultMemoryStats();
+
+    // 6. Measure witness generation with memory tracking
     console.log(`    Measuring witness generation (${config.minRuns} runs)...`);
     const witnessPath = path.join(patternBuildDir, 'witness.wtns');
-    const witnessStats = await this.measureWitnessGeneration(
-      wasmPath,
-      inputPath,
-      witnessPath,
-      config.minRuns
+    const witnessCommand = this.getNvmWrappedCommand(
+      `npx snarkjs wtns calculate "${wasmPath}" "${inputPath}" "${witnessPath}"`
     );
-
-    // 6. Measure proof generation with hyperfine
-    console.log(`    Measuring proof generation with hyperfine...`);
-    const proveCommand = `cd "${patternBuildDir}" && npx snarkjs groth16 prove "${zkeyPath}" "${witnessPath}" proof.json public.json`;
-    const proveResult = await runHyperfine(proveCommand, {
-      warmup: config.warmupRuns,
-      minRuns: config.minRuns,
-      shell: 'default',
+    const witnessResult = await runWithMemoryTracking(witnessCommand, {
+      cwd: patternBuildDir,
+      runs: config.minRuns,
     });
-
-    let proveStats: TimingStats;
-    if (!proveResult.ok) {
-      console.log(`    Warning: Hyperfine failed, using in-process measurement`);
-      // Fallback to in-process measurement
-      const { stats } = await measureAsync(
-        () => prove(zkeyPath, witnessPath),
-        config.minRuns
-      );
-      proveStats = stats;
+    let witnessStats: TimingStats;
+    let witnessMemory: MemoryStats;
+    if (witnessResult) {
+      witnessStats = witnessResult.timing;
+      witnessMemory = witnessResult.memory;
     } else {
-      proveStats = proveResult.value;
+      // Fallback to legacy measurement without memory
+      witnessStats = await this.measureWitnessGeneration(wasmPath, inputPath, witnessPath, config.minRuns);
+      witnessMemory = defaultMemoryStats();
     }
 
-    // 7. Measure verification (in-process, fast operation)
-    console.log(`    Measuring verification (${config.minRuns} runs)...`);
-    const { result: proveOutput } = await measureAsync(
-      () => prove(zkeyPath, witnessPath),
-      1
+    // 7. Measure proof generation with memory tracking
+    console.log(`    Measuring proof generation (${config.minRuns} runs)...`);
+    const proveCommand = this.getNvmWrappedCommand(
+      `npx snarkjs groth16 prove "${zkeyPath}" "${witnessPath}" proof.json public.json`
     );
+    const proveResult = await runWithMemoryTracking(proveCommand, {
+      cwd: patternBuildDir,
+      runs: config.minRuns,
+    });
+    let proveStats: TimingStats;
+    let proveMemory: MemoryStats;
+    if (proveResult) {
+      proveStats = proveResult.timing;
+      proveMemory = proveResult.memory;
+    } else {
+      // Fallback to hyperfine or in-process measurement
+      console.log(`    Memory tracking failed, using hyperfine fallback`);
+      const hyperfineResult = await runHyperfine(`cd "${patternBuildDir}" && ${proveCommand}`, {
+        warmup: config.warmupRuns,
+        minRuns: config.minRuns,
+        shell: 'default',
+      });
+      if (hyperfineResult.ok) {
+        proveStats = hyperfineResult.value;
+      } else {
+        const { stats } = await measureAsync(() => prove(zkeyPath, witnessPath), config.minRuns);
+        proveStats = stats;
+      }
+      proveMemory = defaultMemoryStats();
+    }
+
+    // 8. Measure verification with memory tracking
+    console.log(`    Measuring verification (${config.minRuns} runs)...`);
+    // First generate a proof to get public signals for verification
+    const { result: proveOutput } = await measureAsync(() => prove(zkeyPath, witnessPath), 1);
     if (!proveOutput.ok) {
       return proveOutput;
     }
 
-    const { stats: verifyStats } = await measureAsync(
-      async () => verify(vkeyPath, proveOutput.value.publicSignals, proveOutput.value.proof),
-      config.minRuns
-    );
+    // Write temp files for verification command
+    const tempProofPath = path.join(patternBuildDir, 'temp_proof.json');
+    const tempPublicPath = path.join(patternBuildDir, 'temp_public.json');
+    await fs.writeFile(tempProofPath, JSON.stringify(proveOutput.value.proof, null, 2));
+    await fs.writeFile(tempPublicPath, JSON.stringify(proveOutput.value.publicSignals, null, 2));
 
-    // 8. Get peak memory (rough estimate via file sizes)
-    const peakMemoryMB = await this.estimatePeakMemory(patternBuildDir);
+    const verifyCommand = this.getNvmWrappedCommand(
+      `npx snarkjs groth16 verify "${vkeyPath}" "${tempPublicPath}" "${tempProofPath}"`
+    );
+    const verifyResult = await runWithMemoryTracking(verifyCommand, {
+      cwd: patternBuildDir,
+      runs: config.minRuns,
+    });
+    let verifyStats: TimingStats;
+    let verifyMemory: MemoryStats;
+    if (verifyResult) {
+      verifyStats = verifyResult.timing;
+      verifyMemory = verifyResult.memory;
+    } else {
+      // Fallback to in-process measurement
+      const { stats } = await measureAsync(
+        async () => verify(vkeyPath, proveOutput.value.publicSignals, proveOutput.value.proof),
+        config.minRuns
+      );
+      verifyStats = stats;
+      verifyMemory = defaultMemoryStats();
+    }
+
+    // Clean up temp files
+    await fs.unlink(tempProofPath).catch(() => {});
+    await fs.unlink(tempPublicPath).catch(() => {});
+
+    // Build memory by phase
+    const memoryByPhase: PhaseMemory = {
+      compile: compileMemory,
+      witnessGen: witnessMemory,
+      prove: proveMemory,
+      verify: verifyMemory,
+    };
 
     const metrics: CircomMetrics = {
       constraints,
       witnessGenMs: witnessStats,
       proveMs: proveStats,
       verifyMs: verifyStats,
-      peakMemoryMB,
+      memoryByPhase,
     };
 
     return ok(metrics);
@@ -350,25 +412,10 @@ component main {public [msg]} = ${templateName}(${inputLengthBytes});
   }
 
   /**
-   * Estimate peak memory from build artifacts.
+   * Get a command wrapped with nvm sourcing for npx availability.
+   * Filters out Bun's node shim paths to avoid conflicts.
    */
-  private async estimatePeakMemory(buildDir: string): Promise<number> {
-    try {
-      const files = await fs.readdir(buildDir);
-      let totalSize = 0;
-
-      for (const file of files) {
-        const filePath = path.join(buildDir, file);
-        const stats = await fs.stat(filePath);
-        if (stats.isFile()) {
-          totalSize += stats.size;
-        }
-      }
-
-      // Convert to MB and add rough estimate for runtime overhead
-      return Math.round(totalSize / (1024 * 1024)) + 100;
-    } catch {
-      return 0;
-    }
+  private getNvmWrappedCommand(command: string): string {
+    return `bash -c 'export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"; ${command.replace(/'/g, "'\\''")} '`;
   }
 }

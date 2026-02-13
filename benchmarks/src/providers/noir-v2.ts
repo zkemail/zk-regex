@@ -13,12 +13,15 @@ import type {
   PatternDefinition,
   BenchmarkConfig,
   TimingStats,
+  PhaseMemory,
+  MemoryStats,
 } from '../types.js';
 import type { Result } from '../errors.js';
 import { ok, err, errors } from '../errors.js';
 import { BaseBenchmarkProvider, type BenchmarkMetrics } from './base.js';
 import { runHyperfine } from '../utils/hyperfine.js';
 import { measureAsync, calculateStats } from '../utils/timing.js';
+import { runWithMemoryTracking, defaultMemoryStats } from '../utils/memory.js';
 
 /** Parsed nargo info output */
 interface NargoInfo {
@@ -135,9 +138,9 @@ export class NoirV2Provider extends BaseBenchmarkProvider {
     const targetDir = path.join(benchDir, 'target');
     await fs.rm(targetDir, { recursive: true, force: true }).catch(() => {});
 
-    // 3. Compile with nargo compile
-    console.log(`    Compiling Noir circuit...`);
-    const compileStats = await this.measureCompile(benchDir, config.minRuns);
+    // 3. Compile with nargo compile and measure memory
+    console.log(`    Measuring compilation (${config.minRuns} runs)...`);
+    const { timing: compileStats, memory: compileMemory } = await this.measureCompileWithMemory(benchDir, config.minRuns);
 
     // 4. Parse nargo info text output
     console.log(`    Getting circuit info...`);
@@ -148,17 +151,17 @@ export class NoirV2Provider extends BaseBenchmarkProvider {
     const { acirOpcodes, backendGates } = infoResult.value;
     console.log(`    ACIR opcodes: ${acirOpcodes}, Backend gates: ${backendGates}`);
 
-    // 5. Execute with nargo execute
-    console.log(`    Measuring execution (${config.minRuns} runs)...`);
-    const executeStats = await this.measureExecute(benchDir, config.minRuns);
+    // 5. Execute (witness generation) with nargo execute and measure memory
+    console.log(`    Measuring witness generation (${config.minRuns} runs)...`);
+    const { timing: witnessGenStats, memory: witnessGenMemory } = await this.measureWitnessGenWithMemory(benchDir, config.minRuns);
 
-    // 6. Prove with bb prove_ultra_honk
-    console.log(`    Measuring proof generation...`);
-    const proveStats = await this.measureProve(benchDir, benchName, config);
+    // 6. Prove with bb prove_ultra_honk and measure memory
+    console.log(`    Measuring proof generation (${config.minRuns} runs)...`);
+    const { timing: proveStats, memory: proveMemory } = await this.measureProveWithMemory(benchDir, benchName, config);
 
-    // 7. Verify with bb verify_ultra_honk
-    console.log(`    Measuring verification...`);
-    const verifyStats = await this.measureVerify(benchDir, benchName, config);
+    // 7. Verify with bb verify_ultra_honk and measure memory
+    console.log(`    Measuring verification (${config.minRuns} runs)...`);
+    const { timing: verifyStats, memory: verifyMemory } = await this.measureVerifyWithMemory(benchDir, benchName, config);
 
     // 8. Get proof size (bb v0.84.0+ stores proof in proof/proof)
     const proofFile = path.join(benchDir, 'target', 'proof', 'proof');
@@ -170,15 +173,24 @@ export class NoirV2Provider extends BaseBenchmarkProvider {
       // Proof might not exist if proving failed
     }
 
+    // Build memory by phase
+    const memoryByPhase: PhaseMemory = {
+      compile: compileMemory,
+      witnessGen: witnessGenMemory,
+      prove: proveMemory,
+      verify: verifyMemory,
+    };
+
     const metrics: NoirMetrics = {
       acirOpcodes,
       backendGates,
       gatesPerByte: inputLengthBytes > 0 ? backendGates / inputLengthBytes : 0,
       compileMs: compileStats,
-      executeMs: executeStats,
+      witnessGenMs: witnessGenStats,
       proveMs: proveStats,
       verifyMs: verifyStats,
       proofSizeBytes,
+      memoryByPhase,
     };
 
     return ok(metrics);
@@ -432,9 +444,33 @@ zkregex = { path = "${this.projectRoot}/noir" }
   }
 
   /**
-   * Measure compile time.
+   * Measure compile time with memory tracking.
    */
-  private async measureCompile(benchDir: string, runs: number): Promise<TimingStats> {
+  private async measureCompileWithMemory(
+    benchDir: string,
+    runs: number
+  ): Promise<{ timing: TimingStats; memory: MemoryStats }> {
+    // First clean target for accurate timing
+    await fs.rm(path.join(benchDir, 'target'), { recursive: true, force: true }).catch(() => {});
+
+    const result = await runWithMemoryTracking('nargo compile --silence-warnings', {
+      cwd: benchDir,
+      runs,
+    });
+
+    if (result) {
+      return { timing: result.timing, memory: result.memory };
+    }
+
+    // Fallback to legacy measurement without memory
+    const timing = await this.measureCompileLegacy(benchDir, runs);
+    return { timing, memory: defaultMemoryStats() };
+  }
+
+  /**
+   * Legacy compile measurement without memory tracking.
+   */
+  private async measureCompileLegacy(benchDir: string, runs: number): Promise<TimingStats> {
     const times: number[] = [];
 
     for (let i = 0; i < runs; i++) {
@@ -521,9 +557,30 @@ zkregex = { path = "${this.projectRoot}/noir" }
   }
 
   /**
-   * Measure execute time.
+   * Measure witness generation (execute) time with memory tracking.
    */
-  private async measureExecute(benchDir: string, runs: number): Promise<TimingStats> {
+  private async measureWitnessGenWithMemory(
+    benchDir: string,
+    runs: number
+  ): Promise<{ timing: TimingStats; memory: MemoryStats }> {
+    const result = await runWithMemoryTracking('nargo execute --silence-warnings', {
+      cwd: benchDir,
+      runs,
+    });
+
+    if (result) {
+      return { timing: result.timing, memory: result.memory };
+    }
+
+    // Fallback to legacy measurement without memory
+    const timing = await this.measureWitnessGenLegacy(benchDir, runs);
+    return { timing, memory: defaultMemoryStats() };
+  }
+
+  /**
+   * Legacy witness generation measurement without memory tracking.
+   */
+  private async measureWitnessGenLegacy(benchDir: string, runs: number): Promise<TimingStats> {
     const times: number[] = [];
 
     for (let i = 0; i < runs; i++) {
@@ -540,13 +597,13 @@ zkregex = { path = "${this.projectRoot}/noir" }
   }
 
   /**
-   * Measure proof generation time.
+   * Measure proof generation time with memory tracking.
    */
-  private async measureProve(
+  private async measureProveWithMemory(
     benchDir: string,
     benchName: string,
     config: BenchmarkConfig
-  ): Promise<TimingStats> {
+  ): Promise<{ timing: TimingStats; memory: MemoryStats }> {
     const targetDir = path.join(benchDir, 'target');
 
     // Find the compiled bytecode and witness
@@ -557,7 +614,7 @@ zkregex = { path = "${this.projectRoot}/noir" }
 
       if (!jsonFile || !witnessFile) {
         console.log(`    Warning: Bytecode or witness not found`);
-        return calculateStats([]);
+        return { timing: calculateStats([]), memory: defaultMemoryStats() };
       }
 
       const bytecodeFile = path.join(targetDir, jsonFile);
@@ -577,43 +634,53 @@ zkregex = { path = "${this.projectRoot}/noir" }
         { cwd: benchDir }
       );
 
-      // Use hyperfine for prove measurement
+      // Use memory tracking for prove measurement
       // bb v0.84.0+ API: bb prove -s ultra_honk -o <dir> creates <dir>/proof and <dir>/public_inputs
       const proveCommand = `bb prove -s ultra_honk -b "${bytecodeFile}" -w "${witnessPath}" -o "${proofDir}"`;
-      const result = await runHyperfine(proveCommand, {
+      const result = await runWithMemoryTracking(proveCommand, {
+        cwd: benchDir,
+        runs: config.minRuns,
+      });
+
+      if (result) {
+        return { timing: result.timing, memory: result.memory };
+      }
+
+      // Fallback to hyperfine or in-process measurement
+      console.log(`    Warning: Memory tracking failed, using hyperfine fallback`);
+      const hyperfineResult = await runHyperfine(proveCommand, {
         warmup: config.warmupRuns,
         minRuns: config.minRuns,
         shell: 'default',
         cwd: benchDir,
       });
 
-      if (!result.ok) {
-        // Fallback to in-process measurement
-        console.log(`    Warning: Hyperfine failed, using in-process measurement`);
-        const { stats } = await measureAsync(
-          async () => {
-            await execAsync(proveCommand, { cwd: benchDir });
-          },
-          config.minRuns
-        );
-        return stats;
+      if (hyperfineResult.ok) {
+        return { timing: hyperfineResult.value, memory: defaultMemoryStats() };
       }
 
-      return result.value;
+      // Final fallback to in-process measurement
+      const { stats } = await measureAsync(
+        async () => {
+          await execAsync(proveCommand, { cwd: benchDir });
+        },
+        config.minRuns
+      );
+      return { timing: stats, memory: defaultMemoryStats() };
     } catch (error) {
       console.log(`    Warning: Prove measurement failed: ${error}`);
-      return calculateStats([]);
+      return { timing: calculateStats([]), memory: defaultMemoryStats() };
     }
   }
 
   /**
-   * Measure verification time.
+   * Measure verification time with memory tracking.
    */
-  private async measureVerify(
+  private async measureVerifyWithMemory(
     benchDir: string,
     benchName: string,
     config: BenchmarkConfig
-  ): Promise<TimingStats> {
+  ): Promise<{ timing: TimingStats; memory: MemoryStats }> {
     const targetDir = path.join(benchDir, 'target');
     // bb v0.84.0+ uses directories: vk/vk, proof/proof, proof/public_inputs
     const proofFile = path.join(targetDir, 'proof', 'proof');
@@ -627,30 +694,41 @@ zkregex = { path = "${this.projectRoot}/noir" }
       await fs.access(vkFile);
     } catch {
       console.log(`    Warning: Proof, public_inputs, or VK not found`);
-      return calculateStats([]);
+      return { timing: calculateStats([]), memory: defaultMemoryStats() };
     }
 
     // bb v0.84.0+ API: bb verify -s ultra_honk -p <proof> -k <vk> -i <public_inputs>
     const verifyCommand = `bb verify -s ultra_honk -p "${proofFile}" -k "${vkFile}" -i "${publicInputsFile}"`;
-    const result = await runHyperfine(verifyCommand, {
+    const result = await runWithMemoryTracking(verifyCommand, {
+      cwd: benchDir,
+      runs: config.minRuns,
+    });
+
+    if (result) {
+      return { timing: result.timing, memory: result.memory };
+    }
+
+    // Fallback to hyperfine or in-process measurement
+    console.log(`    Warning: Memory tracking failed, using hyperfine fallback`);
+    const hyperfineResult = await runHyperfine(verifyCommand, {
       warmup: config.warmupRuns,
       minRuns: config.minRuns,
       shell: 'default',
       cwd: benchDir,
     });
 
-    if (!result.ok) {
-      // Fallback to in-process measurement
-      const { stats } = await measureAsync(
-        async () => {
-          await execAsync(verifyCommand, { cwd: benchDir });
-        },
-        config.minRuns
-      );
-      return stats;
+    if (hyperfineResult.ok) {
+      return { timing: hyperfineResult.value, memory: defaultMemoryStats() };
     }
 
-    return result.value;
+    // Final fallback to in-process measurement
+    const { stats } = await measureAsync(
+      async () => {
+        await execAsync(verifyCommand, { cwd: benchDir });
+      },
+      config.minRuns
+    );
+    return { timing: stats, memory: defaultMemoryStats() };
   }
 }
 

@@ -37,11 +37,12 @@ interface BenchmarkResult {
 }
 
 // Parse command line arguments
-function parseArgs(): { providers: ProviderType[]; patternFilter: string | null } {
+function parseArgs(): { providers: ProviderType[]; patternFilter: string | null; noMemory: boolean } {
   const args = process.argv.slice(2);
 
   let providers: ProviderType[] = ['circom-v2', 'noir-v2', 'circom-v1'];
   let patternFilter: string | null = null;
+  const noMemory = args.includes('--no-memory');
 
   const providerIndex = args.indexOf('--provider');
   if (providerIndex !== -1 && args[providerIndex + 1]) {
@@ -53,7 +54,7 @@ function parseArgs(): { providers: ProviderType[]; patternFilter: string | null 
     patternFilter = args[patternIndex + 1];
   }
 
-  return { providers, patternFilter };
+  return { providers, patternFilter, noMemory };
 }
 
 // Load patterns from config
@@ -106,6 +107,12 @@ async function saveResult(result: BenchmarkResult): Promise<void> {
   await fs.writeFile(filepath, JSON.stringify(result, null, 2));
 }
 
+// Format memory stats for display
+function formatMemory(stats: { mean: number; stddev: number; measured: boolean } | undefined): string {
+  if (!stats || !stats.measured || stats.mean === 0) return 'N/A';
+  return `${stats.mean.toFixed(0)}MB (±${stats.stddev.toFixed(0)})`;
+}
+
 // Format metrics for console output
 function formatMetrics(metrics: BenchmarkMetrics, provider: ProviderType): string {
   const lines: string[] = [];
@@ -113,23 +120,25 @@ function formatMetrics(metrics: BenchmarkMetrics, provider: ProviderType): strin
   if (provider === 'noir-v2') {
     const m = metrics as NoirMetrics;
     lines.push(`ACIR opcodes: ${m.acirOpcodes}, Backend gates: ${m.backendGates}`);
-    lines.push(`Compile: ${m.compileMs.mean.toFixed(0)}ms (±${m.compileMs.stddev.toFixed(0)})`);
-    lines.push(`Execute: ${m.executeMs.mean.toFixed(0)}ms (±${m.executeMs.stddev.toFixed(0)})`);
-    lines.push(`Prove: ${m.proveMs.mean.toFixed(0)}ms (±${m.proveMs.stddev.toFixed(0)})`);
-    lines.push(`Verify: ${m.verifyMs.mean.toFixed(0)}ms (±${m.verifyMs.stddev.toFixed(0)})`);
+    lines.push(`Compile: ${m.compileMs.mean.toFixed(0)}ms (±${m.compileMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.compile)}`);
+    lines.push(`Witness gen: ${m.witnessGenMs.mean.toFixed(0)}ms (±${m.witnessGenMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.witnessGen)}`);
+    lines.push(`Prove: ${m.proveMs.mean.toFixed(0)}ms (±${m.proveMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.prove)}`);
+    lines.push(`Verify: ${m.verifyMs.mean.toFixed(0)}ms (±${m.verifyMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.verify)}`);
     lines.push(`Proof size: ${m.proofSizeBytes} bytes`);
   } else if (provider === 'circom-v2') {
     const m = metrics as CircomV2Metrics;
     lines.push(`Constraints: ${m.constraints}, States: ${m.states}, Transitions: ${m.transitions}`);
-    lines.push(`Witness gen: ${m.witnessGenMs.mean.toFixed(0)}ms (±${m.witnessGenMs.stddev.toFixed(0)})`);
-    lines.push(`Prove: ${m.proveMs.mean.toFixed(0)}ms (±${m.proveMs.stddev.toFixed(0)})`);
-    lines.push(`Verify: ${m.verifyMs.mean.toFixed(0)}ms (±${m.verifyMs.stddev.toFixed(0)})`);
+    lines.push(`Compile: Memory: ${formatMemory(m.memoryByPhase?.compile)}`);
+    lines.push(`Witness gen: ${m.witnessGenMs.mean.toFixed(0)}ms (±${m.witnessGenMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.witnessGen)}`);
+    lines.push(`Prove: ${m.proveMs.mean.toFixed(0)}ms (±${m.proveMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.prove)}`);
+    lines.push(`Verify: ${m.verifyMs.mean.toFixed(0)}ms (±${m.verifyMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.verify)}`);
   } else {
     const m = metrics as CircomMetrics;
     lines.push(`Constraints: ${m.constraints}`);
-    lines.push(`Witness gen: ${m.witnessGenMs.mean.toFixed(0)}ms (±${m.witnessGenMs.stddev.toFixed(0)})`);
-    lines.push(`Prove: ${m.proveMs.mean.toFixed(0)}ms (±${m.proveMs.stddev.toFixed(0)})`);
-    lines.push(`Verify: ${m.verifyMs.mean.toFixed(0)}ms (±${m.verifyMs.stddev.toFixed(0)})`);
+    lines.push(`Compile: Memory: ${formatMemory(m.memoryByPhase?.compile)}`);
+    lines.push(`Witness gen: ${m.witnessGenMs.mean.toFixed(0)}ms (±${m.witnessGenMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.witnessGen)}`);
+    lines.push(`Prove: ${m.proveMs.mean.toFixed(0)}ms (±${m.proveMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.prove)}`);
+    lines.push(`Verify: ${m.verifyMs.mean.toFixed(0)}ms (±${m.verifyMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.verify)}`);
   }
 
   return lines.map(l => `        ${l}`).join('\n');
@@ -143,11 +152,12 @@ async function main() {
   registerCleanupHandler();
 
   // Parse arguments
-  const { providers, patternFilter } = parseArgs();
+  const { providers, patternFilter, noMemory } = parseArgs();
   console.log(`Providers: ${providers.join(', ')}`);
   if (patternFilter) {
     console.log(`Pattern filter: ${patternFilter}`);
   }
+  console.log(`Memory profiling: ${noMemory ? 'disabled' : 'enabled'}`);
   console.log();
 
   // Collect hardware info

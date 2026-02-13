@@ -16,6 +16,8 @@ import type {
   PatternMetadataEntry,
   ScalingDataPoint,
   TimingStats,
+  PhaseMemory,
+  MemoryStats,
 } from '../src/types.js';
 import { getHardwareSpec, getToolVersions } from '../src/utils/hardware.js';
 
@@ -73,6 +75,32 @@ function defaultTimingStats(): TimingStats {
 }
 
 /**
+ * Create a default MemoryStats for missing data.
+ */
+function defaultMemoryStats(): MemoryStats {
+  return {
+    mean: 0,
+    stddev: 0,
+    min: 0,
+    max: 0,
+    runs: 0,
+    measured: false,
+  };
+}
+
+/**
+ * Create a default PhaseMemory for missing data.
+ */
+function defaultPhaseMemory(): PhaseMemory {
+  return {
+    compile: defaultMemoryStats(),
+    witnessGen: defaultMemoryStats(),
+    prove: defaultMemoryStats(),
+    verify: defaultMemoryStats(),
+  };
+}
+
+/**
  * Create a default NoirMetrics for missing data.
  */
 function defaultNoirMetrics(): NoirMetrics {
@@ -81,10 +109,11 @@ function defaultNoirMetrics(): NoirMetrics {
     backendGates: 0,
     gatesPerByte: 0,
     compileMs: defaultTimingStats(),
-    executeMs: defaultTimingStats(),
+    witnessGenMs: defaultTimingStats(),
     proveMs: defaultTimingStats(),
     verifyMs: defaultTimingStats(),
     proofSizeBytes: 0,
+    memoryByPhase: defaultPhaseMemory(),
   };
 }
 
@@ -99,7 +128,7 @@ function defaultCircomV2Metrics(): CircomV2Metrics {
     witnessGenMs: defaultTimingStats(),
     proveMs: defaultTimingStats(),
     verifyMs: defaultTimingStats(),
-    peakMemoryMB: 0,
+    memoryByPhase: defaultPhaseMemory(),
   };
 }
 
@@ -320,14 +349,14 @@ async function main() {
         witnessGenMs: TimingStats;
         proveMs: TimingStats;
         verifyMs: TimingStats;
-        peakMemoryMB: number;
+        memoryByPhase?: PhaseMemory;
       };
       v1Circom = {
         constraints: m.constraints,
         witnessGenMs: m.witnessGenMs,
         proveMs: m.proveMs,
         verifyMs: m.verifyMs,
-        peakMemoryMB: m.peakMemoryMB,
+        memoryByPhase: m.memoryByPhase ?? defaultPhaseMemory(),
       };
     }
 
@@ -341,7 +370,7 @@ async function main() {
         witnessGenMs: TimingStats;
         proveMs: TimingStats;
         verifyMs: TimingStats;
-        peakMemoryMB: number;
+        memoryByPhase?: PhaseMemory;
       };
       v2Circom = {
         constraints: m.constraints,
@@ -350,7 +379,7 @@ async function main() {
         witnessGenMs: m.witnessGenMs,
         proveMs: m.proveMs,
         verifyMs: m.verifyMs,
-        peakMemoryMB: m.peakMemoryMB,
+        memoryByPhase: m.memoryByPhase ?? defaultPhaseMemory(),
       };
     } else {
       v2Circom = defaultCircomV2Metrics();
@@ -364,20 +393,22 @@ async function main() {
         backendGates: number;
         gatesPerByte: number;
         compileMs: TimingStats;
-        executeMs: TimingStats;
+        witnessGenMs: TimingStats;
         proveMs: TimingStats;
         verifyMs: TimingStats;
         proofSizeBytes: number;
+        memoryByPhase?: PhaseMemory;
       };
       v2Noir = {
         acirOpcodes: m.acirOpcodes,
         backendGates: m.backendGates,
         gatesPerByte: m.gatesPerByte,
         compileMs: m.compileMs,
-        executeMs: m.executeMs,
+        witnessGenMs: m.witnessGenMs,
         proveMs: m.proveMs,
         verifyMs: m.verifyMs,
         proofSizeBytes: m.proofSizeBytes,
+        memoryByPhase: m.memoryByPhase ?? defaultPhaseMemory(),
       };
     } else {
       v2Noir = defaultNoirMetrics();

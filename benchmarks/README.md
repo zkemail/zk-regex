@@ -211,6 +211,66 @@ benchmarks/
     benchmark.json     # Benchmark settings
 ```
 
+## Memory Profiling
+
+The benchmark suite measures peak memory (RSS) for each phase using `/usr/bin/time`.
+
+### Measured Phases
+
+| Provider | Phases |
+|----------|--------|
+| Circom v1 | compile, witnessGen, prove, verify |
+| Circom v2 | compile, witnessGen, prove, verify |
+| Noir v2 | compile, witnessGen, prove, verify |
+
+Note: Noir's `nargo execute` command is labeled as `witnessGen` for cross-framework consistency, as it performs the same function as Circom's witness generation step.
+
+### Platform Support
+
+- **macOS**: Uses BSD `time -l` (reports bytes)
+- **Linux**: Uses GNU `time -v` (reports kilobytes)
+- **Windows**: Memory profiling not supported (timing only)
+
+### CLI Options
+
+```bash
+# Run benchmarks with memory profiling (default)
+bun run bench
+
+# Disable memory profiling
+bun run bench --no-memory
+```
+
+### Memory Output
+
+Memory measurements are displayed inline with timing results:
+
+```
+Witness gen: 156ms (±12) | Memory: 85MB (±2)
+Prove: 2340ms (±45) | Memory: 512MB (±8)
+Verify: 45ms (±3) | Memory: 45MB (±1)
+```
+
+Memory data is included in:
+- `results/comparison.json` - Per-phase memory stats
+- `outputs/results.md` - Memory tables in Markdown
+- `outputs/tables.tex` - Memory tables in LaTeX
+
+### Memory Requirements
+
+Large input benchmarks may require significant RAM:
+
+| Input Size | Approx. Prove Memory (Circom) |
+|------------|-------------------------------|
+| 64 bytes | ~500 MB |
+| 128 bytes | ~1 GB |
+| 256 bytes | ~2 GB |
+| 512 bytes | ~4 GB |
+
+If benchmarks fail with memory errors, either:
+1. Reduce `inputLengths` in `config/benchmark.json`
+2. Run with `--no-memory` to skip memory profiling overhead
+
 ## Hardware Requirements
 
 - **RAM**: 8GB minimum, 16GB recommended

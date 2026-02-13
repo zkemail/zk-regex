@@ -11,7 +11,7 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import type { BenchmarkResults, PatternBenchmark, TimingStats, ScalingDataPoint } from '../src/types.js';
+import type { BenchmarkResults, PatternBenchmark, TimingStats, ScalingDataPoint, MemoryStats, PhaseMemory } from '../src/types.js';
 
 const RESULTS_FILE = path.join(import.meta.dir, '..', 'results', 'comparison.json');
 const OUTPUT_DIR = path.join(import.meta.dir, '..', 'outputs');
@@ -31,6 +31,22 @@ function formatTimingLatex(stats: TimingStats): string {
 function formatTimingMarkdown(stats: TimingStats): string {
   if (stats.runs === 0) return '—';
   return `${stats.mean.toFixed(1)} ± ${stats.stddev.toFixed(1)}`;
+}
+
+/**
+ * Format memory stats with uncertainty for LaTeX (siunitx format).
+ */
+function formatMemoryLatex(stats: MemoryStats | undefined): string {
+  if (!stats || !stats.measured || stats.runs === 0) return '{---}';
+  return `${stats.mean.toFixed(0)} +- ${stats.stddev.toFixed(0)}`;
+}
+
+/**
+ * Format memory stats for Markdown.
+ */
+function formatMemoryMarkdown(stats: MemoryStats | undefined): string {
+  if (!stats || !stats.measured || stats.runs === 0) return '—';
+  return `${stats.mean.toFixed(0)} ± ${stats.stddev.toFixed(0)}`;
 }
 
 /**
@@ -239,6 +255,50 @@ function generateMarkdown(results: BenchmarkResults): string {
       );
     }
     lines.push('');
+  }
+
+  // Table 5: Memory Usage by Phase - Circom v2
+  if (defaultPatterns.length > 0) {
+    const patternsWithMemory = defaultPatterns.filter(
+      ([, data]) => data.v2Circom.memoryByPhase?.prove?.measured
+    );
+    if (patternsWithMemory.length > 0) {
+      lines.push('## Memory Usage by Phase (MB) - Circom v2');
+      lines.push('');
+      lines.push('| Pattern | Compile | WitnessGen | Prove | Verify |');
+      lines.push('|---------|---------|------------|-------|--------|');
+
+      for (const [key, data] of patternsWithMemory) {
+        const name = getPatternName(key);
+        const mem = data.v2Circom.memoryByPhase;
+        lines.push(
+          `| ${name} | ${formatMemoryMarkdown(mem?.compile)} | ${formatMemoryMarkdown(mem?.witnessGen)} | ${formatMemoryMarkdown(mem?.prove)} | ${formatMemoryMarkdown(mem?.verify)} |`
+        );
+      }
+      lines.push('');
+    }
+  }
+
+  // Table 6: Memory Usage by Phase - Noir v2
+  if (defaultPatterns.length > 0) {
+    const patternsWithMemory = defaultPatterns.filter(
+      ([, data]) => data.v2Noir.memoryByPhase?.prove?.measured
+    );
+    if (patternsWithMemory.length > 0) {
+      lines.push('## Memory Usage by Phase (MB) - Noir v2');
+      lines.push('');
+      lines.push('| Pattern | Compile | WitnessGen | Prove | Verify |');
+      lines.push('|---------|---------|------------|-------|--------|');
+
+      for (const [key, data] of patternsWithMemory) {
+        const name = getPatternName(key);
+        const mem = data.v2Noir.memoryByPhase;
+        lines.push(
+          `| ${name} | ${formatMemoryMarkdown(mem?.compile)} | ${formatMemoryMarkdown(mem?.witnessGen)} | ${formatMemoryMarkdown(mem?.prove)} | ${formatMemoryMarkdown(mem?.verify)} |`
+        );
+      }
+      lines.push('');
+    }
   }
 
   return lines.join('\n');
@@ -467,6 +527,76 @@ function generateLatex(results: BenchmarkResults): string {
 
     // Remove last addlinespace
     lines.pop();
+
+    lines.push('\\bottomrule');
+    lines.push('\\end{tabular}');
+    lines.push('\\end{table}');
+  }
+
+  // Table 5: Memory Usage by Phase - Circom v2
+  const patternsWithCircomMemory = defaultPatterns.filter(
+    ([, data]) => data.v2Circom.memoryByPhase?.prove?.measured
+  );
+  if (patternsWithCircomMemory.length > 0) {
+    lines.push('');
+    lines.push('% Table 5: Memory Usage by Phase - Circom v2');
+    lines.push('\\begin{table}[htbp]');
+    lines.push('\\centering');
+    lines.push('\\caption{Memory Usage by Phase (MB) - Circom v2 at 64-byte input}');
+    lines.push('\\label{tab:memory-circom}');
+    lines.push('\\sisetup{');
+    lines.push('  table-format = 4.0,');
+    lines.push('  separate-uncertainty = true,');
+    lines.push('}');
+    lines.push('\\begin{tabular}{@{}l');
+    lines.push('  S[table-format=4.0(2)]');  // Compile
+    lines.push('  S[table-format=4.0(2)]');  // WitnessGen
+    lines.push('  S[table-format=4.0(2)]');  // Prove
+    lines.push('  S[table-format=3.0(2)]@{}}');  // Verify
+    lines.push('\\toprule');
+    lines.push('Pattern & {Compile (MB)} & {WitnessGen (MB)} & {Prove (MB)} & {Verify (MB)} \\\\');
+    lines.push('\\midrule');
+
+    for (const [key, data] of patternsWithCircomMemory) {
+      const name = getPatternName(key);
+      const mem = data.v2Circom.memoryByPhase;
+      lines.push(`${escapeLatex(name)} & ${formatMemoryLatex(mem?.compile)} & ${formatMemoryLatex(mem?.witnessGen)} & ${formatMemoryLatex(mem?.prove)} & ${formatMemoryLatex(mem?.verify)} \\\\`);
+    }
+
+    lines.push('\\bottomrule');
+    lines.push('\\end{tabular}');
+    lines.push('\\end{table}');
+  }
+
+  // Table 6: Memory Usage by Phase - Noir v2
+  const patternsWithNoirMemory = defaultPatterns.filter(
+    ([, data]) => data.v2Noir.memoryByPhase?.prove?.measured
+  );
+  if (patternsWithNoirMemory.length > 0) {
+    lines.push('');
+    lines.push('% Table 6: Memory Usage by Phase - Noir v2');
+    lines.push('\\begin{table}[htbp]');
+    lines.push('\\centering');
+    lines.push('\\caption{Memory Usage by Phase (MB) - Noir v2 at 64-byte input}');
+    lines.push('\\label{tab:memory-noir}');
+    lines.push('\\sisetup{');
+    lines.push('  table-format = 4.0,');
+    lines.push('  separate-uncertainty = true,');
+    lines.push('}');
+    lines.push('\\begin{tabular}{@{}l');
+    lines.push('  S[table-format=4.0(2)]');  // Compile
+    lines.push('  S[table-format=4.0(2)]');  // WitnessGen
+    lines.push('  S[table-format=4.0(2)]');  // Prove
+    lines.push('  S[table-format=3.0(2)]@{}}');  // Verify
+    lines.push('\\toprule');
+    lines.push('Pattern & {Compile (MB)} & {WitnessGen (MB)} & {Prove (MB)} & {Verify (MB)} \\\\');
+    lines.push('\\midrule');
+
+    for (const [key, data] of patternsWithNoirMemory) {
+      const name = getPatternName(key);
+      const mem = data.v2Noir.memoryByPhase;
+      lines.push(`${escapeLatex(name)} & ${formatMemoryLatex(mem?.compile)} & ${formatMemoryLatex(mem?.witnessGen)} & ${formatMemoryLatex(mem?.prove)} & ${formatMemoryLatex(mem?.verify)} \\\\`);
+    }
 
     lines.push('\\bottomrule');
     lines.push('\\end{tabular}');
