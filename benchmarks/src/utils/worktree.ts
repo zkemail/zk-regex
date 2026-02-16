@@ -11,6 +11,8 @@ import * as fs from 'fs/promises';
 import type { Result } from '../errors.js';
 import { ok, err, errors } from '../errors.js';
 
+const BENCHMARK_CONFIG_PATH = path.join(import.meta.dir, '..', '..', 'config', 'benchmark.json');
+
 const V1_WORKTREE_PATH = path.join(os.tmpdir(), 'zk-regex-v1-bench');
 
 /**
@@ -69,10 +71,30 @@ async function worktreeExists(): Promise<boolean> {
 }
 
 /**
+ * Read the v1 commit hash from benchmark config.
+ * Falls back to 'main' if no commit hash is configured.
+ */
+async function getV1CommitRef(): Promise<string> {
+  try {
+    const content = await fs.readFile(BENCHMARK_CONFIG_PATH, 'utf-8');
+    const config = JSON.parse(content);
+    const commitHash = config?.providers?.['circom-v1']?.commitHash;
+    if (commitHash) {
+      return commitHash;
+    }
+  } catch {
+    // Fall back to main if config cannot be read
+  }
+  console.warn('Warning: No v1 commit hash in benchmark.json, falling back to main');
+  return 'main';
+}
+
+/**
  * Set up a git worktree for v1 benchmarking.
  *
- * Creates a detached HEAD worktree from the main branch,
- * installs dependencies with Yarn, and builds the compiler.
+ * Creates a detached HEAD worktree from the configured commit hash
+ * (or main branch as fallback), installs dependencies with Yarn,
+ * and builds the compiler.
  */
 export async function setupV1Worktree(): Promise<Result<string>> {
   // Clean up any existing worktree first
@@ -84,10 +106,14 @@ export async function setupV1Worktree(): Promise<Result<string>> {
     console.warn('Warning: Failed to prune worktrees');
   }
 
-  // Create worktree with detached HEAD (no branch association)
+  // Get the commit reference to use
+  const commitRef = await getV1CommitRef();
+  console.log(`Using v1 ref: ${commitRef}`);
+
+  // Create worktree with detached HEAD
   console.log(`Creating v1 worktree at ${V1_WORKTREE_PATH}...`);
   const addResult = await execAsync(
-    `git worktree add --detach "${V1_WORKTREE_PATH}" main`
+    `git worktree add --detach "${V1_WORKTREE_PATH}" ${commitRef}`
   );
   if (!addResult.ok) {
     return addResult;

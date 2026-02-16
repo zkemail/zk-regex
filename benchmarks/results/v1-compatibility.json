@@ -1,0 +1,158 @@
+{
+  "description": "V1 DFA compiler compatibility results for all benchmark patterns",
+  "compilerVersion": "2.3.2",
+  "compilerLocation": "packages/compiler (main branch)",
+  "testDate": "2026-02-16",
+  "patterns": [
+    {
+      "pattern": "literal_match",
+      "v1CompilerResult": "success",
+      "v1CompilerPhase": null,
+      "v1CompilerError": null,
+      "circomCompileResult": "success",
+      "circomCompileError": null,
+      "availableInV1": true,
+      "notes": "Simple literal - DFA handles easily"
+    },
+    {
+      "pattern": "char_class_basic",
+      "v1CompilerResult": "success",
+      "v1CompilerPhase": null,
+      "v1CompilerError": null,
+      "circomCompileResult": "success",
+      "circomCompileError": null,
+      "availableInV1": true,
+      "notes": "Basic character class with + quantifier - DFA handles"
+    },
+    {
+      "pattern": "simple_alternation",
+      "v1CompilerResult": "success",
+      "v1CompilerPhase": null,
+      "v1CompilerError": null,
+      "circomCompileResult": "success",
+      "circomCompileError": null,
+      "availableInV1": true,
+      "notes": "Three-way alternation - DFA handles"
+    },
+    {
+      "pattern": "quantified_alphanumeric",
+      "v1CompilerResult": "success",
+      "v1CompilerPhase": null,
+      "v1CompilerError": null,
+      "circomCompileResult": "success",
+      "circomCompileError": null,
+      "availableInV1": true,
+      "notes": "Alphanumeric + quantifier - DFA handles"
+    },
+    {
+      "pattern": "nested_noncapturing",
+      "v1CompilerResult": "success",
+      "v1CompilerPhase": null,
+      "v1CompilerError": null,
+      "circomCompileResult": "success",
+      "circomCompileError": null,
+      "availableInV1": true,
+      "notes": "Nested non-capturing groups - DFA can handle"
+    },
+    {
+      "pattern": "email_basic",
+      "v1CompilerResult": "success",
+      "v1CompilerPhase": null,
+      "v1CompilerError": null,
+      "circomCompileResult": "success",
+      "circomCompileError": null,
+      "availableInV1": true,
+      "notes": "Email pattern with {2,} - unexpectedly succeeded in v1"
+    },
+    {
+      "pattern": "fixed_range_quantifier",
+      "v1CompilerResult": "error",
+      "v1CompilerPhase": "dfa_construction",
+      "v1CompilerError": "Accept Nodes Error: The size of accept nodes must be one",
+      "circomCompileResult": "skipped",
+      "circomCompileError": null,
+      "availableInV1": false,
+      "notes": "Range quantifiers {n,m} with multiple ranges cause DFA accept node ambiguity"
+    },
+    {
+      "pattern": "complex_alternation_groups",
+      "v1CompilerResult": "success",
+      "v1CompilerPhase": null,
+      "v1CompilerError": null,
+      "circomCompileResult": "success",
+      "circomCompileError": null,
+      "availableInV1": true,
+      "notes": "URL pattern - DFA handles despite complexity; {2,} accepted"
+    },
+    {
+      "pattern": "body_hash",
+      "v1CompilerResult": "success",
+      "v1CompilerPhase": null,
+      "v1CompilerError": null,
+      "circomCompileResult": "success",
+      "circomCompileError": null,
+      "availableInV1": true,
+      "notes": "Existing v1 circuit - known working"
+    },
+    {
+      "pattern": "email_addr",
+      "v1CompilerResult": "success",
+      "v1CompilerPhase": null,
+      "v1CompilerError": null,
+      "circomCompileResult": "success",
+      "circomCompileError": null,
+      "availableInV1": true,
+      "notes": "Existing v1 circuit - known working"
+    },
+    {
+      "pattern": "subject_all",
+      "v1CompilerResult": "success",
+      "v1CompilerPhase": null,
+      "v1CompilerError": null,
+      "circomCompileResult": "success",
+      "circomCompileError": null,
+      "availableInV1": true,
+      "notes": "Existing v1 circuit - known working"
+    },
+    {
+      "pattern": "simple",
+      "v1CompilerResult": "success",
+      "v1CompilerPhase": null,
+      "v1CompilerError": null,
+      "circomCompileResult": "success",
+      "circomCompileError": null,
+      "availableInV1": true,
+      "notes": "Simple a*b pattern - DFA handles"
+    },
+    {
+      "pattern": "lazy_quantifier",
+      "v1CompilerResult": "success",
+      "v1CompilerPhase": null,
+      "v1CompilerError": null,
+      "circomCompileResult": "success",
+      "circomCompileError": null,
+      "availableInV1": true,
+      "notes": "Unexpected: v1 DFA compiler accepted lazy quantifier <.*?> - may produce different match semantics than NFA"
+    },
+    {
+      "pattern": "unbounded_range",
+      "v1CompilerResult": "success",
+      "v1CompilerPhase": null,
+      "v1CompilerError": null,
+      "circomCompileResult": "success",
+      "circomCompileError": null,
+      "availableInV1": true,
+      "notes": "Unexpected: v1 DFA compiler accepted {3,} - may expand internally"
+    },
+    {
+      "pattern": "nested_quantified_groups",
+      "v1CompilerResult": "success",
+      "v1CompilerPhase": null,
+      "v1CompilerError": null,
+      "circomCompileResult": "success",
+      "circomCompileError": null,
+      "availableInV1": true,
+      "notes": "Unexpected: v1 DFA compiler handled nested quantified groups - may have high constraint count"
+    }
+  ]
+}

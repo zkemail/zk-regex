@@ -21,7 +21,7 @@
   "providers": {
     "circom-v1": {
       "enabled": true,
-      "worktreeBranch": "main",
+      "commitHash": "783b94f704edc920be827dc2942138099559c796",
       "circuitPath": "packages/circom/circuits/common"
     },
     "circom-v2": {
