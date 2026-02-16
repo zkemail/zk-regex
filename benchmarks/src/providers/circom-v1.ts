@@ -385,7 +385,7 @@ component main {public [msg]} = ${templateName}(${inputLengthBytes});
       nested_quantified_groups_regex: 'abc123def456ghi789',
     };
 
-    let input = sampleInputs[pattern.circuitName] ?? 'test input';
+    let input = sampleInputs[pattern.circuitName] ?? pattern.sampleInput ?? 'test input';
 
     // Pad or truncate to target length
     if (input.length < targetLength) {

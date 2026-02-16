@@ -270,7 +270,7 @@ async function main() {
     process.exit(1);
   }
 
-  const jsonFiles = files.filter(f => f.endsWith('.json') && f !== 'comparison.json');
+  const jsonFiles = files.filter(f => f.endsWith('.json') && f !== 'comparison.json' && f !== 'v1-compatibility.json');
 
   if (jsonFiles.length === 0) {
     console.log('No benchmark result files found.');

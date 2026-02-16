@@ -428,7 +428,7 @@ component main {public [inHaystack]} = ${templateName}(${maxHaystackBytes}, ${ma
       simple_regex: 'b',
     };
 
-    const haystack = sampleInputs[pattern.circuitName] ?? 'b';
+    const haystack = sampleInputs[pattern.circuitName] ?? pattern.sampleInput ?? 'b';
 
     // Use compiler to generate circuit inputs
     const inputsJson = genCircuitInputs(
