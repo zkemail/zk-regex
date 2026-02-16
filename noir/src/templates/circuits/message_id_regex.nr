@@ -1,4 +1,4 @@
-use zkregex::utils::{
+use crate::utils::{
    select_subarray,
    captures::capture_substring,
    sparse_array::SparseArray,
@@ -116,3 +116,6 @@ pub fn regex_match<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
     (capture_1)
 }
 
+
+global MAX_HAYSTACK_LEN: u32 = 300;
+global MAX_MATCH_LEN: u32 = 300;
