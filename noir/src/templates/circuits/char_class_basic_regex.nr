@@ -4,10 +4,10 @@ use zkregex::utils::{
    transitions::check_transition
 };
 
-global TRANSITION_TABLE: SparseArray<6, Field> = SparseArray {
-    keys: [0x00000000, 0x00016362, 0x00016363, 0x00016364, 0x00046a66, 0x00046a67, 0x00046a69, 0x00ca91cd],
-    values: [0x00000000, 0x00000000, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000000],
-    maximum: 0x00ca91cd
+global TRANSITION_TABLE: SparseArray<78, Field> = SparseArray {
+    keys: [0x00000000, 0x00026563, 0x00026564, 0x00026565, 0x00026664, 0x00026665, 0x00026666, 0x00026765, 0x00026766, 0x00026767, 0x00026866, 0x00026867, 0x00026868, 0x00026967, 0x00026968, 0x00026969, 0x00026a68, 0x00026a69, 0x00026a6a, 0x00026b69, 0x00026b6a, 0x00026b6b, 0x00026c6a, 0x00026c6b, 0x00026c6c, 0x00026d6b, 0x00026d6c, 0x00026d6d, 0x00026e6c, 0x00026e6d, 0x00026e6e, 0x00026f6d, 0x00026f6e, 0x00026f6f, 0x0002706e, 0x0002706f, 0x00027070, 0x0002716f, 0x00027170, 0x00027171, 0x00027270, 0x00027271, 0x00027272, 0x00027371, 0x00027372, 0x00027373, 0x00027472, 0x00027473, 0x00027474, 0x00027573, 0x00027574, 0x00027575, 0x00027674, 0x00027675, 0x00027676, 0x00027775, 0x00027776, 0x00027777, 0x00027876, 0x00027877, 0x00027878, 0x00027977, 0x00027978, 0x00027979, 0x00027a78, 0x00027a79, 0x00027a7a, 0x00027b79, 0x00027b7a, 0x00027b7b, 0x00027c7a, 0x00027c7b, 0x00027c7c, 0x00027d7b, 0x00027d7c, 0x00027d7d, 0x00027e7c, 0x00027e7d, 0x00027e7e, 0x00ca91ca],
+    values: [0x00000000, 0x00000000, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000000],
+    maximum: 0x00ca91ca
 };
 
 
@@ -20,7 +20,7 @@ global TRANSITION_TABLE: SparseArray<6, Field> = SparseArray {
  * @param start_state - The start state of the NFA
  */
 fn check_start_state(start_state: Field) {
-    let valid_start_state = (start_state - 0) * (start_state - 2) * (start_state - 3);
+    let valid_start_state = (start_state - 0) * (start_state - 1);
     assert(valid_start_state == 0, "Invalid start state");
 }
     
@@ -42,7 +42,7 @@ fn check_accept_state(
     asserted_match_length: Field
 ) -> Field {
     // check if the next state is an accept state
-    let accept_state_reached = (next_state - 4);
+    let accept_state_reached = (next_state - 2);
     let accept_state_reached_bool = (accept_state_reached == 0) as Field;
 
     // check if the haystack index is the asserted match length
@@ -53,8 +53,8 @@ fn check_accept_state(
 }
 
 /**
- * SimpleRegex matching function
- * Regex: a*b
+ * CharClassBasicRegex matching function
+ * Regex: [a-z]+
  * @param in_haystack - The input haystack to search from
  * @param match_start - The start index in the haystack for the subarray to match from
  * @param match_length - The length of the subarray to extract from haystack

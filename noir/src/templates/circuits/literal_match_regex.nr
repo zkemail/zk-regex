@@ -5,7 +5,7 @@ use zkregex::utils::{
 };
 
 global TRANSITION_TABLE: SparseArray<6, Field> = SparseArray {
-    keys: [0x00000000, 0x00016362, 0x00016363, 0x00016364, 0x00046a66, 0x00046a67, 0x00046a69, 0x00ca91cd],
+    keys: [0x00000000, 0x00026c6a, 0x00026c6b, 0x00036b6a, 0x00047473, 0x00057675, 0x00067b7a, 0x00ca91cd],
     values: [0x00000000, 0x00000000, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000000],
     maximum: 0x00ca91cd
 };
@@ -20,7 +20,7 @@ global TRANSITION_TABLE: SparseArray<6, Field> = SparseArray {
  * @param start_state - The start state of the NFA
  */
 fn check_start_state(start_state: Field) {
-    let valid_start_state = (start_state - 0) * (start_state - 2) * (start_state - 3);
+    let valid_start_state = (start_state - 0) * (start_state - 1);
     assert(valid_start_state == 0, "Invalid start state");
 }
     
@@ -42,7 +42,7 @@ fn check_accept_state(
     asserted_match_length: Field
 ) -> Field {
     // check if the next state is an accept state
-    let accept_state_reached = (next_state - 4);
+    let accept_state_reached = (next_state - 6);
     let accept_state_reached_bool = (accept_state_reached == 0) as Field;
 
     // check if the haystack index is the asserted match length
@@ -53,8 +53,8 @@ fn check_accept_state(
 }
 
 /**
- * SimpleRegex matching function
- * Regex: a*b
+ * LiteralMatchRegex matching function
+ * Regex: hello
  * @param in_haystack - The input haystack to search from
  * @param match_start - The start index in the haystack for the subarray to match from
  * @param match_length - The length of the subarray to extract from haystack

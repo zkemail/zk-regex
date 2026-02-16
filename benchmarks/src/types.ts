@@ -164,6 +164,32 @@ export interface BenchmarkConfig {
 }
 
 /**
+ * Regex feature classification for academic taxonomy.
+ */
+export type PatternFeature =
+  | 'literals'
+  | 'character_classes'
+  | 'alternation'
+  | 'quantifiers_plus'
+  | 'quantifiers_star'
+  | 'quantifiers_fixed'
+  | 'quantifiers_range'
+  | 'quantifiers_lazy'
+  | 'quantifiers_unbounded'
+  | 'nested_groups'
+  | 'capture_groups';
+
+/**
+ * Complexity level for dual taxonomy classification.
+ */
+export type PatternComplexity = 'simple' | 'medium' | 'complex' | 'v2-only';
+
+/**
+ * Pattern category (synthetic benchmark vs real-world usage).
+ */
+export type PatternCategory = 'synthetic' | 'real-world';
+
+/**
  * Pattern definition for benchmarking.
  */
 export interface PatternDefinition {
@@ -171,6 +197,11 @@ export interface PatternDefinition {
   readonly description: string;
   readonly circuitName: string;
   readonly availableInV1: boolean;
+  readonly complexity: PatternComplexity;
+  readonly features: PatternFeature[];
+  readonly category: PatternCategory;
+  readonly regex: string;
+  readonly sampleInput: string;
 }
 
 /**

@@ -5,9 +5,9 @@ use zkregex::utils::{
 };
 
 global TRANSITION_TABLE: SparseArray<6, Field> = SparseArray {
-    keys: [0x00000000, 0x00016362, 0x00016363, 0x00016364, 0x00046a66, 0x00046a67, 0x00046a69, 0x00ca91cd],
+    keys: [0x00000000, 0x00026563, 0x00026564, 0x00026567, 0x00036867, 0x00036968, 0x00046c6b, 0x00ca91cc],
     values: [0x00000000, 0x00000000, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000000],
-    maximum: 0x00ca91cd
+    maximum: 0x00ca91cc
 };
 
 
@@ -20,7 +20,7 @@ global TRANSITION_TABLE: SparseArray<6, Field> = SparseArray {
  * @param start_state - The start state of the NFA
  */
 fn check_start_state(start_state: Field) {
-    let valid_start_state = (start_state - 0) * (start_state - 2) * (start_state - 3);
+    let valid_start_state = (start_state - 0) * (start_state - 1);
     assert(valid_start_state == 0, "Invalid start state");
 }
     
@@ -53,8 +53,8 @@ fn check_accept_state(
 }
 
 /**
- * SimpleRegex matching function
- * Regex: a*b
+ * NestedNoncapturingRegex matching function
+ * Regex: (?:a(?:b|c)d)+
  * @param in_haystack - The input haystack to search from
  * @param match_start - The start index in the haystack for the subarray to match from
  * @param match_length - The length of the subarray to extract from haystack

@@ -1,0 +1,95 @@
+{
+  "regex": "foo|bar|baz",
+  "nodes": [
+    {
+      "state_id": 0,
+      "byte_transitions": {
+        "98": [
+          2
+        ],
+        "102": [
+          4
+        ]
+      },
+      "capture_groups": {
+        "2": [],
+        "4": []
+      }
+    },
+    {
+      "state_id": 1,
+      "byte_transitions": {
+        "114": [
+          6
+        ],
+        "122": [
+          6
+        ]
+      },
+      "capture_groups": {
+        "6": []
+      }
+    },
+    {
+      "state_id": 2,
+      "byte_transitions": {
+        "97": [
+          1
+        ]
+      },
+      "capture_groups": {
+        "1": []
+      }
+    },
+    {
+      "state_id": 3,
+      "byte_transitions": {
+        "111": [
+          6
+        ]
+      },
+      "capture_groups": {
+        "6": []
+      }
+    },
+    {
+      "state_id": 4,
+      "byte_transitions": {
+        "111": [
+          3
+        ]
+      },
+      "capture_groups": {
+        "3": []
+      }
+    },
+    {
+      "state_id": 5,
+      "byte_transitions": {
+        "98": [
+          2
+        ],
+        "102": [
+          4
+        ]
+      },
+      "capture_groups": {
+        "2": [],
+        "4": []
+      }
+    },
+    {
+      "state_id": 6,
+      "byte_transitions": {},
+      "capture_groups": {}
+    }
+  ],
+  "start_states": [
+    0,
+    5
+  ],
+  "accept_states": [
+    6
+  ],
+  "num_capture_groups": 0
+}

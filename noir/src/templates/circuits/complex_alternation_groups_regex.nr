@@ -1,0 +1,95 @@
+use zkregex::utils::{
+   select_subarray,
+   sparse_array::SparseArray,
+   transitions::check_transition
+};
+
+global TRANSITION_TABLE: SparseArray<211, Field> = SparseArray {
+    keys: [0x00000000, 0x00026c6a, 0x00026c6b, 0x00037a79, 0x00047c7b, 0x00057a79, 0x0007746d, 0x00077473, 0x00088483, 0x00098281, 0x00098581, 0x000a4e49, 0x000a4e4d, 0x000b4544, 0x000c4746, 0x000d9190, 0x000e9392, 0x000f9594, 0x00104e4d, 0x00114f4a, 0x00114f4e, 0x00114f4f, 0x0011504b, 0x0011504f, 0x00115050, 0x0011524d, 0x00115251, 0x00115252, 0x0011534e, 0x00115352, 0x00115353, 0x0011544f, 0x00115453, 0x00115454, 0x00115550, 0x00115554, 0x00115555, 0x00115651, 0x00115655, 0x00115656, 0x00115752, 0x00115756, 0x00115757, 0x00115853, 0x00115857, 0x00115858, 0x00115954, 0x00115958, 0x00115959, 0x00115a55, 0x00115a59, 0x00115a5a, 0x00115b56, 0x00115b5a, 0x00115b5b, 0x0011837e, 0x00118382, 0x00118383, 0x0011847f, 0x00118483, 0x00118484, 0x00118580, 0x00118584, 0x00118585, 0x00118681, 0x00118685, 0x00118686, 0x00118782, 0x00118786, 0x00118787, 0x00118883, 0x00118887, 0x00118888, 0x00118984, 0x00118988, 0x00118989, 0x00118a85, 0x00118a89, 0x00118a8a, 0x00118b86, 0x00118b8a, 0x00118b8b, 0x00118c87, 0x00118c8b, 0x00118c8c, 0x00118d88, 0x00118d8c, 0x00118d8d, 0x00118e89, 0x00118e8d, 0x00118e8e, 0x00118f8a, 0x00118f8e, 0x00118f8f, 0x0011908b, 0x0011908f, 0x00119090, 0x0011918c, 0x00119190, 0x00119191, 0x0011928d, 0x00119291, 0x00119292, 0x0011938e, 0x00119392, 0x00119393, 0x0011948f, 0x00119493, 0x00119494, 0x00119590, 0x00119594, 0x00119595, 0x00119691, 0x00119695, 0x00119696, 0x00119792, 0x00119796, 0x00119797, 0x00119893, 0x00119897, 0x00119898, 0x00119994, 0x00119998, 0x00119999, 0x00119a95, 0x00119a99, 0x00119a9a, 0x00119b96, 0x00119b9a, 0x00119b9b, 0x00119c97, 0x00119c9b, 0x00119c9c, 0x00125251, 0x00138786, 0x00138887, 0x00138988, 0x00138a89, 0x00138b8a, 0x00138c8b, 0x00138d8c, 0x00138e8d, 0x00138f8e, 0x0013908f, 0x00139190, 0x00139291, 0x00139392, 0x00139493, 0x00139594, 0x00139695, 0x00139796, 0x00139897, 0x00139998, 0x00139a99, 0x00139b9a, 0x00139c9b, 0x00139d9c, 0x00139e9d, 0x00139f9e, 0x0013a09f, 0x00148988, 0x00148989, 0x00148a89, 0x00148a8a, 0x00148b8a, 0x00148b8b, 0x00148c8b, 0x00148c8c, 0x00148d8c, 0x00148d8d, 0x00148e8d, 0x00148e8e, 0x00148f8e, 0x00148f8f, 0x0014908f, 0x00149090, 0x00149190, 0x00149191, 0x00149291, 0x00149292, 0x00149392, 0x00149393, 0x00149493, 0x00149494, 0x00149594, 0x00149595, 0x00149695, 0x00149696, 0x00149796, 0x00149797, 0x00149897, 0x00149898, 0x00149998, 0x00149999, 0x00149a99, 0x00149a9a, 0x00149b9a, 0x00149b9b, 0x00149c9b, 0x00149c9c, 0x00149d9c, 0x00149d9d, 0x00149e9d, 0x00149e9e, 0x00149f9e, 0x00149f9f, 0x0014a09f, 0x0014a0a0, 0x0014a1a0, 0x0014a1a1, 0x0014a2a1, 0x0014a2a2, 0x00ca91e6],
+    values: [0x00000000, 0x00000000, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000001, 0x00000000],
+    maximum: 0x00ca91e6
+};
+
+
+/**
+ * Constrains a start state to be valid
+ * @dev start states are hardcoded in this function - "(start_state - {state})" for each start
+ *      example: `(start_state - 0) * (start_state - 1) * (start_state - 2)` means 0, 1, or 2
+ *      are valid first states
+ * 
+ * @param start_state - The start state of the NFA
+ */
+fn check_start_state(start_state: Field) {
+    let valid_start_state = (start_state - 0) * (start_state - 1) * (start_state - 6);
+    assert(valid_start_state == 0, "Invalid start state");
+}
+    
+/**
+ * Constrains the recognition of accept_state being reached. If an aceppt state is reached,
+ *      ensures asserted traversal path is valid
+ * @dev accept states are hardcoded in this function - "(next_state - {state})" for each accept
+ *      example: `(next_state - 19) * (next_state - 20) * (next_state - 21)` means 19, 20, or 21
+ *      are valid accept states
+ * 
+ * @param next_state - The asserted next state of the NFA
+ * @param haystack_index - The index being operated on in the haystack
+ * @param asserted_match_length - The asserted traversal path length
+ * @return - 0 if accept_state is reached, nonzero otherwise
+ */
+fn check_accept_state(
+    next_state: Field,
+    haystack_index: Field, 
+    asserted_match_length: Field
+) -> Field {
+    // check if the next state is an accept state
+    let accept_state_reached = (next_state - 20);
+    let accept_state_reached_bool = (accept_state_reached == 0) as Field;
+
+    // check if the haystack index is the asserted match length
+    // should equal 1 since haystack_index should be 1 less than asserted_match)length
+    let asserted_path_traversed = (asserted_match_length - haystack_index == 1) as Field;
+
+    (1 - (accept_state_reached_bool * asserted_path_traversed))
+}
+
+/**
+ * ComplexAlternationGroupsRegex matching function
+ * Regex: (?:https?|ftp)://(?:www\\.)?[a-z0-9.-]+\\.[a-z]{2,}
+ * @param in_haystack - The input haystack to search from
+ * @param match_start - The start index in the haystack for the subarray to match from
+ * @param match_length - The length of the subarray to extract from haystack
+ * @param current_states - The current states of the NFA at each index in the match subarray
+ * @param next_states - The next states of the NFA at each index in the match subarray
+ */
+pub fn regex_match<let MAX_HAYSTACK_LEN: u32, let MAX_MATCH_LEN: u32>(
+    in_haystack: [u8; MAX_HAYSTACK_LEN],
+    match_start: u32,
+    match_length: u32,
+    current_states: [Field; MAX_MATCH_LEN],
+    next_states: [Field; MAX_MATCH_LEN],
+) {
+    // resize haystack 
+    let haystack: [u8; MAX_MATCH_LEN] = select_subarray::<MAX_HAYSTACK_LEN, MAX_MATCH_LEN>(in_haystack, match_start, match_length);
+
+    check_start_state(current_states[0]);
+    for i in 0..MAX_MATCH_LEN-1 {
+        // match length - 1 since current states should be 1 less than next states
+        let in_range = (i < match_length - 1) as Field;
+        let matching_states = current_states[i + 1] - next_states[i];
+        assert(in_range * matching_states == 0, "Invalid Transition Input");
+    }
+    let mut reached_end_state = 1;
+    for i in 0..MAX_MATCH_LEN {
+        check_transition(
+            TRANSITION_TABLE,
+            haystack[i] as Field,
+            current_states[i],
+            next_states[i],
+            reached_end_state
+        );
+        reached_end_state = reached_end_state * check_accept_state(next_states[i], i as Field, match_length as Field);
+    }
+    assert(reached_end_state == 0, "Did not reach a valid end state");
+
+}
+
