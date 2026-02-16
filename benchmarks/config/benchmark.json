@@ -6,7 +6,7 @@
     "minRuns": 3,
     "maxRuns": 5,
     "timeoutMs": 600000,
-    "inputLengths": [64, 128, 256]
+    "inputLengths": [64, 128, 256, 512]
   },
   "hyperfine": {
     "warmup": 3,

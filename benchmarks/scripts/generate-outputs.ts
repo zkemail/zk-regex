@@ -6,68 +6,68 @@
  * - outputs/results.md (Markdown tables)
  * - outputs/tables.tex (LaTeX tables for academic paper)
  *
+ * Output structure:
+ * 1. Pattern Definitions (with complexity and features)
+ * 2. V1 vs V2 Comparison (grouped by complexity - PRIMARY)
+ * 3. V1 Compatibility Analysis (failure modes)
+ * 4. V2-Only Patterns (features v1 cannot compile)
+ * 5. Scaling Analysis by Complexity
+ * 6. Summary Statistics
+ * 7. Noir v2 Details (separate section)
+ * 8. Memory Usage
+ *
  * LaTeX tables use booktabs + siunitx for professional formatting.
  */
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import type { BenchmarkResults, PatternBenchmark, TimingStats, ScalingDataPoint, MemoryStats, PhaseMemory } from '../src/types.js';
+import type {
+  BenchmarkResults,
+  PatternBenchmark,
+  TimingStats,
+  ScalingDataPoint,
+  MemoryStats,
+  PatternDefinition,
+  PatternComplexity,
+} from '../src/types.js';
 
 const RESULTS_FILE = path.join(import.meta.dir, '..', 'results', 'comparison.json');
+const PATTERNS_FILE = path.join(import.meta.dir, '..', 'config', 'patterns.json');
+const V1_COMPAT_FILE = path.join(import.meta.dir, '..', 'results', 'v1-compatibility.json');
 const OUTPUT_DIR = path.join(import.meta.dir, '..', 'outputs');
 
-/**
- * Format timing stats with uncertainty for LaTeX (siunitx format).
- * Format: "mean +- stddev" for siunitx S columns.
- */
+// --- Formatting helpers ---
+
 function formatTimingLatex(stats: TimingStats): string {
   if (stats.runs === 0) return '{---}';
   return `${stats.mean.toFixed(0)} +- ${stats.stddev.toFixed(0)}`;
 }
 
-/**
- * Format timing stats for Markdown.
- */
 function formatTimingMarkdown(stats: TimingStats): string {
   if (stats.runs === 0) return '—';
   return `${stats.mean.toFixed(1)} ± ${stats.stddev.toFixed(1)}`;
 }
 
-/**
- * Format memory stats with uncertainty for LaTeX (siunitx format).
- */
 function formatMemoryLatex(stats: MemoryStats | undefined): string {
   if (!stats || !stats.measured || stats.runs === 0) return '{---}';
   return `${stats.mean.toFixed(0)} +- ${stats.stddev.toFixed(0)}`;
 }
 
-/**
- * Format memory stats for Markdown.
- */
 function formatMemoryMarkdown(stats: MemoryStats | undefined): string {
   if (!stats || !stats.measured || stats.runs === 0) return '—';
   return `${stats.mean.toFixed(0)} ± ${stats.stddev.toFixed(0)}`;
 }
 
-/**
- * Format bytes for display (human-readable).
- */
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '—';
   if (bytes < 1024) return `${bytes}B`;
   return `${(bytes / 1024).toFixed(1)}KB`;
 }
 
-/**
- * Escape pattern name for LaTeX (underscores → \_).
- */
 function escapeLatex(name: string): string {
   return name.replace(/_/g, '\\_').replace(/@/g, ' @ ');
 }
 
-/**
- * Escape control characters for Markdown display.
- */
 function escapeForMarkdown(str: string): string {
   return str
     .replace(/\\/g, '\\\\')
@@ -77,9 +77,6 @@ function escapeForMarkdown(str: string): string {
     .replace(/`/g, '\\`');
 }
 
-/**
- * Escape special characters for LaTeX verbatim/texttt display.
- */
 function escapeLatexVerbatim(str: string): string {
   return str
     .replace(/\\/g, '\\textbackslash{}')
@@ -96,25 +93,34 @@ function escapeLatexVerbatim(str: string): string {
     .replace(/\n/g, '\\textbackslash{}n');
 }
 
-/**
- * Extract pattern name from key (removes @inputLength suffix).
- */
 function getPatternName(key: string): string {
   return key.split('@')[0];
 }
 
-/**
- * Extract input length from key.
- */
 function getInputLength(key: string): number {
   const parts = key.split('@');
   return parts.length > 1 ? parseInt(parts[1], 10) : 0;
 }
 
-/**
- * Group patterns by base pattern name for summary tables.
- * Returns only entries at the default input length (64 bytes).
- */
+// --- Data grouping helpers ---
+
+interface PatternDefMap {
+  [name: string]: PatternDefinition;
+}
+
+interface V1CompatEntry {
+  pattern: string;
+  v1CompilerResult: string;
+  v1CompilerPhase: string | null;
+  v1CompilerError: string | null;
+  circomCompileResult: string;
+  circomCompileError: string | null;
+  availableInV1: boolean;
+  notes: string;
+}
+
+const COMPLEXITY_ORDER: PatternComplexity[] = ['simple', 'medium', 'complex', 'v2-only'];
+
 function getDefaultInputPatterns(patterns: Record<string, PatternBenchmark>): [string, PatternBenchmark][] {
   return Object.entries(patterns)
     .filter(([key]) => key.endsWith('@64'))
@@ -122,9 +128,42 @@ function getDefaultInputPatterns(patterns: Record<string, PatternBenchmark>): [s
 }
 
 /**
- * Generate Markdown tables.
+ * Group default-input patterns by complexity level.
  */
-function generateMarkdown(results: BenchmarkResults): string {
+function groupByComplexity(
+  defaultPatterns: [string, PatternBenchmark][],
+  patternDefs: PatternDefMap,
+): Map<PatternComplexity, [string, PatternBenchmark][]> {
+  const groups = new Map<PatternComplexity, [string, PatternBenchmark][]>();
+  for (const level of COMPLEXITY_ORDER) {
+    groups.set(level, []);
+  }
+
+  for (const entry of defaultPatterns) {
+    const name = getPatternName(entry[0]);
+    const def = patternDefs[name];
+    const level = def?.complexity ?? 'complex';
+    groups.get(level)!.push(entry);
+  }
+
+  return groups;
+}
+
+/**
+ * Compute reduction percentage.
+ */
+function reductionPct(v1: number, v2: number): string {
+  if (!v1 || !v2) return '—';
+  return `${((1 - v2 / v1) * 100).toFixed(1)}%`;
+}
+
+// --- Markdown Generator ---
+
+function generateMarkdown(
+  results: BenchmarkResults,
+  patternDefs: PatternDefMap,
+  v1Compat: V1CompatEntry[],
+): string {
   const lines: string[] = [
     '# ZK-Regex Benchmark Results',
     '',
@@ -147,117 +186,176 @@ function generateMarkdown(results: BenchmarkResults): string {
     '',
   ];
 
-  // Pattern Definitions table
-  if (results.patternMetadata && Object.keys(results.patternMetadata).length > 0) {
+  // Pattern Definitions with complexity and features
+  const defEntries = Object.values(patternDefs).sort((a, b) => a.name.localeCompare(b.name));
+  if (defEntries.length > 0) {
     lines.push('## Pattern Definitions');
     lines.push('');
-    lines.push('| Pattern | Regex | Sample Input |');
-    lines.push('|---------|-------|--------------|');
+    lines.push('| Pattern | Complexity | Category | Features | Regex | Sample Input |');
+    lines.push('|---------|-----------|----------|----------|-------|--------------|');
 
-    const sortedPatterns = Object.entries(results.patternMetadata).sort(([a], [b]) => a.localeCompare(b));
-    for (const [pattern, meta] of sortedPatterns) {
-      const escapedRegex = escapeForMarkdown(meta.regex);
-      const escapedInput = escapeForMarkdown(meta.sampleInput);
-      lines.push(`| ${pattern} | \`${escapedRegex}\` | \`${escapedInput}\` |`);
+    for (const def of defEntries) {
+      const escapedRegex = escapeForMarkdown(def.regex);
+      const escapedInput = escapeForMarkdown(def.sampleInput);
+      const features = def.features.join(', ');
+      lines.push(`| ${def.name} | ${def.complexity} | ${def.category} | ${features} | \`${escapedRegex}\` | \`${escapedInput}\` |`);
     }
     lines.push('');
   }
 
-  // Table 1: Circuit Size Comparison - All Three Providers (64-byte input only)
+  // V1 vs V2 Comparison (PRIMARY) - grouped by complexity
   const defaultPatterns = getDefaultInputPatterns(results.patterns);
-  if (defaultPatterns.length > 0) {
-    lines.push('## Circuit Size Comparison (64-byte input)');
-    lines.push('');
-    lines.push('| Pattern | Circom v1 (DFA) | Circom v2 (NFA) | Noir v2 (UltraHonk) | v1→v2 Reduction |');
-    lines.push('|---------|-----------------|-----------------|---------------------|-----------------|');
+  const grouped = groupByComplexity(defaultPatterns, patternDefs);
 
-    for (const [key, data] of defaultPatterns) {
-      const name = getPatternName(key);
-      const v1 = data.v1Circom?.constraints ?? '—';
-      const v2 = data.v2Circom.constraints || '—';
-      const noir = data.v2Noir.backendGates || '—';
-      const reduction = data.v1Circom && data.v2Circom.constraints
-        ? `${((1 - data.v2Circom.constraints / data.v1Circom.constraints) * 100).toFixed(1)}%`
-        : '—';
-      lines.push(`| ${name} | ${v1} | ${v2} | ${noir} | ${reduction} |`);
-    }
+  if (defaultPatterns.length > 0) {
+    lines.push('## V1 vs V2 Comparison (64-byte input)');
     lines.push('');
+
+    for (const level of COMPLEXITY_ORDER) {
+      const entries = grouped.get(level)!;
+      // Only show patterns that have v1 data for comparison sections
+      const withV1 = entries.filter(([, data]) => data.v1Circom != null);
+      if (withV1.length === 0 && level !== 'v2-only') continue;
+      if (level === 'v2-only') continue; // V2-only gets its own section
+
+      lines.push(`### ${level.charAt(0).toUpperCase() + level.slice(1)} Patterns`);
+      lines.push('');
+      lines.push('| Pattern | V1 Constraints | V2 Constraints | Reduction | V1 Prove (ms) | V2 Prove (ms) |');
+      lines.push('|---------|----------------|----------------|-----------|---------------|---------------|');
+
+      for (const [key, data] of withV1) {
+        const name = getPatternName(key);
+        const v1c = data.v1Circom!.constraints;
+        const v2c = data.v2Circom.constraints;
+        lines.push(
+          `| ${name} | ${v1c} | ${v2c} | ${reductionPct(v1c, v2c)} | ${formatTimingMarkdown(data.v1Circom!.proveMs)} | ${formatTimingMarkdown(data.v2Circom.proveMs)} |`
+        );
+      }
+      lines.push('');
+    }
   }
 
-  // Table 2: Proving Time Comparison - All Three Providers (64-byte input only)
-  if (defaultPatterns.length > 0) {
-    lines.push('## Proving Time Comparison (64-byte input)');
+  // V1 Compatibility Analysis
+  if (v1Compat.length > 0) {
+    lines.push('## V1 Compatibility Analysis');
     lines.push('');
-    lines.push('| Pattern | Circom v1 (ms) | Circom v2 (ms) | Noir v2 (ms) |');
-    lines.push('|---------|----------------|----------------|--------------|');
+    lines.push('| Pattern | Complexity | V1 Compiler | Circom Compile | Failure Phase | Error Summary |');
+    lines.push('|---------|-----------|-------------|----------------|---------------|---------------|');
 
-    for (const [key, data] of defaultPatterns) {
-      const name = getPatternName(key);
-      const v1Prove = data.v1Circom ? formatTimingMarkdown(data.v1Circom.proveMs) : '—';
-      const v2Prove = data.v2Circom.proveMs.runs > 0
-        ? formatTimingMarkdown(data.v2Circom.proveMs)
-        : '—';
-      const noirProve = data.v2Noir.proveMs.runs > 0
-        ? formatTimingMarkdown(data.v2Noir.proveMs)
-        : '—';
-      lines.push(`| ${name} | ${v1Prove} | ${v2Prove} | ${noirProve} |`);
-    }
-    lines.push('');
-  }
-
-  // Table 3: Noir v2 Backend Details (64-byte input)
-  const patternsWithNoir = defaultPatterns.filter(([, data]) => data.v2Noir.backendGates > 0);
-  if (patternsWithNoir.length > 0) {
-    lines.push('## Noir v2 (UltraHonk) Backend Details (64-byte input)');
-    lines.push('');
-    lines.push('| Pattern | ACIR Opcodes | Backend Gates | Gates/Byte | Prove (ms) | Verify (ms) | Proof Size |');
-    lines.push('|---------|--------------|---------------|------------|------------|-------------|------------|');
-
-    for (const [key, data] of patternsWithNoir) {
-      const name = getPatternName(key);
-      const noir = data.v2Noir;
+    for (const entry of v1Compat) {
+      const def = patternDefs[entry.pattern];
+      const complexity = def?.complexity ?? '?';
+      const failPhase = entry.v1CompilerPhase ?? '—';
+      const errorSummary = entry.v1CompilerError ? entry.v1CompilerError.substring(0, 50) : '—';
       lines.push(
-        `| ${name} | ${noir.acirOpcodes} | ${noir.backendGates} | ${noir.gatesPerByte.toFixed(1)} | ${formatTimingMarkdown(noir.proveMs)} | ${formatTimingMarkdown(noir.verifyMs)} | ${formatBytes(noir.proofSizeBytes)} |`
+        `| ${entry.pattern} | ${complexity} | ${entry.v1CompilerResult} | ${entry.circomCompileResult} | ${failPhase} | ${errorSummary} |`
       );
     }
     lines.push('');
   }
 
-  // Table 4a: Scaling Circuit Size
+  // V2-Only Patterns (those without v1 data)
+  const v2OnlyPatterns = defaultPatterns.filter(([, data]) => data.v1Circom == null);
+  if (v2OnlyPatterns.length > 0) {
+    lines.push('## V2-Only Patterns');
+    lines.push('');
+    lines.push('| Pattern | V2 Constraints | V2 Prove (ms) | Noir Gates | Features |');
+    lines.push('|---------|----------------|---------------|------------|----------|');
+
+    for (const [key, data] of v2OnlyPatterns) {
+      const name = getPatternName(key);
+      const def = patternDefs[name];
+      const features = def?.features.join(', ') ?? '';
+      lines.push(
+        `| ${name} | ${data.v2Circom.constraints} | ${formatTimingMarkdown(data.v2Circom.proveMs)} | ${data.v2Noir.backendGates || '—'} | ${features} |`
+      );
+    }
+    lines.push('');
+  }
+
+  // Scaling Analysis by Complexity
   if (results.scaling.length > 0) {
     lines.push('## Scaling: Circuit Size by Input Length');
     lines.push('');
-    lines.push('| Pattern | Input (bytes) | Circom v1 R1CS | Circom v2 R1CS | Noir v2 Gates |');
-    lines.push('|---------|---------------|----------------|----------------|---------------|');
+    lines.push('| Pattern | Complexity | Input (bytes) | Circom v1 R1CS | Circom v2 R1CS | Noir v2 Gates |');
+    lines.push('|---------|-----------|---------------|----------------|----------------|---------------|');
 
     for (const point of results.scaling) {
+      const def = patternDefs[point.pattern];
+      const complexity = def?.complexity ?? '?';
       const v1R1CS = point.circomV1Constraints ?? '—';
       const v2R1CS = point.circomV2Constraints || '—';
       const noirGates = point.noirGates || '—';
       lines.push(
-        `| ${point.pattern} | ${point.inputLengthBytes} | ${v1R1CS} | ${v2R1CS} | ${noirGates} |`
+        `| ${point.pattern} | ${complexity} | ${point.inputLengthBytes} | ${v1R1CS} | ${v2R1CS} | ${noirGates} |`
       );
     }
     lines.push('');
 
-    // Table 4b: Scaling Proving Time
     lines.push('## Scaling: Proving Time by Input Length');
     lines.push('');
-    lines.push('| Pattern | Input (bytes) | Circom v1 (ms) | Circom v2 (ms) | Noir v2 (ms) |');
-    lines.push('|---------|---------------|----------------|----------------|--------------|');
+    lines.push('| Pattern | Complexity | Input (bytes) | Circom v1 (ms) | Circom v2 (ms) | Noir v2 (ms) |');
+    lines.push('|---------|-----------|---------------|----------------|----------------|--------------|');
 
     for (const point of results.scaling) {
+      const def = patternDefs[point.pattern];
+      const complexity = def?.complexity ?? '?';
       const v1Prove = point.circomV1ProveMs && point.circomV1ProveMs > 0 ? point.circomV1ProveMs.toFixed(0) : '—';
       const v2Prove = point.circomV2ProveMs > 0 ? point.circomV2ProveMs.toFixed(0) : '—';
       const noirProve = point.noirProveMs > 0 ? point.noirProveMs.toFixed(0) : '—';
       lines.push(
-        `| ${point.pattern} | ${point.inputLengthBytes} | ${v1Prove} | ${v2Prove} | ${noirProve} |`
+        `| ${point.pattern} | ${complexity} | ${point.inputLengthBytes} | ${v1Prove} | ${v2Prove} | ${noirProve} |`
       );
     }
     lines.push('');
   }
 
-  // Table 5: Memory Usage by Phase - Circom v2
+  // Summary Statistics
+  if (defaultPatterns.length > 0) {
+    lines.push('## Summary Statistics');
+    lines.push('');
+    lines.push('| Complexity | Patterns | Avg V1 Constraints | Avg V2 Constraints | Avg Reduction | Notes |');
+    lines.push('|-----------|----------|--------------------|--------------------|---------------|-------|');
+
+    for (const level of COMPLEXITY_ORDER) {
+      const entries = grouped.get(level)!;
+      if (entries.length === 0) continue;
+      const withV1 = entries.filter(([, d]) => d.v1Circom != null);
+      const avgV1 = withV1.length > 0
+        ? Math.round(withV1.reduce((s, [, d]) => s + d.v1Circom!.constraints, 0) / withV1.length)
+        : '—';
+      const avgV2 = Math.round(entries.reduce((s, [, d]) => s + d.v2Circom.constraints, 0) / entries.length);
+      const avgReduction = withV1.length > 0
+        ? ((1 - entries.reduce((s, [, d]) => s + d.v2Circom.constraints, 0) / withV1.reduce((s, [, d]) => s + d.v1Circom!.constraints, 0)) * 100).toFixed(1) + '%'
+        : '—';
+      const v2Only = entries.length - withV1.length;
+      const notes = v2Only > 0 ? `${v2Only} v2-only` : `${withV1.length} compared`;
+      lines.push(`| ${level} | ${entries.length} | ${avgV1} | ${avgV2} | ${avgReduction} | ${notes} |`);
+    }
+    lines.push('');
+  }
+
+  // Noir v2 Details (separate section)
+  const patternsWithNoir = defaultPatterns.filter(([, data]) => data.v2Noir.backendGates > 0);
+  if (patternsWithNoir.length > 0) {
+    lines.push('## Noir v2 (UltraHonk) Backend Details (64-byte input)');
+    lines.push('');
+    lines.push('| Pattern | Complexity | ACIR Opcodes | Backend Gates | Gates/Byte | Prove (ms) | Verify (ms) | Proof Size |');
+    lines.push('|---------|-----------|--------------|---------------|------------|------------|-------------|------------|');
+
+    for (const [key, data] of patternsWithNoir) {
+      const name = getPatternName(key);
+      const def = patternDefs[name];
+      const complexity = def?.complexity ?? '?';
+      const noir = data.v2Noir;
+      lines.push(
+        `| ${name} | ${complexity} | ${noir.acirOpcodes} | ${noir.backendGates} | ${noir.gatesPerByte.toFixed(1)} | ${formatTimingMarkdown(noir.proveMs)} | ${formatTimingMarkdown(noir.verifyMs)} | ${formatBytes(noir.proofSizeBytes)} |`
+      );
+    }
+    lines.push('');
+  }
+
+  // Memory Usage - Circom v2
   if (defaultPatterns.length > 0) {
     const patternsWithMemory = defaultPatterns.filter(
       ([, data]) => data.v2Circom.memoryByPhase?.prove?.measured
@@ -279,7 +377,7 @@ function generateMarkdown(results: BenchmarkResults): string {
     }
   }
 
-  // Table 6: Memory Usage by Phase - Noir v2
+  // Memory Usage - Noir v2
   if (defaultPatterns.length > 0) {
     const patternsWithMemory = defaultPatterns.filter(
       ([, data]) => data.v2Noir.memoryByPhase?.prove?.measured
@@ -304,10 +402,13 @@ function generateMarkdown(results: BenchmarkResults): string {
   return lines.join('\n');
 }
 
-/**
- * Generate LaTeX tables (booktabs + siunitx).
- */
-function generateLatex(results: BenchmarkResults): string {
+// --- LaTeX Generator ---
+
+function generateLatex(
+  results: BenchmarkResults,
+  patternDefs: PatternDefMap,
+  v1Compat: V1CompatEntry[],
+): string {
   const lines: string[] = [
     '% ZK-Regex Benchmark Tables',
     '% Requires: booktabs, siunitx, multirow packages',
@@ -315,24 +416,26 @@ function generateLatex(results: BenchmarkResults): string {
     '',
   ];
 
-  // Table 0: Pattern Definitions
-  if (results.patternMetadata && Object.keys(results.patternMetadata).length > 0) {
+  const defEntries = Object.values(patternDefs).sort((a, b) => a.name.localeCompare(b.name));
+  const defaultPatterns = getDefaultInputPatterns(results.patterns);
+  const grouped = groupByComplexity(defaultPatterns, patternDefs);
+
+  // Table 0: Pattern Definitions with complexity
+  if (defEntries.length > 0) {
     lines.push('% Table 0: Pattern Definitions');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
-    lines.push('\\caption{Pattern Definitions and Sample Inputs}');
+    lines.push('\\caption{Pattern Definitions with Complexity Classification}');
     lines.push('\\label{tab:patterns}');
-    lines.push('\\begin{tabular}{@{}lp{0.4\\textwidth}p{0.35\\textwidth}@{}}');
+    lines.push('\\begin{tabular}{@{}llllp{0.25\\textwidth}@{}}');
     lines.push('\\toprule');
-    lines.push('Pattern & Regex & Sample Input \\\\');
+    lines.push('Pattern & Complexity & Category & Features & Regex \\\\');
     lines.push('\\midrule');
 
-    const sortedPatterns = Object.entries(results.patternMetadata).sort(([a], [b]) => a.localeCompare(b));
-    for (const [pattern, meta] of sortedPatterns) {
-      const escapedPattern = escapeLatex(pattern);
-      const escapedRegex = escapeLatexVerbatim(meta.regex);
-      const escapedInput = escapeLatexVerbatim(meta.sampleInput);
-      lines.push(`${escapedPattern} & \\texttt{${escapedRegex}} & \\texttt{${escapedInput}} \\\\`);
+    for (const def of defEntries) {
+      const escapedRegex = escapeLatexVerbatim(def.regex);
+      const features = def.features.slice(0, 2).join(', ').replace(/_/g, '\\_');
+      lines.push(`${escapeLatex(def.name)} & ${def.complexity} & ${def.category} & ${features} & \\texttt{${escapedRegex}} \\\\`);
     }
 
     lines.push('\\bottomrule');
@@ -341,35 +444,42 @@ function generateLatex(results: BenchmarkResults): string {
     lines.push('');
   }
 
-  const defaultPatterns = getDefaultInputPatterns(results.patterns);
-
-  // Table 1: Circuit Size Comparison - All Three Providers
+  // Table 1: V1 vs V2 Comparison (PRIMARY) - grouped by complexity
   if (defaultPatterns.length > 0) {
-    lines.push('% Table 1: Circuit Size Comparison');
+    lines.push('% Table 1: V1 vs V2 Circuit Size Comparison (grouped by complexity)');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
-    lines.push('\\caption{Circuit Size Comparison: Circom v1 (DFA), Circom v2 (NFA), and Noir v2 (UltraHonk) at 64-byte input}');
-    lines.push('\\label{tab:circuit-size}');
+    lines.push('\\caption{V1 (DFA) vs V2 (NFA) Circuit Size Comparison at 64-byte input}');
+    lines.push('\\label{tab:v1v2-comparison}');
     lines.push('\\sisetup{');
     lines.push('  table-format = 6.0,');
     lines.push('  round-mode = places,');
     lines.push('  round-precision = 0,');
     lines.push('}');
-    lines.push('\\begin{tabular}{@{}l S S S S[table-format=2.1]@{}}');
+    lines.push('\\begin{tabular}{@{}ll S S S[table-format=2.1] S[table-format=4.0(2)] S[table-format=4.0(2)]@{}}');
     lines.push('\\toprule');
-    lines.push('Pattern & {Circom v1 (DFA)} & {Circom v2 (NFA)} & {Noir v2} & {v1$\\rightarrow$v2 (\\%)} \\\\');
+    lines.push('Complexity & Pattern & {V1 R1CS} & {V2 R1CS} & {Reduction (\\%)} & {V1 Prove (ms)} & {V2 Prove (ms)} \\\\');
     lines.push('\\midrule');
 
-    for (const [key, data] of defaultPatterns) {
-      const name = getPatternName(key);
-      const v1 = data.v1Circom?.constraints ?? '{---}';
-      const v2 = data.v2Circom.constraints || '{---}';
-      const noir = data.v2Noir.backendGates || '{---}';
-      const reduction = data.v1Circom && data.v2Circom.constraints
-        ? ((1 - data.v2Circom.constraints / data.v1Circom.constraints) * 100).toFixed(1)
-        : '{---}';
-      lines.push(`${escapeLatex(name)} & ${v1} & ${v2} & ${noir} & ${reduction} \\\\`);
+    for (const level of COMPLEXITY_ORDER) {
+      if (level === 'v2-only') continue;
+      const entries = grouped.get(level)!.filter(([, d]) => d.v1Circom != null);
+      if (entries.length === 0) continue;
+
+      for (let i = 0; i < entries.length; i++) {
+        const [key, data] = entries[i];
+        const name = getPatternName(key);
+        const levelCol = i === 0 ? level : '';
+        const v1c = data.v1Circom!.constraints;
+        const v2c = data.v2Circom.constraints;
+        const red = v1c > 0 ? ((1 - v2c / v1c) * 100).toFixed(1) : '{---}';
+        lines.push(`${levelCol} & ${escapeLatex(name)} & ${v1c} & ${v2c} & ${red} & ${formatTimingLatex(data.v1Circom!.proveMs)} & ${formatTimingLatex(data.v2Circom.proveMs)} \\\\`);
+      }
+      lines.push('\\addlinespace');
     }
+
+    // Remove last addlinespace
+    if (lines[lines.length - 1] === '\\addlinespace') lines.pop();
 
     lines.push('\\bottomrule');
     lines.push('\\end{tabular}');
@@ -377,31 +487,23 @@ function generateLatex(results: BenchmarkResults): string {
     lines.push('');
   }
 
-  // Table 2: Proving Time Comparison - All Three Providers
-  if (defaultPatterns.length > 0) {
-    lines.push('% Table 2: Proving Time Comparison');
+  // Table 2: V1 Compatibility Analysis
+  if (v1Compat.length > 0) {
+    lines.push('% Table 2: V1 Compatibility Analysis');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
-    lines.push('\\caption{Proving Time Comparison: Circom v1/v2 (Groth16) and Noir v2 (UltraHonk) at 64-byte input}');
-    lines.push('\\label{tab:proving}');
-    lines.push('\\sisetup{');
-    lines.push('  table-format = 4.0,');
-    lines.push('  separate-uncertainty = true,');
-    lines.push('}');
-    lines.push('\\begin{tabular}{@{}l');
-    lines.push('  S[table-format=4.0(2)]');
-    lines.push('  S[table-format=4.0(2)]');
-    lines.push('  S[table-format=4.0(2)]@{}}');
+    lines.push('\\caption{V1 DFA Compiler Compatibility Analysis}');
+    lines.push('\\label{tab:v1-compat}');
+    lines.push('\\begin{tabular}{@{}llllp{0.3\\textwidth}@{}}');
     lines.push('\\toprule');
-    lines.push('Pattern & {Circom v1 (ms)} & {Circom v2 (ms)} & {Noir v2 (ms)} \\\\');
+    lines.push('Pattern & Complexity & V1 Compiler & Circom & Notes \\\\');
     lines.push('\\midrule');
 
-    for (const [key, data] of defaultPatterns) {
-      const name = getPatternName(key);
-      const v1Prove = data.v1Circom ? formatTimingLatex(data.v1Circom.proveMs) : '{---}';
-      const v2Prove = data.v2Circom.proveMs.runs > 0 ? formatTimingLatex(data.v2Circom.proveMs) : '{---}';
-      const noirProve = data.v2Noir.proveMs.runs > 0 ? formatTimingLatex(data.v2Noir.proveMs) : '{---}';
-      lines.push(`${escapeLatex(name)} & ${v1Prove} & ${v2Prove} & ${noirProve} \\\\`);
+    for (const entry of v1Compat) {
+      const def = patternDefs[entry.pattern];
+      const complexity = def?.complexity ?? '?';
+      const notes = escapeLatexVerbatim(entry.notes.substring(0, 60));
+      lines.push(`${escapeLatex(entry.pattern)} & ${complexity} & ${entry.v1CompilerResult} & ${entry.circomCompileResult} & ${notes} \\\\`);
     }
 
     lines.push('\\bottomrule');
@@ -410,35 +512,23 @@ function generateLatex(results: BenchmarkResults): string {
     lines.push('');
   }
 
-  // Table 3: Noir v2 Backend Details
-  const patternsWithNoir = defaultPatterns.filter(([, data]) => data.v2Noir.backendGates > 0);
-  if (patternsWithNoir.length > 0) {
-    lines.push('% Table 3: Noir v2 (UltraHonk) Backend Details');
+  // Table 3: V2-Only patterns
+  const v2OnlyPatterns = defaultPatterns.filter(([, d]) => d.v1Circom == null);
+  if (v2OnlyPatterns.length > 0) {
+    lines.push('% Table 3: V2-Only Patterns');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
-    lines.push('\\caption{Noir v2 (UltraHonk) Backend Details at 64-byte input}');
-    lines.push('\\label{tab:noir-details}');
-    lines.push('\\sisetup{');
-    lines.push('  table-format = 5.0,');
-    lines.push('  separate-uncertainty = true,');
-    lines.push('}');
-    lines.push('\\begin{tabular}{@{}l');
-    lines.push('  S[table-format=5.0]');  // ACIR Opcodes
-    lines.push('  S[table-format=5.0]');  // Backend Gates
-    lines.push('  S[table-format=4.1]');  // Gates/Byte
-    lines.push('  S[table-format=3.0(2)]');  // Prove
-    lines.push('  S[table-format=3.0(2)]');  // Verify
-    lines.push('  S[table-format=5.0]@{}}');  // Proof Size
+    lines.push('\\caption{V2-Only Patterns (V1 DFA cannot compile)}');
+    lines.push('\\label{tab:v2-only}');
+    lines.push('\\sisetup{table-format = 5.0, separate-uncertainty = true}');
+    lines.push('\\begin{tabular}{@{}l S S[table-format=4.0(2)] S@{}}');
     lines.push('\\toprule');
-    lines.push('Pattern & {ACIR Opcodes} & {Backend Gates} & {Gates/Byte} & {Prove (ms)} & {Verify (ms)} & {Proof (B)} \\\\');
+    lines.push('Pattern & {V2 R1CS} & {V2 Prove (ms)} & {Noir Gates} \\\\');
     lines.push('\\midrule');
 
-    for (const [key, data] of patternsWithNoir) {
+    for (const [key, data] of v2OnlyPatterns) {
       const name = getPatternName(key);
-      const noir = data.v2Noir;
-      const proveMs = formatTimingLatex(noir.proveMs);
-      const verifyMs = formatTimingLatex(noir.verifyMs);
-      lines.push(`${escapeLatex(name)} & ${noir.acirOpcodes} & ${noir.backendGates} & ${noir.gatesPerByte.toFixed(1)} & ${proveMs} & ${verifyMs} & ${noir.proofSizeBytes} \\\\`);
+      lines.push(`${escapeLatex(name)} & ${data.v2Circom.constraints} & ${formatTimingLatex(data.v2Circom.proveMs)} & ${data.v2Noir.backendGates || '{---}'} \\\\`);
     }
 
     lines.push('\\bottomrule');
@@ -447,9 +537,8 @@ function generateLatex(results: BenchmarkResults): string {
     lines.push('');
   }
 
-  // Table 4a: Scaling Circuit Size
+  // Table 4: Scaling by input length
   if (results.scaling.length > 0) {
-    // Group scaling data by pattern for cleaner presentation
     const patternGroups = new Map<string, ScalingDataPoint[]>();
     for (const point of results.scaling) {
       if (!patternGroups.has(point.pattern)) {
@@ -458,37 +547,29 @@ function generateLatex(results: BenchmarkResults): string {
       patternGroups.get(point.pattern)!.push(point);
     }
 
-    lines.push('% Table 4a: Circuit Size Scaling by Input Length');
+    lines.push('% Table 4a: Circuit Size Scaling');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
     lines.push('\\caption{Circuit Size Scaling by Input Length}');
     lines.push('\\label{tab:scaling-size}');
-    lines.push('\\sisetup{');
-    lines.push('  table-format = 6.0,');
-    lines.push('}');
-    lines.push('\\begin{tabular}{@{}l');
-    lines.push('  S[table-format=3.0]');   // Input (bytes)
-    lines.push('  S[table-format=6.0]');   // Circom v1 R1CS
-    lines.push('  S[table-format=6.0]');   // Circom v2 R1CS
-    lines.push('  S[table-format=6.0]@{}}');   // Noir Gates
+    lines.push('\\sisetup{table-format = 6.0}');
+    lines.push('\\begin{tabular}{@{}ll S[table-format=3.0] S S S@{}}');
     lines.push('\\toprule');
-    lines.push('Pattern & {Input (B)} & {Circom v1 R1CS} & {Circom v2 R1CS} & {Noir v2 Gates} \\\\');
+    lines.push('Complexity & Pattern & {Input (B)} & {V1 R1CS} & {V2 R1CS} & {Noir Gates} \\\\');
     lines.push('\\midrule');
 
     for (const [pattern, points] of patternGroups) {
+      const def = patternDefs[pattern];
+      const complexity = def?.complexity ?? '?';
       for (let i = 0; i < points.length; i++) {
         const point = points[i];
+        const complexCol = i === 0 ? complexity : '';
         const patternCol = i === 0 ? escapeLatex(pattern) : '';
-        const v1R1CS = point.circomV1Constraints ?? '{---}';
-        const v2R1CS = point.circomV2Constraints || '{---}';
-        const noirGates = point.noirGates || '{---}';
-        lines.push(`${patternCol} & ${point.inputLengthBytes} & ${v1R1CS} & ${v2R1CS} & ${noirGates} \\\\`);
+        lines.push(`${complexCol} & ${patternCol} & ${point.inputLengthBytes} & ${point.circomV1Constraints ?? '{---}'} & ${point.circomV2Constraints || '{---}'} & ${point.noirGates || '{---}'} \\\\`);
       }
       lines.push('\\addlinespace');
     }
-
-    // Remove last addlinespace
-    lines.pop();
+    if (lines[lines.length - 1] === '\\addlinespace') lines.pop();
 
     lines.push('\\bottomrule');
     lines.push('\\end{tabular}');
@@ -496,65 +577,120 @@ function generateLatex(results: BenchmarkResults): string {
     lines.push('');
 
     // Table 4b: Proving Time Scaling
-    lines.push('% Table 4b: Proving Time Scaling by Input Length');
+    lines.push('% Table 4b: Proving Time Scaling');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
     lines.push('\\caption{Proving Time Scaling by Input Length}');
     lines.push('\\label{tab:scaling-time}');
-    lines.push('\\sisetup{');
-    lines.push('  table-format = 4.0,');
-    lines.push('}');
-    lines.push('\\begin{tabular}{@{}l');
-    lines.push('  S[table-format=3.0]');   // Input (bytes)
-    lines.push('  S[table-format=4.0]');   // Circom v1 Prove
-    lines.push('  S[table-format=4.0]');   // Circom v2 Prove
-    lines.push('  S[table-format=4.0]@{}}');  // Noir Prove
+    lines.push('\\sisetup{table-format = 4.0}');
+    lines.push('\\begin{tabular}{@{}ll S[table-format=3.0] S S S@{}}');
     lines.push('\\toprule');
-    lines.push('Pattern & {Input (B)} & {Circom v1 (ms)} & {Circom v2 (ms)} & {Noir v2 (ms)} \\\\');
+    lines.push('Complexity & Pattern & {Input (B)} & {V1 (ms)} & {V2 (ms)} & {Noir (ms)} \\\\');
     lines.push('\\midrule');
 
     for (const [pattern, points] of patternGroups) {
+      const def = patternDefs[pattern];
+      const complexity = def?.complexity ?? '?';
       for (let i = 0; i < points.length; i++) {
         const point = points[i];
+        const complexCol = i === 0 ? complexity : '';
         const patternCol = i === 0 ? escapeLatex(pattern) : '';
         const v1Prove = point.circomV1ProveMs && point.circomV1ProveMs > 0 ? point.circomV1ProveMs.toFixed(0) : '{---}';
         const v2Prove = point.circomV2ProveMs > 0 ? point.circomV2ProveMs.toFixed(0) : '{---}';
         const noirProve = point.noirProveMs > 0 ? point.noirProveMs.toFixed(0) : '{---}';
-        lines.push(`${patternCol} & ${point.inputLengthBytes} & ${v1Prove} & ${v2Prove} & ${noirProve} \\\\`);
+        lines.push(`${complexCol} & ${patternCol} & ${point.inputLengthBytes} & ${v1Prove} & ${v2Prove} & ${noirProve} \\\\`);
       }
       lines.push('\\addlinespace');
     }
-
-    // Remove last addlinespace
-    lines.pop();
+    if (lines[lines.length - 1] === '\\addlinespace') lines.pop();
 
     lines.push('\\bottomrule');
     lines.push('\\end{tabular}');
     lines.push('\\end{table}');
+    lines.push('');
   }
 
-  // Table 5: Memory Usage by Phase - Circom v2
+  // Table 5: Summary Statistics
+  if (defaultPatterns.length > 0) {
+    lines.push('% Table 5: Summary Statistics by Complexity');
+    lines.push('\\begin{table}[htbp]');
+    lines.push('\\centering');
+    lines.push('\\caption{Summary Statistics by Complexity Level at 64-byte input}');
+    lines.push('\\label{tab:summary}');
+    lines.push('\\sisetup{table-format = 6.0}');
+    lines.push('\\begin{tabular}{@{}l S[table-format=2.0] S S S[table-format=2.1]@{}}');
+    lines.push('\\toprule');
+    lines.push('Complexity & {Patterns} & {Avg V1 R1CS} & {Avg V2 R1CS} & {Avg Reduction (\\%)} \\\\');
+    lines.push('\\midrule');
+
+    for (const level of COMPLEXITY_ORDER) {
+      const entries = grouped.get(level)!;
+      if (entries.length === 0) continue;
+      const withV1 = entries.filter(([, d]) => d.v1Circom != null);
+      const avgV1 = withV1.length > 0
+        ? Math.round(withV1.reduce((s, [, d]) => s + d.v1Circom!.constraints, 0) / withV1.length)
+        : '{---}';
+      const avgV2 = Math.round(entries.reduce((s, [, d]) => s + d.v2Circom.constraints, 0) / entries.length);
+      const avgReduction = withV1.length > 0 && typeof avgV1 === 'number'
+        ? ((1 - avgV2 / avgV1) * 100).toFixed(1)
+        : '{---}';
+      lines.push(`${level} & ${entries.length} & ${avgV1} & ${avgV2} & ${avgReduction} \\\\`);
+    }
+
+    lines.push('\\bottomrule');
+    lines.push('\\end{tabular}');
+    lines.push('\\end{table}');
+    lines.push('');
+  }
+
+  // Table 6: Noir v2 Details (separate section)
+  const patternsWithNoir = defaultPatterns.filter(([, data]) => data.v2Noir.backendGates > 0);
+  if (patternsWithNoir.length > 0) {
+    lines.push('% Table 6: Noir v2 Backend Details');
+    lines.push('\\begin{table}[htbp]');
+    lines.push('\\centering');
+    lines.push('\\caption{Noir v2 (UltraHonk) Backend Details at 64-byte input}');
+    lines.push('\\label{tab:noir-details}');
+    lines.push('\\sisetup{table-format = 5.0, separate-uncertainty = true}');
+    lines.push('\\begin{tabular}{@{}ll');
+    lines.push('  S[table-format=5.0]');
+    lines.push('  S[table-format=5.0]');
+    lines.push('  S[table-format=4.1]');
+    lines.push('  S[table-format=3.0(2)]');
+    lines.push('  S[table-format=3.0(2)]');
+    lines.push('  S[table-format=5.0]@{}}');
+    lines.push('\\toprule');
+    lines.push('Complexity & Pattern & {ACIR} & {Gates} & {Gates/B} & {Prove (ms)} & {Verify (ms)} & {Proof (B)} \\\\');
+    lines.push('\\midrule');
+
+    for (const [key, data] of patternsWithNoir) {
+      const name = getPatternName(key);
+      const def = patternDefs[name];
+      const complexity = def?.complexity ?? '?';
+      const noir = data.v2Noir;
+      lines.push(`${complexity} & ${escapeLatex(name)} & ${noir.acirOpcodes} & ${noir.backendGates} & ${noir.gatesPerByte.toFixed(1)} & ${formatTimingLatex(noir.proveMs)} & ${formatTimingLatex(noir.verifyMs)} & ${noir.proofSizeBytes} \\\\`);
+    }
+
+    lines.push('\\bottomrule');
+    lines.push('\\end{tabular}');
+    lines.push('\\end{table}');
+    lines.push('');
+  }
+
+  // Table 7/8: Memory Usage
   const patternsWithCircomMemory = defaultPatterns.filter(
     ([, data]) => data.v2Circom.memoryByPhase?.prove?.measured
   );
   if (patternsWithCircomMemory.length > 0) {
-    lines.push('');
-    lines.push('% Table 5: Memory Usage by Phase - Circom v2');
+    lines.push('% Table 7: Memory Usage - Circom v2');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
     lines.push('\\caption{Memory Usage by Phase (MB) - Circom v2 at 64-byte input}');
     lines.push('\\label{tab:memory-circom}');
-    lines.push('\\sisetup{');
-    lines.push('  table-format = 4.0,');
-    lines.push('  separate-uncertainty = true,');
-    lines.push('}');
-    lines.push('\\begin{tabular}{@{}l');
-    lines.push('  S[table-format=4.0(2)]');  // Compile
-    lines.push('  S[table-format=4.0(2)]');  // WitnessGen
-    lines.push('  S[table-format=4.0(2)]');  // Prove
-    lines.push('  S[table-format=3.0(2)]@{}}');  // Verify
+    lines.push('\\sisetup{table-format = 4.0, separate-uncertainty = true}');
+    lines.push('\\begin{tabular}{@{}l S[table-format=4.0(2)] S[table-format=4.0(2)] S[table-format=4.0(2)] S[table-format=3.0(2)]@{}}');
     lines.push('\\toprule');
-    lines.push('Pattern & {Compile (MB)} & {WitnessGen (MB)} & {Prove (MB)} & {Verify (MB)} \\\\');
+    lines.push('Pattern & {Compile} & {WitnessGen} & {Prove} & {Verify} \\\\');
     lines.push('\\midrule');
 
     for (const [key, data] of patternsWithCircomMemory) {
@@ -568,28 +704,20 @@ function generateLatex(results: BenchmarkResults): string {
     lines.push('\\end{table}');
   }
 
-  // Table 6: Memory Usage by Phase - Noir v2
   const patternsWithNoirMemory = defaultPatterns.filter(
     ([, data]) => data.v2Noir.memoryByPhase?.prove?.measured
   );
   if (patternsWithNoirMemory.length > 0) {
     lines.push('');
-    lines.push('% Table 6: Memory Usage by Phase - Noir v2');
+    lines.push('% Table 8: Memory Usage - Noir v2');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
     lines.push('\\caption{Memory Usage by Phase (MB) - Noir v2 at 64-byte input}');
     lines.push('\\label{tab:memory-noir}');
-    lines.push('\\sisetup{');
-    lines.push('  table-format = 4.0,');
-    lines.push('  separate-uncertainty = true,');
-    lines.push('}');
-    lines.push('\\begin{tabular}{@{}l');
-    lines.push('  S[table-format=4.0(2)]');  // Compile
-    lines.push('  S[table-format=4.0(2)]');  // WitnessGen
-    lines.push('  S[table-format=4.0(2)]');  // Prove
-    lines.push('  S[table-format=3.0(2)]@{}}');  // Verify
+    lines.push('\\sisetup{table-format = 4.0, separate-uncertainty = true}');
+    lines.push('\\begin{tabular}{@{}l S[table-format=4.0(2)] S[table-format=4.0(2)] S[table-format=4.0(2)] S[table-format=3.0(2)]@{}}');
     lines.push('\\toprule');
-    lines.push('Pattern & {Compile (MB)} & {WitnessGen (MB)} & {Prove (MB)} & {Verify (MB)} \\\\');
+    lines.push('Pattern & {Compile} & {WitnessGen} & {Prove} & {Verify} \\\\');
     lines.push('\\midrule');
 
     for (const [key, data] of patternsWithNoirMemory) {
@@ -606,6 +734,34 @@ function generateLatex(results: BenchmarkResults): string {
   return lines.join('\n');
 }
 
+// --- Main ---
+
+async function loadPatternDefs(): Promise<PatternDefMap> {
+  try {
+    const content = await fs.readFile(PATTERNS_FILE, 'utf-8');
+    const data = JSON.parse(content);
+    const defs: PatternDefMap = {};
+    for (const p of data.patterns) {
+      defs[p.name] = p;
+    }
+    return defs;
+  } catch {
+    console.warn('Warning: Could not load patterns.json');
+    return {};
+  }
+}
+
+async function loadV1Compat(): Promise<V1CompatEntry[]> {
+  try {
+    const content = await fs.readFile(V1_COMPAT_FILE, 'utf-8');
+    const data = JSON.parse(content);
+    return data.patterns ?? [];
+  } catch {
+    console.warn('Warning: Could not load v1-compatibility.json');
+    return [];
+  }
+}
+
 async function main() {
   console.log('Generating output files...\n');
 
@@ -619,17 +775,21 @@ async function main() {
     process.exit(1);
   }
 
+  // Load pattern definitions and v1 compatibility data
+  const patternDefs = await loadPatternDefs();
+  const v1Compat = await loadV1Compat();
+
   // Ensure output directory exists
   await fs.mkdir(OUTPUT_DIR, { recursive: true });
 
   // Generate Markdown
-  const markdown = generateMarkdown(results);
+  const markdown = generateMarkdown(results, patternDefs, v1Compat);
   const mdPath = path.join(OUTPUT_DIR, 'results.md');
   await fs.writeFile(mdPath, markdown);
   console.log(`Generated: ${mdPath}`);
 
   // Generate LaTeX
-  const latex = generateLatex(results);
+  const latex = generateLatex(results, patternDefs, v1Compat);
   const texPath = path.join(OUTPUT_DIR, 'tables.tex');
   await fs.writeFile(texPath, latex);
   console.log(`Generated: ${texPath}`);
