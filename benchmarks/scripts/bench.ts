@@ -33,6 +33,7 @@ interface BenchmarkResult {
   provider: ProviderType;
   pattern: string;
   inputLengthBytes: number;
+  actualContentLength?: number;
   timestamp: string;
   metrics: BenchmarkMetrics;
 }
@@ -156,6 +157,9 @@ async function main() {
 
   // Parse arguments
   const { providers, patternFilter, noMemory } = parseArgs();
+  if (noMemory) {
+    process.env.BENCH_NO_MEMORY = '1';
+  }
   console.log(`Providers: ${providers.join(', ')}`);
   if (patternFilter) {
     console.log(`Pattern filter: ${patternFilter}`);
@@ -243,6 +247,7 @@ async function main() {
             provider: providerType,
             pattern: pattern.circuitName,
             inputLengthBytes: inputLength,
+            actualContentLength: pattern.inputTemplate ? inputLength : undefined,
             timestamp: new Date().toISOString(),
             metrics: result.value,
           };

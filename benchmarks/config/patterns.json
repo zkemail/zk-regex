@@ -12,7 +12,9 @@
       "category": "synthetic",
       "regex": "hello",
       "sampleInput": "say hello world to me",
-      "purpose": "Baseline: simplest possible pattern"
+      "purpose": "Baseline: simplest possible pattern",
+      "inputTemplate": "hello ",
+      "scalingStrategy": "repeat"
     },
     {
       "name": "char_class_basic",
@@ -24,7 +26,11 @@
       "category": "synthetic",
       "regex": "[a-z]+",
       "sampleInput": "test lowercase letters here",
-      "purpose": "Test character class handling"
+      "purpose": "Test character class handling",
+      "inputTemplate": "abcdefghijklmnopqrstuvwxyz",
+      "scalingStrategy": "extend",
+      "extendChar": "a",
+      "extendPosition": "end"
     },
     {
       "name": "simple_alternation",
@@ -36,7 +42,9 @@
       "category": "synthetic",
       "regex": "foo|bar|baz",
       "sampleInput": "choose foo or bar or baz",
-      "purpose": "Test alternation without groups"
+      "purpose": "Test alternation without groups",
+      "inputTemplate": "foo bar baz ",
+      "scalingStrategy": "repeat"
     },
     {
       "name": "quantified_alphanumeric",
@@ -48,7 +56,11 @@
       "category": "real-world",
       "regex": "[A-Za-z0-9_]+",
       "sampleInput": "user_name_123 is valid",
-      "purpose": "Common identifier matching pattern"
+      "purpose": "Common identifier matching pattern",
+      "inputTemplate": "user_name_123",
+      "scalingStrategy": "extend",
+      "extendChar": "x",
+      "extendPosition": "end"
     },
     {
       "name": "nested_noncapturing",
@@ -60,7 +72,9 @@
       "category": "synthetic",
       "regex": "(?:a(?:b|c)d)+",
       "sampleInput": "abdacdabd repeating",
-      "purpose": "Test nested group handling"
+      "purpose": "Test nested group handling",
+      "inputTemplate": "abdacd",
+      "scalingStrategy": "repeat"
     },
     {
       "name": "email_basic",
@@ -72,7 +86,9 @@
       "category": "real-world",
       "regex": "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}",
       "sampleInput": "contact test@example.com for info",
-      "purpose": "Real-world email validation; {2,} may challenge v1"
+      "purpose": "Real-world email validation; {2,} may challenge v1",
+      "inputTemplate": "a@b.co ",
+      "scalingStrategy": "repeat"
     },
     {
       "name": "fixed_range_quantifier",
@@ -84,7 +100,9 @@
       "category": "synthetic",
       "regex": "[a-z]{3}[0-9]{2,4}[A-Z]{1,2}",
       "sampleInput": "abc1234XY matches here",
-      "purpose": "Range quantifiers {n,m} often unsupported in v1"
+      "purpose": "Range quantifiers {n,m} often unsupported in v1",
+      "inputTemplate": "abc12X ",
+      "scalingStrategy": "repeat"
     },
     {
       "name": "complex_alternation_groups",
@@ -96,7 +114,9 @@
       "category": "real-world",
       "regex": "(?:https?|ftp)://(?:www\\.)?[a-z0-9.-]+\\.[a-z]{2,}",
       "sampleInput": "visit https://www.example.com today",
-      "purpose": "Complex real-world URL matching"
+      "purpose": "Complex real-world URL matching",
+      "inputTemplate": "https://a.co ",
+      "scalingStrategy": "repeat"
     },
     {
       "name": "body_hash",
@@ -108,7 +128,9 @@
       "category": "real-world",
       "regex": "(?:\\r\\n|^)dkim-signature:(?:[a-z]+=[^;]+; )+bh=[a-zA-Z0-9+/=]+;",
       "sampleInput": "dkim-signature:v=1; a=rsa-sha256; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=",
-      "purpose": "Primary comparison metric for complex patterns"
+      "purpose": "Primary comparison metric for complex patterns",
+      "inputTemplate": "\r\ndkim-signature:v=1; a=rsa-sha256; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=",
+      "scalingStrategy": "pad-with-match"
     },
     {
       "name": "email_addr",
@@ -120,7 +142,9 @@
       "category": "real-world",
       "regex": "(?:\\r\\n|^)to:(?:[^<]+<)?[a-zA-Z0-9!#$%&*+\\-/=?^_`{|}~.]+@[a-zA-Z0-9_.-]+>?\\r\\n",
       "sampleInput": "to:test@example.com\r\n",
-      "purpose": "Test capture group performance"
+      "purpose": "Test capture group performance",
+      "inputTemplate": "\r\nto:test@example.com\r\n",
+      "scalingStrategy": "pad-with-match"
     },
     {
       "name": "subject_all",
@@ -132,7 +156,9 @@
       "category": "real-world",
       "regex": "(?:\\r\\n|^)subject:[^\\r\\n]+\\r\\n",
       "sampleInput": "subject:Hello World\r\n",
-      "purpose": "Medium complexity real-world header"
+      "purpose": "Medium complexity real-world header",
+      "inputTemplate": "\r\nsubject:Hello World\r\n",
+      "scalingStrategy": "pad-with-match"
     },
     {
       "name": "simple",
@@ -144,7 +170,11 @@
       "category": "synthetic",
       "regex": "a*b",
       "sampleInput": "aaab",
-      "purpose": "Minimal baseline (6 transitions)"
+      "purpose": "Minimal baseline (6 transitions)",
+      "inputTemplate": "ab",
+      "scalingStrategy": "extend",
+      "extendChar": "a",
+      "extendPosition": "before-last"
     },
     {
       "name": "lazy_quantifier",
@@ -156,7 +186,9 @@
       "category": "synthetic",
       "regex": "<.*?>",
       "sampleInput": "<tag>content</tag> with HTML",
-      "purpose": "Lazy quantifiers require NFA; v1 DFA cannot represent"
+      "purpose": "Lazy quantifiers require NFA; v1 DFA cannot represent",
+      "inputTemplate": "<tag> ",
+      "scalingStrategy": "repeat"
     },
     {
       "name": "unbounded_range",
@@ -168,7 +200,11 @@
       "category": "synthetic",
       "regex": "[a-z]{3,}",
       "sampleInput": "abc abcdef abcdefghij",
-      "purpose": "Unbounded ranges often unsupported in v1 DFA"
+      "purpose": "Unbounded ranges often unsupported in v1 DFA",
+      "inputTemplate": "abcdefghij",
+      "scalingStrategy": "extend",
+      "extendChar": "a",
+      "extendPosition": "end"
     },
     {
       "name": "nested_quantified_groups",
@@ -180,7 +216,9 @@
       "category": "synthetic",
       "regex": "(?:[a-z]+[0-9]+)+",
       "sampleInput": "abc123def456ghi789",
-      "purpose": "Nested quantified groups cause DFA state explosion"
+      "purpose": "Nested quantified groups cause DFA state explosion",
+      "inputTemplate": "abc123",
+      "scalingStrategy": "repeat"
     }
   ]
 }

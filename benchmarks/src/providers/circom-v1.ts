@@ -31,6 +31,7 @@ import { getConstraintCount, groth16Setup, generateWitness, prove, verify, expor
 import { runHyperfine } from '../utils/hyperfine.js';
 import { measureAsync, calculateStats } from '../utils/timing.js';
 import { runWithMemoryTracking, defaultMemoryStats } from '../utils/memory.js';
+import { generateScaledInput } from '../utils/input-scaling.js';
 
 /**
  * Execute a shell command and return result.
@@ -368,33 +369,28 @@ component main {public [msg]} = ${templateName}(${inputLengthBytes});
   }
 
   /**
-   * Create padded input string for a pattern.
+   * Create input string for a pattern at target length.
+   *
+   * Uses scaled inputs that fill the target length with regex-matching
+   * content when the pattern has scaling config.
    */
   private createPaddedInput(pattern: PatternDefinition, targetLength: number): string {
-    // Use sample test strings based on pattern
-    const sampleInputs: Record<string, string> = {
-      body_hash_regex: 'dkim-signature:v=1; a=rsa-sha256; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=',
-      email_addr_regex: 'from:test@example.com\r\n',
-      subject_all_regex: 'subject:Hello World\r\n',
-      simple_regex: 'aaab',
-      literal_match_regex: 'say hello world to me',
-      char_class_basic_regex: 'test lowercase letters here',
-      simple_alternation_regex: 'choose foo or bar or baz',
-      quantified_alphanumeric_regex: 'user_name_123 is valid',
-      nested_noncapturing_regex: 'abdacdabd repeating',
-      email_basic_regex: 'contact test@example.com for info',
-      fixed_range_quantifier_regex: 'abc1234XY matches here',
-      complex_alternation_groups_regex: 'visit https://www.example.com today',
-      lazy_quantifier_regex: '<tag>content</tag> with HTML',
-      unbounded_range_regex: 'abc abcdef abcdefghij',
-      nested_quantified_groups_regex: 'abc123def456ghi789',
-    };
+    if (pattern.inputTemplate && pattern.scalingStrategy) {
+      return generateScaledInput(
+        {
+          strategy: pattern.scalingStrategy,
+          inputTemplate: pattern.inputTemplate,
+          extendChar: pattern.extendChar,
+          extendPosition: pattern.extendPosition,
+        },
+        targetLength
+      );
+    }
 
-    let input = sampleInputs[pattern.circuitName] ?? pattern.sampleInput ?? 'test input';
+    // Fallback for patterns without scaling config
+    let input = pattern.sampleInput ?? 'test input';
 
-    // Pad or truncate to target length
     if (input.length < targetLength) {
-      // Pad with spaces
       input = input + ' '.repeat(targetLength - input.length);
     } else if (input.length > targetLength) {
       input = input.slice(0, targetLength);

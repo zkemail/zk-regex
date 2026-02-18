@@ -152,6 +152,9 @@ export async function runHyperfine(
 
     return ok(stats);
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return err(errors.hyperfineFailed(command, 'Aborted'));
+    }
     return err(errors.hyperfineFailed(command, String(error)));
   } finally {
     // Clean up temp file

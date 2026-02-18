@@ -416,7 +416,9 @@ component main {public [inHaystack]} = ${templateName}(${maxHaystackBytes}, ${ma
    * Generate test input for a pattern using the compiler.
    *
    * Uses genCircuitInputs() from the compiler to generate proper
-   * NFA traversal inputs for the circuit.
+   * NFA traversal inputs for the circuit. When the pattern has scaling
+   * config, generates content that fills inputLengthBytes with
+   * regex-matching text.
    */
   private generateTestInput(
     pattern: PatternDefinition,
@@ -425,15 +427,29 @@ component main {public [inHaystack]} = ${templateName}(${maxHaystackBytes}, ${ma
     maxHaystackBytes: number,
     maxMatchBytes: number
   ): Record<string, unknown> {
-    // Sample test strings for each pattern - must match the regex definitions
-    const sampleInputs: Record<string, string> = {
-      body_hash_regex: '\r\ndkim-signature:v=1; a=rsa-sha256; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=',
-      email_addr_regex: '\r\nto:test@example.com\r\n',  // Uses 'to:' not 'from:'
-      subject_all_regex: '\r\nsubject:Hello World\r\n',  // Needs leading \r\n
-      simple_regex: 'b',
-    };
+    let haystack: string;
 
-    const haystack = sampleInputs[pattern.circuitName] ?? pattern.sampleInput ?? 'b';
+    if (pattern.inputTemplate && pattern.scalingStrategy) {
+      // Use scaled input that fills the target length with matching content
+      haystack = generateScaledInput(
+        {
+          strategy: pattern.scalingStrategy,
+          inputTemplate: pattern.inputTemplate,
+          extendChar: pattern.extendChar,
+          extendPosition: pattern.extendPosition,
+        },
+        inputLengthBytes
+      );
+    } else {
+      // Fallback to hardcoded samples for patterns without scaling config
+      const sampleInputs: Record<string, string> = {
+        body_hash_regex: '\r\ndkim-signature:v=1; a=rsa-sha256; bh=BWETwQ9JDReS4GyR2v2TTR8Bpzj9ayumsWQJ3q7vehs=; b=',
+        email_addr_regex: '\r\nto:test@example.com\r\n',
+        subject_all_regex: '\r\nsubject:Hello World\r\n',
+        simple_regex: 'b',
+      };
+      haystack = sampleInputs[pattern.circuitName] ?? pattern.sampleInput ?? 'b';
+    }
 
     // Use compiler to generate circuit inputs
     const inputsJson = genCircuitInputs(

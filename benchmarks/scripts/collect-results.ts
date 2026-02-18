@@ -10,11 +10,13 @@ import * as path from 'path';
 import type {
   BenchmarkResults,
   PatternBenchmark,
+  PatternDefinition,
   CircomMetrics,
   CircomV2Metrics,
   NoirMetrics,
   PatternMetadataEntry,
   ScalingDataPoint,
+  ScalingStrategy,
   TimingStats,
   PhaseMemory,
   MemoryStats,
@@ -24,6 +26,7 @@ import { getHardwareSpec, getToolVersions } from '../src/utils/hardware.js';
 const RESULTS_DIR = path.join(import.meta.dir, '..', 'results');
 const OUTPUT_FILE = path.join(RESULTS_DIR, 'comparison.json');
 const PROJECT_ROOT = path.join(import.meta.dir, '..', '..');
+const PATTERNS_FILE = path.join(import.meta.dir, '..', 'config', 'patterns.json');
 
 /**
  * Pattern metadata for display purposes.
@@ -42,6 +45,7 @@ interface RawResultFile {
   provider: 'circom-v1' | 'circom-v2' | 'noir-v2';
   pattern: string;
   inputLengthBytes: number;
+  actualContentLength?: number;
   timestamp: string;
   metrics: Record<string, unknown>;
 }
@@ -258,6 +262,24 @@ function displayResultsSummary(
   console.log('\n' + '='.repeat(60));
 }
 
+/**
+ * Load pattern definitions from patterns.json.
+ */
+async function loadPatternDefs(): Promise<Map<string, PatternDefinition>> {
+  const defs = new Map<string, PatternDefinition>();
+  try {
+    const content = await fs.readFile(PATTERNS_FILE, 'utf-8');
+    const data = JSON.parse(content);
+    for (const p of data.patterns) {
+      // Map by circuitName since result files use circuitName (e.g., "simple_regex")
+      defs.set(p.circuitName, p);
+    }
+  } catch {
+    console.warn('Warning: Could not load patterns.json for scaling metadata');
+  }
+  return defs;
+}
+
 async function main() {
   console.log('Collecting benchmark results...\n');
 
@@ -331,6 +353,9 @@ async function main() {
         break;
     }
   }
+
+  // Load pattern definitions for scaling metadata
+  const patternDefs = await loadPatternDefs();
 
   // Build PatternBenchmark entries
   // For the patterns record, we use a composite key: "{pattern}@{inputLength}"
@@ -424,9 +449,18 @@ async function main() {
 
     // Add scaling data point if we have enough data
     if (v2Circom.constraints > 0 || v2Noir.backendGates > 0 || v1Circom) {
+      // Get actual content length from raw results or pattern definition
+      const anyResult = entry.circomV2 ?? entry.noirV2 ?? entry.circomV1;
+      const def = patternDefs.get(entry.pattern);
+      const hasScaling = def?.inputTemplate && def?.scalingStrategy;
+      const actualContentLength = anyResult?.actualContentLength
+        ?? (hasScaling ? entry.inputLength : (def?.sampleInput?.length ?? 0));
+
       scaling.push({
         pattern: entry.pattern,
         inputLengthBytes: entry.inputLength,
+        actualContentLength,
+        scalingStrategy: def?.scalingStrategy as ScalingStrategy | undefined,
         circomV1Constraints: v1Circom?.constraints,
         circomV2Constraints: v2Circom.constraints,
         noirGates: v2Noir.backendGates,

@@ -123,6 +123,8 @@ export interface PatternBenchmark {
 export interface ScalingDataPoint {
   readonly pattern: string;
   readonly inputLengthBytes: number;
+  readonly actualContentLength: number;
+  readonly scalingStrategy?: ScalingStrategy;
   readonly circomV1Constraints?: number;
   readonly circomV2Constraints: number;
   readonly noirGates: number;
@@ -192,6 +194,19 @@ export type PatternCategory = 'synthetic' | 'real-world';
 /**
  * Pattern definition for benchmarking.
  */
+/**
+ * Strategy for scaling input content to fill target length.
+ */
+export type ScalingStrategy = 'repeat' | 'extend' | 'pad-with-match';
+
+/**
+ * Position for character extension in 'extend' strategy.
+ */
+export type ExtendPosition = 'before-last' | 'end';
+
+/**
+ * Pattern definition for benchmarking.
+ */
 export interface PatternDefinition {
   readonly name: string;
   readonly description: string;
@@ -202,6 +217,10 @@ export interface PatternDefinition {
   readonly category: PatternCategory;
   readonly regex: string;
   readonly sampleInput: string;
+  readonly inputTemplate?: string;
+  readonly scalingStrategy?: ScalingStrategy;
+  readonly extendChar?: string;
+  readonly extendPosition?: ExtendPosition;
 }
 
 /**

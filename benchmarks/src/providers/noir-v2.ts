@@ -357,13 +357,27 @@ zkregex = { path = "${this.projectRoot}/noir" }
   }
 
   /**
-   * Load pre-generated circuit input or generate a simple one.
+   * Load or generate circuit input for a pattern at a specific input length.
+   *
+   * When the pattern has scaling config, generates scaled content using
+   * generateScaledInput() and then uses the compiler to produce proper
+   * NFA traversal inputs. Falls back to pre-generated files when the
+   * compiler is unavailable.
    */
   private async loadOrGenerateInput(
     pattern: PatternDefinition,
     inputLengthBytes: number
   ): Promise<Result<NoirCircuitInput>> {
-    // Try to load a pre-generated input
+    // Try compiler-based generation with scaled inputs first
+    if (pattern.inputTemplate && pattern.scalingStrategy) {
+      const compilerResult = await this.generateInputWithCompiler(pattern, inputLengthBytes);
+      if (compilerResult.ok) {
+        return compilerResult;
+      }
+      console.log(`    Warning: Compiler input generation failed, falling back to pre-generated files`);
+    }
+
+    // Fallback: try to load a pre-generated input
     const inputDir = path.join(
       this.projectRoot,
       'noir',
@@ -372,7 +386,6 @@ zkregex = { path = "${this.projectRoot}/noir" }
       'circuit_inputs'
     );
 
-    // Pattern name without _regex suffix for input files
     const baseName = pattern.circuitName.replace('_regex', '');
 
     try {
@@ -388,21 +401,67 @@ zkregex = { path = "${this.projectRoot}/noir" }
         return ok(input);
       }
     } catch {
-      // Fall through to generate input
+      // Fall through to generate simple input
     }
 
-    // Generate a simple input if no pre-generated one exists
     return ok(this.generateSimpleInput(inputLengthBytes));
   }
 
   /**
-   * Generate a simple test input for benchmarking.
+   * Generate circuit input using the compiler with scaled content.
    */
-  private generateSimpleInput(inputLengthBytes: number): NoirCircuitInput {
-    // Use 300 as the default max length (matching the Noir templates)
+  private async generateInputWithCompiler(
+    pattern: PatternDefinition,
+    inputLengthBytes: number
+  ): Promise<Result<NoirCircuitInput>> {
     const maxLen = Math.max(300, inputLengthBytes);
 
-    // Create a simple 'b' input that matches a*b
+    // Generate scaled input content
+    const scaledInput = generateScaledInput(
+      {
+        strategy: pattern.scalingStrategy!,
+        inputTemplate: pattern.inputTemplate!,
+        extendChar: pattern.extendChar,
+        extendPosition: pattern.extendPosition,
+      },
+      inputLengthBytes
+    );
+
+    // Load graph JSON for this pattern
+    const baseName = pattern.circuitName.replace('_regex', '');
+    const graphPath = path.join(
+      this.projectRoot,
+      'circom',
+      'circuits',
+      'common',
+      `${baseName}_graph.json`
+    );
+
+    try {
+      const graphJson = await fs.readFile(graphPath, 'utf-8');
+      const inputsJson = genCircuitInputs(
+        graphJson,
+        scaledInput,
+        maxLen,
+        maxLen,
+        ProvingFramework.Noir
+      );
+      const inputs = JSON.parse(inputsJson) as NoirCircuitInput;
+      return ok(inputs);
+    } catch (error) {
+      return err(errors.compilationFailed(
+        pattern.circuitName,
+        `Compiler input generation failed: ${error}`
+      ));
+    }
+  }
+
+  /**
+   * Generate a simple test input for benchmarking (fallback).
+   */
+  private generateSimpleInput(inputLengthBytes: number): NoirCircuitInput {
+    const maxLen = Math.max(300, inputLengthBytes);
+
     const haystack = new Array(maxLen).fill(0);
     haystack[0] = 98; // 'b'
 

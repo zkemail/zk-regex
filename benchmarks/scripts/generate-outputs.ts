@@ -187,18 +187,20 @@ function generateMarkdown(
   ];
 
   // Pattern Definitions with complexity and features
-  const defEntries = Object.values(patternDefs).sort((a, b) => a.name.localeCompare(b.name));
+  const defEntries = [...new Map(Object.values(patternDefs).map(d => [d.name, d])).values()]
+    .sort((a, b) => a.name.localeCompare(b.name));
   if (defEntries.length > 0) {
     lines.push('## Pattern Definitions');
     lines.push('');
-    lines.push('| Pattern | Complexity | Category | Features | Regex | Sample Input |');
-    lines.push('|---------|-----------|----------|----------|-------|--------------|');
+    lines.push('| Pattern | Complexity | Category | Scaling | Features | Regex | Sample Input |');
+    lines.push('|---------|-----------|----------|---------|----------|-------|--------------|');
 
     for (const def of defEntries) {
       const escapedRegex = escapeForMarkdown(def.regex);
       const escapedInput = escapeForMarkdown(def.sampleInput);
       const features = def.features.join(', ');
-      lines.push(`| ${def.name} | ${def.complexity} | ${def.category} | ${features} | \`${escapedRegex}\` | \`${escapedInput}\` |`);
+      const scaling = def.scalingStrategy ?? '—';
+      lines.push(`| ${def.name} | ${def.complexity} | ${def.category} | ${scaling} | ${features} | \`${escapedRegex}\` | \`${escapedInput}\` |`);
     }
     lines.push('');
   }
@@ -275,10 +277,51 @@ function generateMarkdown(
 
   // Scaling Analysis by Complexity
   if (results.scaling.length > 0) {
+    lines.push('## Scaling Methodology');
+    lines.push('');
+    lines.push('For each input length, the actual input fed to the circuit is filled with');
+    lines.push('**regex-matching content** (not zero-padded short samples). This ensures');
+    lines.push('benchmarks measure the cost of real regex work at each size, not just');
+    lines.push('circuit overhead for unused capacity.');
+    lines.push('');
+    lines.push('Three content-scaling strategies are used per pattern:');
+    lines.push('');
+    lines.push('- **repeat**: Template string is tiled to fill the target length (e.g., `"hello "` repeated)');
+    lines.push('- **extend**: A variable-length match portion grows (e.g., `a*b` becomes `aaa...ab`)');
+    lines.push('- **pad-with-match**: Anchored template is placed at start, rest filled with safe filler');
+    lines.push('');
+
+    lines.push('### Input Scaling per Pattern');
+    lines.push('');
+    lines.push('| Pattern | Strategy | Template | Content at 64B | Content at 512B |');
+    lines.push('|---------|----------|----------|----------------|-----------------|');
+
+    // Show unique patterns with their scaling strategy
+    const seenPatterns = new Set<string>();
+    for (const point of results.scaling) {
+      if (seenPatterns.has(point.pattern)) continue;
+      seenPatterns.add(point.pattern);
+
+      const def = patternDefs[point.pattern];
+      const strategy = point.scalingStrategy ?? def?.scalingStrategy ?? '—';
+      const template = def?.inputTemplate
+        ? '`' + escapeForMarkdown(def.inputTemplate.length > 25 ? def.inputTemplate.slice(0, 22) + '...' : def.inputTemplate) + '`'
+        : '—';
+
+      // Find data points for this pattern at 64 and 512
+      const at64 = results.scaling.find(p => p.pattern === point.pattern && p.inputLengthBytes === 64);
+      const at512 = results.scaling.find(p => p.pattern === point.pattern && p.inputLengthBytes === 512);
+      const content64 = at64 ? `${at64.actualContentLength}B` : '—';
+      const content512 = at512 ? `${at512.actualContentLength}B` : '—';
+
+      lines.push(`| ${point.pattern} | ${strategy} | ${template} | ${content64} | ${content512} |`);
+    }
+    lines.push('');
+
     lines.push('## Scaling: Circuit Size by Input Length');
     lines.push('');
-    lines.push('| Pattern | Complexity | Input (bytes) | Circom v1 R1CS | Circom v2 R1CS | Noir v2 Gates |');
-    lines.push('|---------|-----------|---------------|----------------|----------------|---------------|');
+    lines.push('| Pattern | Complexity | Input (bytes) | Content (bytes) | Circom v1 R1CS | Circom v2 R1CS | Noir v2 Gates |');
+    lines.push('|---------|-----------|---------------|-----------------|----------------|----------------|---------------|');
 
     for (const point of results.scaling) {
       const def = patternDefs[point.pattern];
@@ -287,15 +330,15 @@ function generateMarkdown(
       const v2R1CS = point.circomV2Constraints || '—';
       const noirGates = point.noirGates || '—';
       lines.push(
-        `| ${point.pattern} | ${complexity} | ${point.inputLengthBytes} | ${v1R1CS} | ${v2R1CS} | ${noirGates} |`
+        `| ${point.pattern} | ${complexity} | ${point.inputLengthBytes} | ${point.actualContentLength} | ${v1R1CS} | ${v2R1CS} | ${noirGates} |`
       );
     }
     lines.push('');
 
     lines.push('## Scaling: Proving Time by Input Length');
     lines.push('');
-    lines.push('| Pattern | Complexity | Input (bytes) | Circom v1 (ms) | Circom v2 (ms) | Noir v2 (ms) |');
-    lines.push('|---------|-----------|---------------|----------------|----------------|--------------|');
+    lines.push('| Pattern | Complexity | Input (bytes) | Content (bytes) | Circom v1 (ms) | Circom v2 (ms) | Noir v2 (ms) |');
+    lines.push('|---------|-----------|---------------|-----------------|----------------|----------------|--------------|');
 
     for (const point of results.scaling) {
       const def = patternDefs[point.pattern];
@@ -304,7 +347,7 @@ function generateMarkdown(
       const v2Prove = point.circomV2ProveMs > 0 ? point.circomV2ProveMs.toFixed(0) : '—';
       const noirProve = point.noirProveMs > 0 ? point.noirProveMs.toFixed(0) : '—';
       lines.push(
-        `| ${point.pattern} | ${complexity} | ${point.inputLengthBytes} | ${v1Prove} | ${v2Prove} | ${noirProve} |`
+        `| ${point.pattern} | ${complexity} | ${point.inputLengthBytes} | ${point.actualContentLength} | ${v1Prove} | ${v2Prove} | ${noirProve} |`
       );
     }
     lines.push('');
@@ -355,11 +398,37 @@ function generateMarkdown(
     lines.push('');
   }
 
+  // Memory Usage - Circom v1
+  if (defaultPatterns.length > 0) {
+    const patternsWithMemory = defaultPatterns.filter(([, data]) => {
+      const mem = data.v1Circom?.memoryByPhase;
+      return mem?.compile?.measured || mem?.witnessGen?.measured ||
+             mem?.prove?.measured || mem?.verify?.measured;
+    });
+    if (patternsWithMemory.length > 0) {
+      lines.push('## Memory Usage by Phase (MB) - Circom v1');
+      lines.push('');
+      lines.push('| Pattern | Compile | WitnessGen | Prove | Verify |');
+      lines.push('|---------|---------|------------|-------|--------|');
+
+      for (const [key, data] of patternsWithMemory) {
+        const name = getPatternName(key);
+        const mem = data.v1Circom!.memoryByPhase;
+        lines.push(
+          `| ${name} | ${formatMemoryMarkdown(mem?.compile)} | ${formatMemoryMarkdown(mem?.witnessGen)} | ${formatMemoryMarkdown(mem?.prove)} | ${formatMemoryMarkdown(mem?.verify)} |`
+        );
+      }
+      lines.push('');
+    }
+  }
+
   // Memory Usage - Circom v2
   if (defaultPatterns.length > 0) {
-    const patternsWithMemory = defaultPatterns.filter(
-      ([, data]) => data.v2Circom.memoryByPhase?.prove?.measured
-    );
+    const patternsWithMemory = defaultPatterns.filter(([, data]) => {
+      const mem = data.v2Circom.memoryByPhase;
+      return mem?.compile?.measured || mem?.witnessGen?.measured ||
+             mem?.prove?.measured || mem?.verify?.measured;
+    });
     if (patternsWithMemory.length > 0) {
       lines.push('## Memory Usage by Phase (MB) - Circom v2');
       lines.push('');
@@ -379,9 +448,11 @@ function generateMarkdown(
 
   // Memory Usage - Noir v2
   if (defaultPatterns.length > 0) {
-    const patternsWithMemory = defaultPatterns.filter(
-      ([, data]) => data.v2Noir.memoryByPhase?.prove?.measured
-    );
+    const patternsWithMemory = defaultPatterns.filter(([, data]) => {
+      const mem = data.v2Noir.memoryByPhase;
+      return mem?.compile?.measured || mem?.witnessGen?.measured ||
+             mem?.prove?.measured || mem?.verify?.measured;
+    });
     if (patternsWithMemory.length > 0) {
       lines.push('## Memory Usage by Phase (MB) - Noir v2');
       lines.push('');
@@ -416,7 +487,8 @@ function generateLatex(
     '',
   ];
 
-  const defEntries = Object.values(patternDefs).sort((a, b) => a.name.localeCompare(b.name));
+  const defEntries = [...new Map(Object.values(patternDefs).map(d => [d.name, d])).values()]
+    .sort((a, b) => a.name.localeCompare(b.name));
   const defaultPatterns = getDefaultInputPatterns(results.patterns);
   const grouped = groupByComplexity(defaultPatterns, patternDefs);
 
@@ -425,17 +497,18 @@ function generateLatex(
     lines.push('% Table 0: Pattern Definitions');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
-    lines.push('\\caption{Pattern Definitions with Complexity Classification}');
+    lines.push('\\caption{Pattern Definitions with Complexity Classification and Input Scaling Strategy}');
     lines.push('\\label{tab:patterns}');
-    lines.push('\\begin{tabular}{@{}llllp{0.25\\textwidth}@{}}');
+    lines.push('\\begin{tabular}{@{}lllllp{0.2\\textwidth}@{}}');
     lines.push('\\toprule');
-    lines.push('Pattern & Complexity & Category & Features & Regex \\\\');
+    lines.push('Pattern & Complexity & Category & Scaling & Features & Regex \\\\');
     lines.push('\\midrule');
 
     for (const def of defEntries) {
       const escapedRegex = escapeLatexVerbatim(def.regex);
       const features = def.features.slice(0, 2).join(', ').replace(/_/g, '\\_');
-      lines.push(`${escapeLatex(def.name)} & ${def.complexity} & ${def.category} & ${features} & \\texttt{${escapedRegex}} \\\\`);
+      const scaling = def.scalingStrategy ?? '---';
+      lines.push(`${escapeLatex(def.name)} & ${def.complexity} & ${def.category} & ${scaling} & ${features} & \\texttt{${escapedRegex}} \\\\`);
     }
 
     lines.push('\\bottomrule');
@@ -548,14 +621,17 @@ function generateLatex(
     }
 
     lines.push('% Table 4a: Circuit Size Scaling');
+    lines.push('% Note: "Content (B)" shows actual regex-matching bytes fed to the circuit.');
+    lines.push('% Unlike zero-padded benchmarks, content fills the full input capacity.');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
-    lines.push('\\caption{Circuit Size Scaling by Input Length}');
+    lines.push('\\caption{Circuit Size Scaling by Input Length. Content column shows');
+    lines.push('bytes of regex-matching text (not zero-padded).}');
     lines.push('\\label{tab:scaling-size}');
     lines.push('\\sisetup{table-format = 6.0}');
-    lines.push('\\begin{tabular}{@{}ll S[table-format=3.0] S S S@{}}');
+    lines.push('\\begin{tabular}{@{}ll S[table-format=3.0] S[table-format=3.0] S S S@{}}');
     lines.push('\\toprule');
-    lines.push('Complexity & Pattern & {Input (B)} & {V1 R1CS} & {V2 R1CS} & {Noir Gates} \\\\');
+    lines.push('Complexity & Pattern & {Capacity (B)} & {Content (B)} & {V1 R1CS} & {V2 R1CS} & {Noir Gates} \\\\');
     lines.push('\\midrule');
 
     for (const [pattern, points] of patternGroups) {
@@ -565,7 +641,7 @@ function generateLatex(
         const point = points[i];
         const complexCol = i === 0 ? complexity : '';
         const patternCol = i === 0 ? escapeLatex(pattern) : '';
-        lines.push(`${complexCol} & ${patternCol} & ${point.inputLengthBytes} & ${point.circomV1Constraints ?? '{---}'} & ${point.circomV2Constraints || '{---}'} & ${point.noirGates || '{---}'} \\\\`);
+        lines.push(`${complexCol} & ${patternCol} & ${point.inputLengthBytes} & ${point.actualContentLength} & ${point.circomV1Constraints ?? '{---}'} & ${point.circomV2Constraints || '{---}'} & ${point.noirGates || '{---}'} \\\\`);
       }
       lines.push('\\addlinespace');
     }
@@ -580,12 +656,13 @@ function generateLatex(
     lines.push('% Table 4b: Proving Time Scaling');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
-    lines.push('\\caption{Proving Time Scaling by Input Length}');
+    lines.push('\\caption{Proving Time Scaling by Input Length. Content column shows');
+    lines.push('bytes of regex-matching text (not zero-padded).}');
     lines.push('\\label{tab:scaling-time}');
     lines.push('\\sisetup{table-format = 4.0}');
-    lines.push('\\begin{tabular}{@{}ll S[table-format=3.0] S S S@{}}');
+    lines.push('\\begin{tabular}{@{}ll S[table-format=3.0] S[table-format=3.0] S S S@{}}');
     lines.push('\\toprule');
-    lines.push('Complexity & Pattern & {Input (B)} & {V1 (ms)} & {V2 (ms)} & {Noir (ms)} \\\\');
+    lines.push('Complexity & Pattern & {Capacity (B)} & {Content (B)} & {V1 (ms)} & {V2 (ms)} & {Noir (ms)} \\\\');
     lines.push('\\midrule');
 
     for (const [pattern, points] of patternGroups) {
@@ -598,7 +675,7 @@ function generateLatex(
         const v1Prove = point.circomV1ProveMs && point.circomV1ProveMs > 0 ? point.circomV1ProveMs.toFixed(0) : '{---}';
         const v2Prove = point.circomV2ProveMs > 0 ? point.circomV2ProveMs.toFixed(0) : '{---}';
         const noirProve = point.noirProveMs > 0 ? point.noirProveMs.toFixed(0) : '{---}';
-        lines.push(`${complexCol} & ${patternCol} & ${point.inputLengthBytes} & ${v1Prove} & ${v2Prove} & ${noirProve} \\\\`);
+        lines.push(`${complexCol} & ${patternCol} & ${point.inputLengthBytes} & ${point.actualContentLength} & ${v1Prove} & ${v2Prove} & ${noirProve} \\\\`);
       }
       lines.push('\\addlinespace');
     }
@@ -677,12 +754,44 @@ function generateLatex(
     lines.push('');
   }
 
-  // Table 7/8: Memory Usage
-  const patternsWithCircomMemory = defaultPatterns.filter(
-    ([, data]) => data.v2Circom.memoryByPhase?.prove?.measured
-  );
+  // Table 7: Memory Usage - Circom v1
+  const patternsWithCircomV1Memory = defaultPatterns.filter(([, data]) => {
+    const mem = data.v1Circom?.memoryByPhase;
+    return mem?.compile?.measured || mem?.witnessGen?.measured ||
+           mem?.prove?.measured || mem?.verify?.measured;
+  });
+  if (patternsWithCircomV1Memory.length > 0) {
+    lines.push('% Table 7: Memory Usage - Circom v1');
+    lines.push('\\begin{table}[htbp]');
+    lines.push('\\centering');
+    lines.push('\\caption{Memory Usage by Phase (MB) - Circom v1 at 64-byte input}');
+    lines.push('\\label{tab:memory-circom-v1}');
+    lines.push('\\sisetup{table-format = 4.0, separate-uncertainty = true}');
+    lines.push('\\begin{tabular}{@{}l S[table-format=4.0(2)] S[table-format=4.0(2)] S[table-format=4.0(2)] S[table-format=3.0(2)]@{}}');
+    lines.push('\\toprule');
+    lines.push('Pattern & {Compile} & {WitnessGen} & {Prove} & {Verify} \\\\');
+    lines.push('\\midrule');
+
+    for (const [key, data] of patternsWithCircomV1Memory) {
+      const name = getPatternName(key);
+      const mem = data.v1Circom!.memoryByPhase;
+      lines.push(`${escapeLatex(name)} & ${formatMemoryLatex(mem?.compile)} & ${formatMemoryLatex(mem?.witnessGen)} & ${formatMemoryLatex(mem?.prove)} & ${formatMemoryLatex(mem?.verify)} \\\\`);
+    }
+
+    lines.push('\\bottomrule');
+    lines.push('\\end{tabular}');
+    lines.push('\\end{table}');
+    lines.push('');
+  }
+
+  // Table 8: Memory Usage - Circom v2
+  const patternsWithCircomMemory = defaultPatterns.filter(([, data]) => {
+    const mem = data.v2Circom.memoryByPhase;
+    return mem?.compile?.measured || mem?.witnessGen?.measured ||
+           mem?.prove?.measured || mem?.verify?.measured;
+  });
   if (patternsWithCircomMemory.length > 0) {
-    lines.push('% Table 7: Memory Usage - Circom v2');
+    lines.push('% Table 8: Memory Usage - Circom v2');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
     lines.push('\\caption{Memory Usage by Phase (MB) - Circom v2 at 64-byte input}');
@@ -704,12 +813,15 @@ function generateLatex(
     lines.push('\\end{table}');
   }
 
-  const patternsWithNoirMemory = defaultPatterns.filter(
-    ([, data]) => data.v2Noir.memoryByPhase?.prove?.measured
-  );
+  // Table 9: Memory Usage - Noir v2
+  const patternsWithNoirMemory = defaultPatterns.filter(([, data]) => {
+    const mem = data.v2Noir.memoryByPhase;
+    return mem?.compile?.measured || mem?.witnessGen?.measured ||
+           mem?.prove?.measured || mem?.verify?.measured;
+  });
   if (patternsWithNoirMemory.length > 0) {
     lines.push('');
-    lines.push('% Table 8: Memory Usage - Noir v2');
+    lines.push('% Table 9: Memory Usage - Noir v2');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
     lines.push('\\caption{Memory Usage by Phase (MB) - Noir v2 at 64-byte input}');
@@ -742,7 +854,9 @@ async function loadPatternDefs(): Promise<PatternDefMap> {
     const data = JSON.parse(content);
     const defs: PatternDefMap = {};
     for (const p of data.patterns) {
+      // Key by both name and circuitName since result files use circuitName
       defs[p.name] = p;
+      defs[p.circuitName] = p;
     }
     return defs;
   } catch {

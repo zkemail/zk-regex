@@ -80,6 +80,24 @@
           "purpose": {
             "type": "string",
             "description": "Optional purpose/rationale for including this pattern"
+          },
+          "inputTemplate": {
+            "type": "string",
+            "description": "Short string that matches the regex and can be scaled to fill target input lengths"
+          },
+          "scalingStrategy": {
+            "type": "string",
+            "enum": ["repeat", "extend", "pad-with-match"],
+            "description": "Strategy for scaling inputTemplate to target length: repeat (tile), extend (grow match), pad-with-match (template + filler)"
+          },
+          "extendChar": {
+            "type": "string",
+            "description": "Character to repeat when using 'extend' strategy"
+          },
+          "extendPosition": {
+            "type": "string",
+            "enum": ["before-last", "end"],
+            "description": "Where to insert extension characters: before-last (insert before final char) or end (append)"
           }
         },
         "additionalProperties": false
