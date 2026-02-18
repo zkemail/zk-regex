@@ -9,6 +9,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import type { Result } from '../errors.js';
 import { ok, err, errors } from '../errors.js';
+import { getAbortSignal } from './abort.js';
 
 /**
  * Get the constraint count from an R1CS file using CLI.
@@ -66,6 +67,7 @@ async function execCommand(
       stdout: 'pipe',
       stderr: 'pipe',
       env: { ...process.env, PATH: cleanPath },
+      signal: getAbortSignal(),
     });
 
     const stdout = await new Response(proc.stdout).text();
@@ -78,6 +80,9 @@ async function execCommand(
 
     return ok(stdout.trim());
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return err(errors.compilationFailed(command, 'Aborted'));
+    }
     return err(errors.compilationFailed(command, String(error)));
   }
 }

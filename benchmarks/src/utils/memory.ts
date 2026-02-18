@@ -10,6 +10,7 @@ import * as os from 'os';
 import * as path from 'path';
 import type { TimingStats } from '../types.js';
 import { calculateStats } from './timing.js';
+import { getAbortSignal, isAborted } from './abort.js';
 
 /**
  * Detected platform type for memory profiling.
@@ -162,6 +163,7 @@ async function runSingleWithMemory(
       cwd: options.cwd,
       stdout: 'pipe',
       stderr: 'pipe',
+      signal: getAbortSignal(),
     });
 
     const stdout = await new Response(proc.stdout).text();
@@ -187,6 +189,11 @@ async function runSingleWithMemory(
       stdout,
       stderr: commandStderr,
     };
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') {
+      return null;
+    }
+    throw e;
   } finally {
     // Clean up temp file
     try {
@@ -256,6 +263,7 @@ export async function runWithMemoryTracking(
   const memories: number[] = [];
 
   for (let i = 0; i < runs; i++) {
+    if (isAborted()) break;
     const result = await runSingleWithMemory(command, {
       cwd: options.cwd,
       timeoutMs: options.timeoutMs,

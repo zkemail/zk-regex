@@ -24,7 +24,8 @@ import { CircomV1Provider } from '../src/providers/circom-v1.js';
 import { CircomV2Provider } from '../src/providers/circom-v2.js';
 import { NoirV2Provider } from '../src/providers/noir-v2.js';
 import { getHardwareSpec, getToolVersions, verifyDependencies } from '../src/utils/hardware.js';
-import { registerCleanupHandler } from '../src/utils/worktree.js';
+import { cleanupV1Worktree } from '../src/utils/worktree.js';
+import { registerAbortHandler, isAborted } from '../src/utils/abort.js';
 import { formatError } from '../src/errors.js';
 
 /** Result for a single benchmark run */
@@ -148,8 +149,10 @@ async function main() {
   console.log('ZK-Regex Benchmark Suite');
   console.log('========================\n');
 
-  // Register cleanup handler for worktrees
-  registerCleanupHandler();
+  // Register abort handler for graceful shutdown
+  registerAbortHandler(async () => {
+    await cleanupV1Worktree();
+  });
 
   // Parse arguments
   const { providers, patternFilter, noMemory } = parseArgs();
@@ -195,6 +198,7 @@ async function main() {
 
   // Run benchmarks for each provider
   for (const providerType of providers) {
+    if (isAborted()) break;
     console.log(`\n--- Provider: ${providerType} ---\n`);
 
     // Check dependencies
@@ -216,6 +220,7 @@ async function main() {
     try {
       // Benchmark each pattern
       for (const pattern of patterns) {
+        if (isAborted()) break;
         if (!provider.supportsPattern(pattern)) {
           console.log(`  Skipping ${pattern.name} (not supported)`);
           continue;
@@ -224,6 +229,7 @@ async function main() {
         console.log(`  Benchmarking ${pattern.name}...`);
 
         for (const inputLength of config.inputLengths) {
+          if (isAborted()) break;
           console.log(`    Input length: ${inputLength} bytes`);
 
           const result = await provider.benchmarkPattern(pattern, inputLength, config);

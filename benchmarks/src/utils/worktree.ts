@@ -10,6 +10,7 @@ import * as os from 'os';
 import * as fs from 'fs/promises';
 import type { Result } from '../errors.js';
 import { ok, err, errors } from '../errors.js';
+import { getAbortSignal } from './abort.js';
 
 const BENCHMARK_CONFIG_PATH = path.join(import.meta.dir, '..', '..', 'config', 'benchmark.json');
 
@@ -42,6 +43,7 @@ async function execAsync(
       stdout: 'pipe',
       stderr: 'pipe',
       env: { ...process.env, PATH: cleanPath },
+      signal: getAbortSignal(),
     });
 
     const stdout = await new Response(proc.stdout).text();
@@ -54,6 +56,9 @@ async function execAsync(
 
     return ok(stdout.trim());
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return err(errors.worktreeFailed('main', 'Aborted'));
+    }
     return err(errors.worktreeFailed('main', String(error)));
   }
 }
@@ -171,22 +176,3 @@ export async function cleanupV1Worktree(): Promise<void> {
   await execAsync('git worktree prune');
 }
 
-/**
- * Register cleanup handler for process exit.
- *
- * Ensures worktree is removed even if the process crashes.
- */
-export function registerCleanupHandler(): void {
-  const cleanup = async () => {
-    await cleanupV1Worktree();
-    process.exit();
-  };
-
-  process.on('SIGINT', cleanup);
-  process.on('SIGTERM', cleanup);
-  process.on('uncaughtException', async (error) => {
-    console.error('Uncaught exception:', error);
-    await cleanupV1Worktree();
-    process.exit(1);
-  });
-}

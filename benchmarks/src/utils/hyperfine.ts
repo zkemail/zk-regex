@@ -11,6 +11,7 @@ import * as os from 'os';
 import type { TimingStats, HyperfineOutput } from '../types.js';
 import type { Result } from '../errors.js';
 import { ok, err, errors } from '../errors.js';
+import { getAbortSignal } from './abort.js';
 
 /**
  * Options for hyperfine benchmarks.
@@ -119,6 +120,7 @@ export async function runHyperfine(
       stdout: 'pipe',
       stderr: 'pipe',
       env: { ...process.env, PATH: cleanPath },
+      signal: getAbortSignal(),
     });
 
     const exitCode = await proc.exited;

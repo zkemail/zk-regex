@@ -19,6 +19,7 @@ import type {
 import type { Result } from '../errors.js';
 import { ok, err, errors } from '../errors.js';
 import { BaseBenchmarkProvider, type BenchmarkMetrics } from './base.js';
+import { getAbortSignal } from '../utils/abort.js';
 import { runHyperfine } from '../utils/hyperfine.js';
 import { measureAsync, calculateStats } from '../utils/timing.js';
 import { runWithMemoryTracking, defaultMemoryStats } from '../utils/memory.js';
@@ -41,6 +42,7 @@ async function execAsync(
       cwd: options.cwd,
       stdout: 'pipe',
       stderr: 'pipe',
+      signal: getAbortSignal(),
     });
 
     const stdout = await new Response(proc.stdout).text();
@@ -53,6 +55,9 @@ async function execAsync(
 
     return ok(stdout.trim());
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return err(errors.compilationFailed(command, 'Aborted'));
+    }
     return err(errors.compilationFailed(command, String(error)));
   }
 }
