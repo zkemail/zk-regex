@@ -12,8 +12,14 @@ import type { TimingStats } from '../types.js';
  */
 export async function measureAsync<T>(
   fn: () => Promise<T>,
-  runs: number
+  runs: number,
+  warmupRuns: number = 0
 ): Promise<{ result: T; stats: TimingStats }> {
+  // Warmup: execute fn without recording times
+  for (let i = 0; i < warmupRuns; i++) {
+    await fn();
+  }
+
   const times: number[] = [];
   let result!: T;
 

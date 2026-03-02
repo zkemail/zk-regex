@@ -261,7 +261,7 @@ component main {public [msg]} = ${templateName}(${inputLengthBytes});
       if (hyperfineResult.ok) {
         proveStats = hyperfineResult.value;
       } else {
-        const { stats } = await measureAsync(() => prove(zkeyPath, witnessPath), config.minRuns);
+        const { stats } = await measureAsync(() => prove(zkeyPath, witnessPath), config.minRuns, config.warmupRuns);
         proveStats = stats;
       }
       proveMemory = defaultMemoryStats();
@@ -298,7 +298,8 @@ component main {public [msg]} = ${templateName}(${inputLengthBytes});
       // Fallback to in-process measurement
       const { stats } = await measureAsync(
         async () => verify(vkeyPath, proveOutput.value.publicSignals, proveOutput.value.proof),
-        config.minRuns
+        config.minRuns,
+        config.warmupRuns
       );
       verifyStats = stats;
       verifyMemory = defaultMemoryStats();

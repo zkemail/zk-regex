@@ -712,7 +712,8 @@ zkregex = { path = "${this.projectRoot}/noir" }
         async () => {
           await execAsync(proveCommand, { cwd: benchDir });
         },
-        config.minRuns
+        config.minRuns,
+        config.warmupRuns
       );
       return { timing: stats, memory: defaultMemoryStats() };
     } catch (error) {
@@ -774,7 +775,8 @@ zkregex = { path = "${this.projectRoot}/noir" }
       async () => {
         await execAsync(verifyCommand, { cwd: benchDir });
       },
-      config.minRuns
+      config.minRuns,
+      config.warmupRuns
     );
     return { timing: stats, memory: defaultMemoryStats() };
   }
