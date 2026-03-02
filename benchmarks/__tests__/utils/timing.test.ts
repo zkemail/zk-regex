@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import { calculateStats, isHighVariance, measureSync, formatTimingStats } from '../../src/utils/timing.js';
+import { calculateStats, isHighVariance, formatTimingStats } from '../../src/utils/timing.js';
 
 describe('timing utilities', () => {
   describe('calculateStats', () => {
@@ -42,20 +42,6 @@ describe('timing utilities', () => {
     it('returns false for low variance', () => {
       const stats = calculateStats([100, 101, 99, 100, 100]); // Low variance
       expect(isHighVariance(stats)).toBe(false);
-    });
-  });
-
-  describe('measureSync', () => {
-    it('measures synchronous function execution', () => {
-      const { result, stats } = measureSync(() => {
-        let sum = 0;
-        for (let i = 0; i < 10000; i++) sum += i;
-        return sum;
-      }, 5);
-
-      expect(result).toBe(49995000);
-      expect(stats.runs).toBe(5);
-      expect(stats.mean).toBeGreaterThan(0);
     });
   });
 

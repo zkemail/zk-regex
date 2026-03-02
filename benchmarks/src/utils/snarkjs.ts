@@ -223,28 +223,3 @@ export async function verify(
     return err(errors.invalidOutput('snarkjs verify', String(error)));
   }
 }
-
-/**
- * Generate and verify a Groth16 proof using CLI.
- *
- * Returns the proof and public signals.
- */
-export async function proveAndVerify(
-  zkeyPath: string,
-  witnessPath: string,
-  vkeyPath: string
-): Promise<Result<{ proof: unknown; publicSignals: string[]; verified: boolean }>> {
-  const proveResult = await prove(zkeyPath, witnessPath);
-  if (!proveResult.ok) {
-    return proveResult;
-  }
-
-  const { proof, publicSignals } = proveResult.value;
-
-  const verifyResult = await verify(vkeyPath, publicSignals, proof);
-  if (!verifyResult.ok) {
-    return verifyResult;
-  }
-
-  return ok({ proof, publicSignals, verified: verifyResult.value });
-}

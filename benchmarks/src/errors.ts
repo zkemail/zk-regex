@@ -41,57 +41,6 @@ export function err<T>(error: BenchmarkError): Result<T> {
 }
 
 /**
- * Check if a result is successful.
- */
-export function isOk<T>(result: Result<T>): result is { ok: true; value: T } {
-  return result.ok;
-}
-
-/**
- * Check if a result is failed.
- */
-export function isErr<T>(result: Result<T>): result is { ok: false; error: BenchmarkError } {
-  return !result.ok;
-}
-
-/**
- * Unwrap a result, throwing if it's an error.
- */
-export function unwrap<T>(result: Result<T>): T {
-  if (result.ok) {
-    return result.value;
-  }
-  throw new Error(formatError(result.error));
-}
-
-/**
- * Unwrap a result with a default value on error.
- */
-export function unwrapOr<T>(result: Result<T>, defaultValue: T): T {
-  return result.ok ? result.value : defaultValue;
-}
-
-/**
- * Map a successful result to a new value.
- */
-export function map<T, U>(result: Result<T>, fn: (value: T) => U): Result<U> {
-  if (result.ok) {
-    return ok(fn(result.value));
-  }
-  return result;
-}
-
-/**
- * Chain result operations.
- */
-export function flatMap<T, U>(result: Result<T>, fn: (value: T) => Result<U>): Result<U> {
-  if (result.ok) {
-    return fn(result.value);
-  }
-  return result;
-}
-
-/**
  * Format an error for display.
  */
 export function formatError(error: BenchmarkError): string {

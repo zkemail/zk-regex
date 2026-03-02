@@ -8,7 +8,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
-import * as crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import type { Result } from '../errors.js';
 import { ok, err, errors } from '../errors.js';
@@ -148,14 +147,6 @@ export async function ensurePtauFile(): Promise<Result<string>> {
   }
 
   return ok(ptauPath);
-}
-
-/**
- * Compute SHA256 hash of a file.
- */
-export async function hashFile(filePath: string): Promise<string> {
-  const data = await fs.readFile(filePath);
-  return crypto.createHash('sha256').update(data).digest('hex');
 }
 
 /**

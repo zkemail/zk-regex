@@ -31,29 +31,6 @@ export async function measureAsync<T>(
 }
 
 /**
- * Measure the execution time of a synchronous function.
- */
-export function measureSync<T>(
-  fn: () => T,
-  runs: number
-): { result: T; stats: TimingStats } {
-  const times: number[] = [];
-  let result!: T;
-
-  for (let i = 0; i < runs; i++) {
-    const start = performance.now();
-    result = fn();
-    const end = performance.now();
-    times.push(end - start);
-  }
-
-  return {
-    result,
-    stats: calculateStats(times),
-  };
-}
-
-/**
  * Calculate statistical metrics from an array of timing measurements.
  */
 export function calculateStats(times: number[]): TimingStats {

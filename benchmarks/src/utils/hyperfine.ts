@@ -165,19 +165,3 @@ export async function runHyperfine(
     }
   }
 }
-
-/**
- * Run multiple hyperfine benchmarks in sequence.
- */
-export async function runHyperfineBatch(
-  commands: string[],
-  options: HyperfineOptions = {}
-): Promise<Map<string, Result<TimingStats>>> {
-  const results = new Map<string, Result<TimingStats>>();
-
-  for (const command of commands) {
-    results.set(command, await runHyperfine(command, options));
-  }
-
-  return results;
-}
