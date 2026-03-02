@@ -11,7 +11,8 @@
   "workspaces": [
     "scripts",
     "circom",
-    "compiler"
+    "compiler",
+    "benchmarks"
   ],
   "engines": {
     "node": ">=18.0.0",
