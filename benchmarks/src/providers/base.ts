@@ -64,27 +64,3 @@ export interface BenchmarkProvider {
   cleanup(): Promise<void>;
 }
 
-/**
- * Abstract base class with common functionality.
- */
-export abstract class BaseBenchmarkProvider implements BenchmarkProvider {
-  abstract readonly name: string;
-
-  abstract getCommitHash(): string;
-
-  abstract getToolVersions(): ToolVersions;
-
-  abstract setup(): Promise<Result<void>>;
-
-  abstract benchmarkPattern(
-    pattern: PatternDefinition,
-    inputLengthBytes: number,
-    config: BenchmarkConfig
-  ): Promise<Result<BenchmarkMetrics>>;
-
-  abstract supportsPattern(pattern: PatternDefinition): boolean;
-
-  async cleanup(): Promise<void> {
-    // Default: no cleanup needed
-  }
-}

@@ -16,10 +16,11 @@ import type {
   PhaseMemory,
   MemoryStats,
   ToolVersions,
+  NoirCircuitInput,
 } from '../types.js';
 import type { Result } from '../errors.js';
 import { ok, err, errors } from '../errors.js';
-import { BaseBenchmarkProvider, type BenchmarkMetrics } from './base.js';
+import type { BenchmarkProvider, BenchmarkMetrics } from './base.js';
 import { execAsync } from '../utils/exec.js';
 import { getProjectRoot, getGitCommitHash } from '../utils/project.js';
 import { runHyperfine } from '../utils/hyperfine.js';
@@ -36,7 +37,7 @@ interface NargoInfo {
   backendGates: number;
 }
 
-export class NoirNFAProvider extends BaseBenchmarkProvider {
+export class NoirNFAProvider implements BenchmarkProvider {
   readonly name = 'noir-nfa';
   private buildDir: string;
   private projectRoot: string;
@@ -782,17 +783,3 @@ zkregex = { path = "${this.projectRoot}/noir" }
   }
 }
 
-/** Structure of Noir circuit input */
-interface NoirCircuitInput {
-  type: string;
-  in_haystack: number[];
-  match_start: number;
-  match_length: number;
-  curr_states: number[];
-  next_states: number[];
-  /** Array of arrays - one per capture group, each containing field values */
-  capture_group_ids: number[][];
-  /** Array of arrays - one per capture group, each containing start positions */
-  capture_group_starts: number[][];
-  capture_group_start_indices: number[];
-}

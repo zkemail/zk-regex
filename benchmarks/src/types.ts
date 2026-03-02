@@ -272,3 +272,20 @@ export interface HyperfineResult {
 export interface HyperfineOutput {
   readonly results: HyperfineResult[];
 }
+
+/**
+ * Structure of Noir circuit input for prover TOML generation.
+ */
+export interface NoirCircuitInput {
+  readonly type: string;
+  readonly in_haystack: number[];
+  readonly match_start: number;
+  readonly match_length: number;
+  readonly curr_states: number[];
+  readonly next_states: number[];
+  /** Array of arrays - one per capture group, each containing field values */
+  readonly capture_group_ids: number[][];
+  /** Array of arrays - one per capture group, each containing start positions */
+  readonly capture_group_starts: number[][];
+  readonly capture_group_start_indices: number[];
+}

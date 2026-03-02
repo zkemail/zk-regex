@@ -19,7 +19,7 @@ import type {
 } from '../types.js';
 import type { Result } from '../errors.js';
 import { ok, err, errors } from '../errors.js';
-import { BaseBenchmarkProvider, type BenchmarkMetrics } from './base.js';
+import type { BenchmarkProvider, BenchmarkMetrics } from './base.js';
 import { execAsync, wrapCommandWithNvm } from '../utils/exec.js';
 import { getProjectRoot, getGitCommitHash } from '../utils/project.js';
 import { ensurePtauFile, getMaxConstraints } from '../utils/ptau.js';
@@ -46,7 +46,7 @@ interface NFAGraph {
   num_capture_groups: number;
 }
 
-export class CircomNFAProvider extends BaseBenchmarkProvider {
+export class CircomNFAProvider implements BenchmarkProvider {
   readonly name = 'circom-nfa';
   private ptauPath: string | null = null;
   private buildDir: string;

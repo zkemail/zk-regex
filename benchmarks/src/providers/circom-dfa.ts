@@ -19,7 +19,7 @@ import type {
 } from '../types.js';
 import type { Result } from '../errors.js';
 import { ok, err, errors } from '../errors.js';
-import { BaseBenchmarkProvider, type BenchmarkMetrics } from './base.js';
+import type { BenchmarkProvider, BenchmarkMetrics } from './base.js';
 import { execAsync, wrapCommandWithNvm } from '../utils/exec.js';
 import {
   setupDfaWorktree,
@@ -37,7 +37,7 @@ import { generateScaledInput } from '../utils/input-scaling.js';
 
 const BENCHMARK_CONFIG_PATH = path.join(import.meta.dir, '..', '..', 'config', 'benchmark.json');
 
-export class CircomDFAProvider extends BaseBenchmarkProvider {
+export class CircomDFAProvider implements BenchmarkProvider {
   readonly name = 'circom-dfa';
   private worktreePath: string | null = null;
   private ptauPath: string | null = null;

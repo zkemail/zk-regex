@@ -17,7 +17,7 @@
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import type { TimingStats } from '../types.js';
+import type { TimingStats, MemoryStats } from '../types.js';
 import { calculateStats } from './timing.js';
 import { getAbortSignal, isAborted } from './abort.js';
 
@@ -25,19 +25,6 @@ import { getAbortSignal, isAborted } from './abort.js';
  * Detected platform type for memory profiling.
  */
 export type Platform = 'darwin' | 'linux' | 'unsupported';
-
-/**
- * Statistical summary of memory measurements.
- * Parallel to TimingStats but for memory (MB).
- */
-export interface MemoryStats {
-  readonly mean: number; // MB
-  readonly stddev: number; // MB
-  readonly min: number; // MB
-  readonly max: number; // MB
-  readonly runs: number;
-  readonly measured: boolean; // true = /usr/bin/time, false = estimated/unavailable
-}
 
 /**
  * Result of a single memory-tracked command execution.
