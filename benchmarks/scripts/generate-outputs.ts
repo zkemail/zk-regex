@@ -152,9 +152,9 @@ function groupByComplexity(
 /**
  * Compute reduction percentage.
  */
-function reductionPct(v1: number, v2: number): string {
-  if (!v1 || !v2) return '—';
-  return `${((1 - v2 / v1) * 100).toFixed(1)}%`;
+function reductionPct(dfa: number, nfa: number): string {
+  if (!dfa || !nfa) return '—';
+  return `${((1 - nfa / dfa) * 100).toFixed(1)}%`;
 }
 
 // --- Markdown Generator ---
@@ -205,7 +205,7 @@ function generateMarkdown(
     lines.push('');
   }
 
-  // V1 vs V2 Comparison (PRIMARY) - grouped by complexity
+  // DFA vs NFA Comparison (PRIMARY) - grouped by complexity
   const defaultPatterns = getDefaultInputPatterns(results.patterns);
   const grouped = groupByComplexity(defaultPatterns, patternDefs);
 
@@ -237,7 +237,7 @@ function generateMarkdown(
     }
   }
 
-  // V1 Compatibility Analysis
+  // DFA Compatibility Analysis
   if (v1Compat.length > 0) {
     lines.push('## DFA Compiler Compatibility Analysis');
     lines.push('');
@@ -378,7 +378,7 @@ function generateMarkdown(
     lines.push('');
   }
 
-  // Noir v2 Details (separate section)
+  // Noir NFA Details (separate section)
   const patternsWithNoir = defaultPatterns.filter(([, data]) => data.nfaNoir.backendGates > 0);
   if (patternsWithNoir.length > 0) {
     lines.push('## Noir NFA (UltraHonk) Backend Details (64-byte input)');
@@ -398,7 +398,7 @@ function generateMarkdown(
     lines.push('');
   }
 
-  // Memory Usage - Circom v1
+  // Memory Usage - Circom DFA
   if (defaultPatterns.length > 0) {
     const patternsWithMemory = defaultPatterns.filter(([, data]) => {
       const mem = data.dfaCircom?.memoryByPhase;
@@ -422,7 +422,7 @@ function generateMarkdown(
     }
   }
 
-  // Memory Usage - Circom v2
+  // Memory Usage - Circom NFA
   if (defaultPatterns.length > 0) {
     const patternsWithMemory = defaultPatterns.filter(([, data]) => {
       const mem = data.nfaCircom.memoryByPhase;
@@ -446,7 +446,7 @@ function generateMarkdown(
     }
   }
 
-  // Memory Usage - Noir v2
+  // Memory Usage - Noir NFA
   if (defaultPatterns.length > 0) {
     const patternsWithMemory = defaultPatterns.filter(([, data]) => {
       const mem = data.nfaNoir.memoryByPhase;
@@ -517,7 +517,7 @@ function generateLatex(
     lines.push('');
   }
 
-  // Table 1: V1 vs V2 Comparison (PRIMARY) - grouped by complexity
+  // Table 1: DFA vs NFA Comparison (PRIMARY) - grouped by complexity
   if (defaultPatterns.length > 0) {
     lines.push('% Table 1: Circom DFA vs Circom NFA Circuit Size Comparison (grouped by complexity)');
     lines.push('\\begin{table}[htbp]');
@@ -560,7 +560,7 @@ function generateLatex(
     lines.push('');
   }
 
-  // Table 2: V1 Compatibility Analysis
+  // Table 2: DFA Compatibility Analysis
   if (v1Compat.length > 0) {
     lines.push('% Table 2: DFA Compiler Compatibility Analysis');
     lines.push('\\begin{table}[htbp]');
@@ -585,7 +585,7 @@ function generateLatex(
     lines.push('');
   }
 
-  // Table 3: V2-Only patterns
+  // Table 3: NFA-Only patterns
   const nfaOnlyPatterns = defaultPatterns.filter(([, d]) => d.dfaCircom == null);
   if (nfaOnlyPatterns.length > 0) {
     lines.push('% Table 3: NFA-Only Patterns');
@@ -720,7 +720,7 @@ function generateLatex(
     lines.push('');
   }
 
-  // Table 6: Noir v2 Details (separate section)
+  // Table 6: Noir NFA Details (separate section)
   const patternsWithNoir = defaultPatterns.filter(([, data]) => data.nfaNoir.backendGates > 0);
   if (patternsWithNoir.length > 0) {
     lines.push('% Table 6: Noir NFA Backend Details');
@@ -784,7 +784,7 @@ function generateLatex(
     lines.push('');
   }
 
-  // Table 8: Memory Usage - Circom v2
+  // Table 8: Memory Usage - Circom NFA
   const patternsWithCircomMemory = defaultPatterns.filter(([, data]) => {
     const mem = data.nfaCircom.memoryByPhase;
     return mem?.compile?.measured || mem?.witnessGen?.measured ||
@@ -813,7 +813,7 @@ function generateLatex(
     lines.push('\\end{table}');
   }
 
-  // Table 9: Memory Usage - Noir v2
+  // Table 9: Memory Usage - Noir NFA
   const patternsWithNoirMemory = defaultPatterns.filter(([, data]) => {
     const mem = data.nfaNoir.memoryByPhase;
     return mem?.compile?.measured || mem?.witnessGen?.measured ||
@@ -889,7 +889,7 @@ async function main() {
     process.exit(1);
   }
 
-  // Load pattern definitions and v1 compatibility data
+  // Load pattern definitions and DFA compatibility data
   const patternDefs = await loadPatternDefs();
   const v1Compat = await loadV1Compat();
 
