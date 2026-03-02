@@ -8,6 +8,8 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
+import { createHash } from 'node:crypto';
+import { createReadStream } from 'fs';
 import { fileURLToPath } from 'url';
 import type { Result } from '../errors.js';
 import { ok, err, errors } from '../errors.js';
@@ -42,13 +44,43 @@ export async function getPtauCachePath(): Promise<string> {
 }
 
 /**
- * Check if the ptau file exists and is valid.
+ * Compute SHA256 hash of a file using streaming reads.
  */
-async function validatePtauFile(filePath: string): Promise<boolean> {
+async function computeSha256(filePath: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const hash = createHash('sha256');
+    const stream = createReadStream(filePath);
+    stream.on('data', (chunk) => hash.update(chunk));
+    stream.on('end', () => resolve(hash.digest('hex')));
+    stream.on('error', reject);
+  });
+}
+
+/**
+ * Verify a file's SHA256 checksum matches the expected value.
+ * Returns the actual hash on mismatch for error reporting.
+ */
+async function verifyChecksum(
+  filePath: string,
+  expectedSha256: string,
+): Promise<Result<void>> {
+  try {
+    const actual = await computeSha256(filePath);
+    if (actual !== expectedSha256) {
+      return err(errors.checksumMismatch(filePath, expectedSha256, actual));
+    }
+    return ok(undefined);
+  } catch {
+    return err(errors.fileNotFound(filePath));
+  }
+}
+
+/**
+ * Check if the ptau file exists and has non-zero size.
+ */
+async function fileExistsWithContent(filePath: string): Promise<boolean> {
   try {
     const stats = await fs.stat(filePath);
-    // File must exist and have non-zero size
-    // Skip exact size validation as files can vary slightly
     return stats.size > 0;
   } catch {
     return false;
@@ -128,10 +160,17 @@ export async function ensurePtauFile(): Promise<Result<string>> {
     // Directory might already exist
   }
 
-  // Check if already cached and valid
-  if (await validatePtauFile(ptauPath)) {
-    console.log(`Using cached Powers of Tau: ${ptauPath}`);
-    return ok(ptauPath);
+  // Check if already cached
+  if (await fileExistsWithContent(ptauPath)) {
+    console.log(`Verifying cached Powers of Tau: ${ptauPath}`);
+    const checksumResult = await verifyChecksum(ptauPath, config.sha256);
+    if (checksumResult.ok) {
+      console.log('Checksum verified.');
+      return ok(ptauPath);
+    }
+    // Cached file is corrupt — delete and re-download
+    console.log('Cached file failed checksum verification. Re-downloading...');
+    await fs.unlink(ptauPath).catch(() => {});
   }
 
   // Download
@@ -140,12 +179,18 @@ export async function ensurePtauFile(): Promise<Result<string>> {
     return downloadResult;
   }
 
-  // Validate downloaded file
-  if (!await validatePtauFile(ptauPath)) {
-    await fs.unlink(ptauPath).catch(() => {});
-    return err(errors.ptauDownloadFailed(config.url, 'Downloaded file validation failed'));
+  // Verify downloaded file
+  if (!await fileExistsWithContent(ptauPath)) {
+    return err(errors.ptauDownloadFailed(config.url, 'Downloaded file is empty'));
   }
 
+  const checksumResult = await verifyChecksum(ptauPath, config.sha256);
+  if (!checksumResult.ok) {
+    await fs.unlink(ptauPath).catch(() => {});
+    return checksumResult;
+  }
+
+  console.log('Download checksum verified.');
   return ok(ptauPath);
 }
 

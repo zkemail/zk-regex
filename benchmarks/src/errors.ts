@@ -17,7 +17,8 @@ export type BenchmarkError =
   | { readonly kind: 'ptau_download_failed'; readonly url: string; readonly error: string }
   | { readonly kind: 'file_not_found'; readonly path: string }
   | { readonly kind: 'parse_error'; readonly message: string; readonly rawData: string }
-  | { readonly kind: 'hyperfine_failed'; readonly command: string; readonly error: string };
+  | { readonly kind: 'hyperfine_failed'; readonly command: string; readonly error: string }
+  | { readonly kind: 'checksum_mismatch'; readonly file: string; readonly expected: string; readonly actual: string };
 
 /**
  * Result type for operations that can fail.
@@ -71,6 +72,9 @@ export function formatError(error: BenchmarkError): string {
 
     case 'hyperfine_failed':
       return `Hyperfine benchmark failed for command '${error.command}': ${error.error}`;
+
+    case 'checksum_mismatch':
+      return `Checksum mismatch for ${error.file}:\n  Expected: ${error.expected}\n  Actual:   ${error.actual}`;
   }
 }
 
@@ -129,5 +133,12 @@ export const errors = {
     kind: 'hyperfine_failed',
     command,
     error,
+  }),
+
+  checksumMismatch: (file: string, expected: string, actual: string): BenchmarkError => ({
+    kind: 'checksum_mismatch',
+    file,
+    expected,
+    actual,
   }),
 };

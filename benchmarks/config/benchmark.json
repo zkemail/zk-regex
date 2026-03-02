@@ -16,7 +16,8 @@
   },
   "ptau": {
     "url": "https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_21.ptau",
-    "filename": "pot21.ptau"
+    "filename": "pot21.ptau",
+    "sha256": "cdc7c94a6635bc91466d8c7d96faefe1d17ecc98a3596a748ca1e6c895f8c2b4"
   },
   "providers": {
     "circom-dfa": {

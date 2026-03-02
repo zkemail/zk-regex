@@ -250,6 +250,7 @@ export type ProviderType = 'circom-dfa' | 'circom-nfa' | 'noir-nfa';
 export interface PtauConfig {
   readonly url: string;
   readonly filename: string;
+  readonly sha256: string;
 }
 
 /**
