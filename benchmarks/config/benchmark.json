@@ -3,15 +3,15 @@
   "description": "Configuration for zk-regex benchmark runs",
   "config": {
     "warmupRuns": 3,
-    "minRuns": 3,
-    "maxRuns": 5,
+    "minRuns": 5,
+    "maxRuns": 10,
     "timeoutMs": 600000,
     "inputLengths": [64, 128, 256, 512]
   },
   "hyperfine": {
     "warmup": 3,
-    "minRuns": 3,
-    "maxRuns": 5,
+    "minRuns": 5,
+    "maxRuns": 10,
     "exportJson": true
   },
   "ptau": {

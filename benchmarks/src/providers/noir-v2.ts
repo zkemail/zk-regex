@@ -23,6 +23,7 @@ import { getAbortSignal } from '../utils/abort.js';
 import { runHyperfine } from '../utils/hyperfine.js';
 import { measureAsync, calculateStats } from '../utils/timing.js';
 import { runWithMemoryTracking, defaultMemoryStats } from '../utils/memory.js';
+import { generateScaledInput } from '../utils/input-scaling.js';
 
 /** Parsed nargo info output */
 interface NargoInfo {

@@ -25,6 +25,7 @@ import { getConstraintCount, groth16Setup, generateWitness, prove, verify, expor
 import { runHyperfine } from '../utils/hyperfine.js';
 import { measureAsync, calculateStats } from '../utils/timing.js';
 import { runWithMemoryTracking, defaultMemoryStats } from '../utils/memory.js';
+import { generateScaledInput } from '../utils/input-scaling.js';
 
 // Import compiler for input generation
 import { genCircuitInputs, ProvingFramework } from '../../../compiler/pkg/zk_regex_compiler.js';
