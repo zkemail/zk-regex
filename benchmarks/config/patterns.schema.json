@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "ZK-Regex Benchmark Patterns",
-  "description": "Pattern definitions for benchmarking zk-regex v1 vs v2",
+  "description": "Pattern definitions for benchmarking zk-regex DFA vs NFA backends",
   "type": "object",
   "required": ["description", "patterns"],
   "properties": {
@@ -41,7 +41,7 @@
           },
           "complexity": {
             "type": "string",
-            "enum": ["simple", "medium", "complex", "v2-only"],
+            "enum": ["simple", "medium", "complex", "NFA-only"],
             "description": "Complexity classification for academic analysis"
           },
           "features": {

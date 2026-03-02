@@ -1,6 +1,6 @@
 {
   "$schema": "./patterns.schema.json",
-  "description": "Regex patterns for benchmarking zk-regex v1 vs v2",
+  "description": "Regex patterns for benchmarking zk-regex DFA vs NFA backends",
   "patterns": [
     {
       "name": "literal_match",
@@ -181,7 +181,7 @@
       "description": "Lazy (non-greedy) quantifier - not DFA-representable",
       "circuitName": "lazy_quantifier_regex",
       "availableInV1": true,
-      "complexity": "v2-only",
+      "complexity": "NFA-only",
       "features": ["quantifiers_lazy", "character_classes"],
       "category": "synthetic",
       "regex": "<.*?>",
@@ -195,7 +195,7 @@
       "description": "Unbounded range quantifier {3,}",
       "circuitName": "unbounded_range_regex",
       "availableInV1": true,
-      "complexity": "v2-only",
+      "complexity": "NFA-only",
       "features": ["character_classes", "quantifiers_unbounded"],
       "category": "synthetic",
       "regex": "[a-z]{3,}",
@@ -211,7 +211,7 @@
       "description": "Nested groups with quantifiers (state explosion risk)",
       "circuitName": "nested_quantified_groups_regex",
       "availableInV1": true,
-      "complexity": "v2-only",
+      "complexity": "NFA-only",
       "features": ["nested_groups", "character_classes", "quantifiers_plus"],
       "category": "synthetic",
       "regex": "(?:[a-z]+[0-9]+)+",

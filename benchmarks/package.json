@@ -1,7 +1,7 @@
 {
   "name": "@zk-regex/benchmarks",
   "version": "0.1.0",
-  "description": "Benchmarking suite for zk-regex v1 vs v2 comparison",
+  "description": "Benchmarking suite for zk-regex DFA vs NFA backend comparison",
   "type": "module",
   "main": "src/index.ts",
   "scripts": {

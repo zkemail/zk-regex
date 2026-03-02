@@ -8,12 +8,12 @@
  *
  * Output structure:
  * 1. Pattern Definitions (with complexity and features)
- * 2. V1 vs V2 Comparison (grouped by complexity - PRIMARY)
- * 3. V1 Compatibility Analysis (failure modes)
- * 4. V2-Only Patterns (features v1 cannot compile)
+ * 2. Circom DFA vs Circom NFA Comparison (grouped by complexity - PRIMARY)
+ * 3. DFA Compiler Compatibility Analysis (failure modes)
+ * 4. NFA-Only Patterns (features DFA cannot compile)
  * 5. Scaling Analysis by Complexity
  * 6. Summary Statistics
- * 7. Noir v2 Details (separate section)
+ * 7. Noir NFA Details (separate section)
  * 8. Memory Usage
  *
  * LaTeX tables use booktabs + siunitx for professional formatting.
@@ -119,7 +119,7 @@ interface V1CompatEntry {
   notes: string;
 }
 
-const COMPLEXITY_ORDER: PatternComplexity[] = ['simple', 'medium', 'complex', 'v2-only'];
+const COMPLEXITY_ORDER: PatternComplexity[] = ['simple', 'medium', 'complex', 'NFA-only'];
 
 function getDefaultInputPatterns(patterns: Record<string, PatternBenchmark>): [string, PatternBenchmark][] {
   return Object.entries(patterns)
@@ -210,20 +210,20 @@ function generateMarkdown(
   const grouped = groupByComplexity(defaultPatterns, patternDefs);
 
   if (defaultPatterns.length > 0) {
-    lines.push('## V1 vs V2 Comparison (64-byte input)');
+    lines.push('## Circom DFA vs Circom NFA Comparison (64-byte input)');
     lines.push('');
 
     for (const level of COMPLEXITY_ORDER) {
       const entries = grouped.get(level)!;
-      // Only show patterns that have v1 data for comparison sections
+      // Only show patterns that have DFA data for comparison sections
       const withV1 = entries.filter(([, data]) => data.v1Circom != null);
-      if (withV1.length === 0 && level !== 'v2-only') continue;
-      if (level === 'v2-only') continue; // V2-only gets its own section
+      if (withV1.length === 0 && level !== 'NFA-only') continue;
+      if (level === 'NFA-only') continue; // NFA-only gets its own section
 
       lines.push(`### ${level.charAt(0).toUpperCase() + level.slice(1)} Patterns`);
       lines.push('');
-      lines.push('| Pattern | V1 Constraints | V2 Constraints | Reduction | V1 Prove (ms) | V2 Prove (ms) |');
-      lines.push('|---------|----------------|----------------|-----------|---------------|---------------|');
+      lines.push('| Pattern | DFA Constraints | NFA Constraints | Reduction | DFA Prove (ms) | NFA Prove (ms) |');
+      lines.push('|---------|-----------------|-----------------|-----------|----------------|----------------|');
 
       for (const [key, data] of withV1) {
         const name = getPatternName(key);
@@ -239,10 +239,10 @@ function generateMarkdown(
 
   // V1 Compatibility Analysis
   if (v1Compat.length > 0) {
-    lines.push('## V1 Compatibility Analysis');
+    lines.push('## DFA Compiler Compatibility Analysis');
     lines.push('');
-    lines.push('| Pattern | Complexity | V1 Compiler | Circom Compile | Failure Phase | Error Summary |');
-    lines.push('|---------|-----------|-------------|----------------|---------------|---------------|');
+    lines.push('| Pattern | Complexity | DFA Compiler | Circom Compile | Failure Phase | Error Summary |');
+    lines.push('|---------|-----------|--------------|----------------|---------------|---------------|');
 
     for (const entry of v1Compat) {
       const def = patternDefs[entry.pattern];
@@ -256,13 +256,13 @@ function generateMarkdown(
     lines.push('');
   }
 
-  // V2-Only Patterns (those without v1 data)
+  // NFA-Only Patterns (those without DFA data)
   const v2OnlyPatterns = defaultPatterns.filter(([, data]) => data.v1Circom == null);
   if (v2OnlyPatterns.length > 0) {
-    lines.push('## V2-Only Patterns');
+    lines.push('## NFA-Only Patterns');
     lines.push('');
-    lines.push('| Pattern | V2 Constraints | V2 Prove (ms) | Noir Gates | Features |');
-    lines.push('|---------|----------------|---------------|------------|----------|');
+    lines.push('| Pattern | Circom NFA Constraints | Circom NFA Prove (ms) | Noir NFA Gates | Features |');
+    lines.push('|---------|------------------------|------------------------|----------------|----------|');
 
     for (const [key, data] of v2OnlyPatterns) {
       const name = getPatternName(key);
@@ -320,8 +320,8 @@ function generateMarkdown(
 
     lines.push('## Scaling: Circuit Size by Input Length');
     lines.push('');
-    lines.push('| Pattern | Complexity | Input (bytes) | Content (bytes) | Circom v1 R1CS | Circom v2 R1CS | Noir v2 Gates |');
-    lines.push('|---------|-----------|---------------|-----------------|----------------|----------------|---------------|');
+    lines.push('| Pattern | Complexity | Input (bytes) | Content (bytes) | Circom DFA R1CS | Circom NFA R1CS | Noir NFA Gates |');
+    lines.push('|---------|-----------|---------------|-----------------|-----------------|-----------------|----------------|');
 
     for (const point of results.scaling) {
       const def = patternDefs[point.pattern];
@@ -337,8 +337,8 @@ function generateMarkdown(
 
     lines.push('## Scaling: Proving Time by Input Length');
     lines.push('');
-    lines.push('| Pattern | Complexity | Input (bytes) | Content (bytes) | Circom v1 (ms) | Circom v2 (ms) | Noir v2 (ms) |');
-    lines.push('|---------|-----------|---------------|-----------------|----------------|----------------|--------------|');
+    lines.push('| Pattern | Complexity | Input (bytes) | Content (bytes) | Circom DFA (ms) | Circom NFA (ms) | Noir NFA (ms) |');
+    lines.push('|---------|-----------|---------------|-----------------|-----------------|-----------------|---------------|');
 
     for (const point of results.scaling) {
       const def = patternDefs[point.pattern];
@@ -357,8 +357,8 @@ function generateMarkdown(
   if (defaultPatterns.length > 0) {
     lines.push('## Summary Statistics');
     lines.push('');
-    lines.push('| Complexity | Patterns | Avg V1 Constraints | Avg V2 Constraints | Avg Reduction | Notes |');
-    lines.push('|-----------|----------|--------------------|--------------------|---------------|-------|');
+    lines.push('| Complexity | Patterns | Avg DFA Constraints | Avg NFA Constraints | Avg Reduction | Notes |');
+    lines.push('|-----------|----------|---------------------|---------------------|---------------|-------|');
 
     for (const level of COMPLEXITY_ORDER) {
       const entries = grouped.get(level)!;
@@ -381,7 +381,7 @@ function generateMarkdown(
   // Noir v2 Details (separate section)
   const patternsWithNoir = defaultPatterns.filter(([, data]) => data.v2Noir.backendGates > 0);
   if (patternsWithNoir.length > 0) {
-    lines.push('## Noir v2 (UltraHonk) Backend Details (64-byte input)');
+    lines.push('## Noir NFA (UltraHonk) Backend Details (64-byte input)');
     lines.push('');
     lines.push('| Pattern | Complexity | ACIR Opcodes | Backend Gates | Gates/Byte | Prove (ms) | Verify (ms) | Proof Size |');
     lines.push('|---------|-----------|--------------|---------------|------------|------------|-------------|------------|');
@@ -406,7 +406,7 @@ function generateMarkdown(
              mem?.prove?.measured || mem?.verify?.measured;
     });
     if (patternsWithMemory.length > 0) {
-      lines.push('## Memory Usage by Phase (MB) - Circom v1');
+      lines.push('## Memory Usage by Phase (MB) - Circom DFA');
       lines.push('');
       lines.push('| Pattern | Compile | WitnessGen | Prove | Verify |');
       lines.push('|---------|---------|------------|-------|--------|');
@@ -430,7 +430,7 @@ function generateMarkdown(
              mem?.prove?.measured || mem?.verify?.measured;
     });
     if (patternsWithMemory.length > 0) {
-      lines.push('## Memory Usage by Phase (MB) - Circom v2');
+      lines.push('## Memory Usage by Phase (MB) - Circom NFA');
       lines.push('');
       lines.push('| Pattern | Compile | WitnessGen | Prove | Verify |');
       lines.push('|---------|---------|------------|-------|--------|');
@@ -454,7 +454,7 @@ function generateMarkdown(
              mem?.prove?.measured || mem?.verify?.measured;
     });
     if (patternsWithMemory.length > 0) {
-      lines.push('## Memory Usage by Phase (MB) - Noir v2');
+      lines.push('## Memory Usage by Phase (MB) - Noir NFA');
       lines.push('');
       lines.push('| Pattern | Compile | WitnessGen | Prove | Verify |');
       lines.push('|---------|---------|------------|-------|--------|');
@@ -519,11 +519,11 @@ function generateLatex(
 
   // Table 1: V1 vs V2 Comparison (PRIMARY) - grouped by complexity
   if (defaultPatterns.length > 0) {
-    lines.push('% Table 1: V1 vs V2 Circuit Size Comparison (grouped by complexity)');
+    lines.push('% Table 1: Circom DFA vs Circom NFA Circuit Size Comparison (grouped by complexity)');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
-    lines.push('\\caption{V1 (DFA) vs V2 (NFA) Circuit Size Comparison at 64-byte input}');
-    lines.push('\\label{tab:v1v2-comparison}');
+    lines.push('\\caption{Circom DFA vs Circom NFA Circuit Size Comparison at 64-byte input}');
+    lines.push('\\label{tab:dfa-nfa-comparison}');
     lines.push('\\sisetup{');
     lines.push('  table-format = 6.0,');
     lines.push('  round-mode = places,');
@@ -531,11 +531,11 @@ function generateLatex(
     lines.push('}');
     lines.push('\\begin{tabular}{@{}ll S S S[table-format=2.1] S[table-format=4.0(2)] S[table-format=4.0(2)]@{}}');
     lines.push('\\toprule');
-    lines.push('Complexity & Pattern & {V1 R1CS} & {V2 R1CS} & {Reduction (\\%)} & {V1 Prove (ms)} & {V2 Prove (ms)} \\\\');
+    lines.push('Complexity & Pattern & {DFA R1CS} & {NFA R1CS} & {Reduction (\\%)} & {DFA Prove (ms)} & {NFA Prove (ms)} \\\\');
     lines.push('\\midrule');
 
     for (const level of COMPLEXITY_ORDER) {
-      if (level === 'v2-only') continue;
+      if (level === 'NFA-only') continue;
       const entries = grouped.get(level)!.filter(([, d]) => d.v1Circom != null);
       if (entries.length === 0) continue;
 
@@ -562,14 +562,14 @@ function generateLatex(
 
   // Table 2: V1 Compatibility Analysis
   if (v1Compat.length > 0) {
-    lines.push('% Table 2: V1 Compatibility Analysis');
+    lines.push('% Table 2: DFA Compiler Compatibility Analysis');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
-    lines.push('\\caption{V1 DFA Compiler Compatibility Analysis}');
-    lines.push('\\label{tab:v1-compat}');
+    lines.push('\\caption{DFA Compiler Compatibility Analysis}');
+    lines.push('\\label{tab:dfa-compat}');
     lines.push('\\begin{tabular}{@{}llllp{0.3\\textwidth}@{}}');
     lines.push('\\toprule');
-    lines.push('Pattern & Complexity & V1 Compiler & Circom & Notes \\\\');
+    lines.push('Pattern & Complexity & DFA Compiler & Circom & Notes \\\\');
     lines.push('\\midrule');
 
     for (const entry of v1Compat) {
@@ -588,15 +588,15 @@ function generateLatex(
   // Table 3: V2-Only patterns
   const v2OnlyPatterns = defaultPatterns.filter(([, d]) => d.v1Circom == null);
   if (v2OnlyPatterns.length > 0) {
-    lines.push('% Table 3: V2-Only Patterns');
+    lines.push('% Table 3: NFA-Only Patterns');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
-    lines.push('\\caption{V2-Only Patterns (V1 DFA cannot compile)}');
-    lines.push('\\label{tab:v2-only}');
+    lines.push('\\caption{NFA-Only Patterns (DFA cannot compile)}');
+    lines.push('\\label{tab:nfa-only}');
     lines.push('\\sisetup{table-format = 5.0, separate-uncertainty = true}');
     lines.push('\\begin{tabular}{@{}l S S[table-format=4.0(2)] S@{}}');
     lines.push('\\toprule');
-    lines.push('Pattern & {V2 R1CS} & {V2 Prove (ms)} & {Noir Gates} \\\\');
+    lines.push('Pattern & {Circom NFA R1CS} & {Circom NFA Prove (ms)} & {Noir NFA Gates} \\\\');
     lines.push('\\midrule');
 
     for (const [key, data] of v2OnlyPatterns) {
@@ -631,7 +631,7 @@ function generateLatex(
     lines.push('\\sisetup{table-format = 6.0}');
     lines.push('\\begin{tabular}{@{}ll S[table-format=3.0] S[table-format=3.0] S S S@{}}');
     lines.push('\\toprule');
-    lines.push('Complexity & Pattern & {Capacity (B)} & {Content (B)} & {V1 R1CS} & {V2 R1CS} & {Noir Gates} \\\\');
+    lines.push('Complexity & Pattern & {Capacity (B)} & {Content (B)} & {DFA R1CS} & {Circom NFA R1CS} & {Noir NFA Gates} \\\\');
     lines.push('\\midrule');
 
     for (const [pattern, points] of patternGroups) {
@@ -662,7 +662,7 @@ function generateLatex(
     lines.push('\\sisetup{table-format = 4.0}');
     lines.push('\\begin{tabular}{@{}ll S[table-format=3.0] S[table-format=3.0] S S S@{}}');
     lines.push('\\toprule');
-    lines.push('Complexity & Pattern & {Capacity (B)} & {Content (B)} & {V1 (ms)} & {V2 (ms)} & {Noir (ms)} \\\\');
+    lines.push('Complexity & Pattern & {Capacity (B)} & {Content (B)} & {DFA (ms)} & {Circom NFA (ms)} & {Noir NFA (ms)} \\\\');
     lines.push('\\midrule');
 
     for (const [pattern, points] of patternGroups) {
@@ -697,7 +697,7 @@ function generateLatex(
     lines.push('\\sisetup{table-format = 6.0}');
     lines.push('\\begin{tabular}{@{}l S[table-format=2.0] S S S[table-format=2.1]@{}}');
     lines.push('\\toprule');
-    lines.push('Complexity & {Patterns} & {Avg V1 R1CS} & {Avg V2 R1CS} & {Avg Reduction (\\%)} \\\\');
+    lines.push('Complexity & {Patterns} & {Avg DFA R1CS} & {Avg Circom NFA R1CS} & {Avg Reduction (\\%)} \\\\');
     lines.push('\\midrule');
 
     for (const level of COMPLEXITY_ORDER) {
@@ -723,10 +723,10 @@ function generateLatex(
   // Table 6: Noir v2 Details (separate section)
   const patternsWithNoir = defaultPatterns.filter(([, data]) => data.v2Noir.backendGates > 0);
   if (patternsWithNoir.length > 0) {
-    lines.push('% Table 6: Noir v2 Backend Details');
+    lines.push('% Table 6: Noir NFA Backend Details');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
-    lines.push('\\caption{Noir v2 (UltraHonk) Backend Details at 64-byte input}');
+    lines.push('\\caption{Noir NFA (UltraHonk) Backend Details at 64-byte input}');
     lines.push('\\label{tab:noir-details}');
     lines.push('\\sisetup{table-format = 5.0, separate-uncertainty = true}');
     lines.push('\\begin{tabular}{@{}ll');
@@ -761,11 +761,11 @@ function generateLatex(
            mem?.prove?.measured || mem?.verify?.measured;
   });
   if (patternsWithCircomV1Memory.length > 0) {
-    lines.push('% Table 7: Memory Usage - Circom v1');
+    lines.push('% Table 7: Memory Usage - Circom DFA');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
-    lines.push('\\caption{Memory Usage by Phase (MB) - Circom v1 at 64-byte input}');
-    lines.push('\\label{tab:memory-circom-v1}');
+    lines.push('\\caption{Memory Usage by Phase (MB) - Circom DFA at 64-byte input}');
+    lines.push('\\label{tab:memory-circom-dfa}');
     lines.push('\\sisetup{table-format = 4.0, separate-uncertainty = true}');
     lines.push('\\begin{tabular}{@{}l S[table-format=4.0(2)] S[table-format=4.0(2)] S[table-format=4.0(2)] S[table-format=3.0(2)]@{}}');
     lines.push('\\toprule');
@@ -791,11 +791,11 @@ function generateLatex(
            mem?.prove?.measured || mem?.verify?.measured;
   });
   if (patternsWithCircomMemory.length > 0) {
-    lines.push('% Table 8: Memory Usage - Circom v2');
+    lines.push('% Table 8: Memory Usage - Circom NFA');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
-    lines.push('\\caption{Memory Usage by Phase (MB) - Circom v2 at 64-byte input}');
-    lines.push('\\label{tab:memory-circom}');
+    lines.push('\\caption{Memory Usage by Phase (MB) - Circom NFA at 64-byte input}');
+    lines.push('\\label{tab:memory-circom-nfa}');
     lines.push('\\sisetup{table-format = 4.0, separate-uncertainty = true}');
     lines.push('\\begin{tabular}{@{}l S[table-format=4.0(2)] S[table-format=4.0(2)] S[table-format=4.0(2)] S[table-format=3.0(2)]@{}}');
     lines.push('\\toprule');
@@ -821,11 +821,11 @@ function generateLatex(
   });
   if (patternsWithNoirMemory.length > 0) {
     lines.push('');
-    lines.push('% Table 9: Memory Usage - Noir v2');
+    lines.push('% Table 9: Memory Usage - Noir NFA');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
-    lines.push('\\caption{Memory Usage by Phase (MB) - Noir v2 at 64-byte input}');
-    lines.push('\\label{tab:memory-noir}');
+    lines.push('\\caption{Memory Usage by Phase (MB) - Noir NFA at 64-byte input}');
+    lines.push('\\label{tab:memory-noir-nfa}');
     lines.push('\\sisetup{table-format = 4.0, separate-uncertainty = true}');
     lines.push('\\begin{tabular}{@{}l S[table-format=4.0(2)] S[table-format=4.0(2)] S[table-format=4.0(2)] S[table-format=3.0(2)]@{}}');
     lines.push('\\toprule');

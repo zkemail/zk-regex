@@ -184,7 +184,7 @@ export type PatternFeature =
 /**
  * Complexity level for dual taxonomy classification.
  */
-export type PatternComplexity = 'simple' | 'medium' | 'complex' | 'v2-only';
+export type PatternComplexity = 'simple' | 'medium' | 'complex' | 'NFA-only';
 
 /**
  * Pattern category (synthetic benchmark vs real-world usage).
