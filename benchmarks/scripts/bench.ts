@@ -4,9 +4,9 @@
  *
  * Usage:
  *   bun scripts/bench.ts                              # Run all providers, all patterns
- *   bun scripts/bench.ts --provider circom-v2         # Run specific provider
+ *   bun scripts/bench.ts --provider circom-nfa         # Run specific provider
  *   bun scripts/bench.ts --pattern simple_regex       # Run specific pattern
- *   bun scripts/bench.ts --provider circom-v2 --pattern simple_regex  # Both
+ *   bun scripts/bench.ts --provider circom-nfa --pattern simple_regex  # Both
  */
 
 import * as fs from 'fs/promises';
@@ -15,34 +15,25 @@ import type {
   ProviderType,
   PatternDefinition,
   BenchmarkConfig,
+  BenchmarkResult,
   NoirMetrics,
   CircomMetrics,
-  CircomV2Metrics,
+  CircomNFAMetrics,
 } from '../src/types.js';
 import type { BenchmarkProvider, BenchmarkMetrics } from '../src/providers/base.js';
-import { CircomV1Provider } from '../src/providers/circom-v1.js';
-import { CircomV2Provider } from '../src/providers/circom-v2.js';
-import { NoirV2Provider } from '../src/providers/noir-v2.js';
+import { CircomDFAProvider } from '../src/providers/circom-dfa.js';
+import { CircomNFAProvider } from '../src/providers/circom-nfa.js';
+import { NoirNFAProvider } from '../src/providers/noir-nfa.js';
 import { getHardwareSpec, getToolVersions, verifyDependencies } from '../src/utils/hardware.js';
-import { cleanupV1Worktree } from '../src/utils/worktree.js';
+import { cleanupDfaWorktree } from '../src/utils/worktree.js';
 import { registerAbortHandler, isAborted } from '../src/utils/abort.js';
 import { formatError } from '../src/errors.js';
-
-/** Result for a single benchmark run */
-interface BenchmarkResult {
-  provider: ProviderType;
-  pattern: string;
-  inputLengthBytes: number;
-  actualContentLength?: number;
-  timestamp: string;
-  metrics: BenchmarkMetrics;
-}
 
 // Parse command line arguments
 function parseArgs(): { providers: ProviderType[]; patternFilter: string | null; noMemory: boolean } {
   const args = process.argv.slice(2);
 
-  let providers: ProviderType[] = ['circom-v2', 'noir-v2', 'circom-v1'];
+  let providers: ProviderType[] = ['circom-nfa', 'noir-nfa', 'circom-dfa'];
   let patternFilter: string | null = null;
   const noMemory = args.includes('--no-memory');
 
@@ -76,12 +67,12 @@ async function loadBenchmarkConfig(): Promise<BenchmarkConfig> {
 // Create provider instance
 function createProvider(type: ProviderType): BenchmarkProvider {
   switch (type) {
-    case 'circom-v1':
-      return new CircomV1Provider();
-    case 'circom-v2':
-      return new CircomV2Provider();
-    case 'noir-v2':
-      return new NoirV2Provider();
+    case 'circom-dfa':
+      return new CircomDFAProvider();
+    case 'circom-nfa':
+      return new CircomNFAProvider();
+    case 'noir-nfa':
+      return new NoirNFAProvider();
     default:
       throw new Error(`Unknown provider: ${type}`);
   }
@@ -90,10 +81,10 @@ function createProvider(type: ProviderType): BenchmarkProvider {
 // Get required binaries for a provider
 function getRequiredBinaries(type: ProviderType): string[] {
   switch (type) {
-    case 'circom-v1':
-    case 'circom-v2':
+    case 'circom-dfa':
+    case 'circom-nfa':
       return ['circom', 'hyperfine'];
-    case 'noir-v2':
+    case 'noir-nfa':
       return ['nargo', 'bb', 'hyperfine'];
   }
 }
@@ -119,7 +110,7 @@ function formatMemory(stats: { mean: number; stddev: number; measured: boolean }
 function formatMetrics(metrics: BenchmarkMetrics, provider: ProviderType): string {
   const lines: string[] = [];
 
-  if (provider === 'noir-v2') {
+  if (provider === 'noir-nfa') {
     const m = metrics as NoirMetrics;
     lines.push(`ACIR opcodes: ${m.acirOpcodes}, Backend gates: ${m.backendGates}`);
     lines.push(`Compile: ${m.compileMs.mean.toFixed(0)}ms (±${m.compileMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.compile)}`);
@@ -127,8 +118,8 @@ function formatMetrics(metrics: BenchmarkMetrics, provider: ProviderType): strin
     lines.push(`Prove: ${m.proveMs.mean.toFixed(0)}ms (±${m.proveMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.prove)}`);
     lines.push(`Verify: ${m.verifyMs.mean.toFixed(0)}ms (±${m.verifyMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.verify)}`);
     lines.push(`Proof size: ${m.proofSizeBytes} bytes`);
-  } else if (provider === 'circom-v2') {
-    const m = metrics as CircomV2Metrics;
+  } else if (provider === 'circom-nfa') {
+    const m = metrics as CircomNFAMetrics;
     lines.push(`Constraints: ${m.constraints}, States: ${m.states}, Transitions: ${m.transitions}`);
     lines.push(`Compile: Memory: ${formatMemory(m.memoryByPhase?.compile)}`);
     lines.push(`Witness gen: ${m.witnessGenMs.mean.toFixed(0)}ms (±${m.witnessGenMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.witnessGen)}`);
@@ -152,7 +143,7 @@ async function main() {
 
   // Register abort handler for graceful shutdown
   registerAbortHandler(async () => {
-    await cleanupV1Worktree();
+    await cleanupDfaWorktree();
   });
 
   // Parse arguments
@@ -249,6 +240,8 @@ async function main() {
             inputLengthBytes: inputLength,
             actualContentLength: pattern.inputTemplate ? inputLength : undefined,
             timestamp: new Date().toISOString(),
+            compilerCommitHash: provider.getCommitHash(),
+            toolVersions: provider.getToolVersions(),
             metrics: result.value,
           };
           await saveResult(benchResult);

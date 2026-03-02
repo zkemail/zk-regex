@@ -1,23 +1,24 @@
 /**
  * Base interface for benchmark providers.
  *
- * Each provider (CircomV1, CircomV2, NoirV2) implements this interface
+ * Each provider (CircomDFA, CircomNFA, NoirNFA) implements this interface
  * to provide a consistent API for benchmarking different backends.
  */
 
 import type {
   CircomMetrics,
-  CircomV2Metrics,
+  CircomNFAMetrics,
   NoirMetrics,
   PatternDefinition,
   BenchmarkConfig,
+  ToolVersions,
 } from '../types.js';
 import type { Result } from '../errors.js';
 
 /**
  * Generic metrics type for benchmark results.
  */
-export type BenchmarkMetrics = CircomMetrics | CircomV2Metrics | NoirMetrics;
+export type BenchmarkMetrics = CircomMetrics | CircomNFAMetrics | NoirMetrics;
 
 /**
  * Interface for benchmark providers.
@@ -27,6 +28,16 @@ export interface BenchmarkProvider {
    * Provider name for identification.
    */
   readonly name: string;
+
+  /**
+   * Get the compiler commit hash used by this provider.
+   */
+  getCommitHash(): string;
+
+  /**
+   * Get the tool versions relevant to this provider.
+   */
+  getToolVersions(): ToolVersions;
 
   /**
    * Initialize the provider (e.g., set up worktree, check dependencies).
@@ -58,6 +69,10 @@ export interface BenchmarkProvider {
  */
 export abstract class BaseBenchmarkProvider implements BenchmarkProvider {
   abstract readonly name: string;
+
+  abstract getCommitHash(): string;
+
+  abstract getToolVersions(): ToolVersions;
 
   abstract setup(): Promise<Result<void>>;
 

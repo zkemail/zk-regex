@@ -1,8 +1,8 @@
 /**
- * Git worktree management for v1 benchmarking.
+ * Git worktree management for DFA benchmarking.
  *
  * Creates a temporary worktree from the main branch to benchmark
- * the v1 DFA-based compiler without affecting the current branch.
+ * the DFA-based compiler without affecting the current branch.
  */
 
 import * as path from 'path';
@@ -14,7 +14,7 @@ import { getAbortSignal } from './abort.js';
 
 const BENCHMARK_CONFIG_PATH = path.join(import.meta.dir, '..', '..', 'config', 'benchmark.json');
 
-const V1_WORKTREE_PATH = path.join(os.tmpdir(), 'zk-regex-v1-bench');
+const DFA_WORKTREE_PATH = path.join(os.tmpdir(), 'zk-regex-dfa-bench');
 
 /**
  * Execute a command and return stdout.
@@ -68,7 +68,7 @@ async function execAsync(
  */
 async function worktreeExists(): Promise<boolean> {
   try {
-    await fs.access(V1_WORKTREE_PATH);
+    await fs.access(DFA_WORKTREE_PATH);
     return true;
   } catch {
     return false;
@@ -76,34 +76,34 @@ async function worktreeExists(): Promise<boolean> {
 }
 
 /**
- * Read the v1 commit hash from benchmark config.
+ * Read the DFA compiler commit hash from benchmark config.
  * Falls back to 'main' if no commit hash is configured.
  */
-async function getV1CommitRef(): Promise<string> {
+async function getDfaCommitRef(): Promise<string> {
   try {
     const content = await fs.readFile(BENCHMARK_CONFIG_PATH, 'utf-8');
     const config = JSON.parse(content);
-    const commitHash = config?.providers?.['circom-v1']?.commitHash;
+    const commitHash = config?.providers?.['circom-dfa']?.commitHash;
     if (commitHash) {
       return commitHash;
     }
   } catch {
     // Fall back to main if config cannot be read
   }
-  console.warn('Warning: No v1 commit hash in benchmark.json, falling back to main');
+  console.warn('Warning: No DFA commit hash in benchmark.json, falling back to main');
   return 'main';
 }
 
 /**
- * Set up a git worktree for v1 benchmarking.
+ * Set up a git worktree for DFA benchmarking.
  *
  * Creates a detached HEAD worktree from the configured commit hash
  * (or main branch as fallback), installs dependencies with Yarn,
  * and builds the compiler.
  */
-export async function setupV1Worktree(): Promise<Result<string>> {
+export async function setupDfaWorktree(): Promise<Result<string>> {
   // Clean up any existing worktree first
-  await cleanupV1Worktree();
+  await cleanupDfaWorktree();
 
   // Prune stale worktrees
   const pruneResult = await execAsync('git worktree prune');
@@ -112,51 +112,51 @@ export async function setupV1Worktree(): Promise<Result<string>> {
   }
 
   // Get the commit reference to use
-  const commitRef = await getV1CommitRef();
-  console.log(`Using v1 ref: ${commitRef}`);
+  const commitRef = await getDfaCommitRef();
+  console.log(`Using DFA ref: ${commitRef}`);
 
   // Create worktree with detached HEAD
-  console.log(`Creating v1 worktree at ${V1_WORKTREE_PATH}...`);
+  console.log(`Creating DFA worktree at ${DFA_WORKTREE_PATH}...`);
   const addResult = await execAsync(
-    `git worktree add --detach "${V1_WORKTREE_PATH}" ${commitRef}`
+    `git worktree add --detach "${DFA_WORKTREE_PATH}" ${commitRef}`
   );
   if (!addResult.ok) {
     return addResult;
   }
 
-  // Install dependencies with Yarn (v1 uses Yarn, not Bun)
-  console.log('Installing v1 dependencies with Yarn...');
-  const yarnResult = await execAsync('yarn install', { cwd: V1_WORKTREE_PATH });
+  // Install dependencies with Yarn (DFA codebase uses Yarn, not Bun)
+  console.log('Installing DFA dependencies with Yarn...');
+  const yarnResult = await execAsync('yarn install', { cwd: DFA_WORKTREE_PATH });
   if (!yarnResult.ok) {
-    await cleanupV1Worktree();
+    await cleanupDfaWorktree();
     return yarnResult;
   }
 
-  // Build the v1 compiler
-  console.log('Building v1 compiler...');
-  const buildResult = await execAsync('yarn build', { cwd: V1_WORKTREE_PATH });
+  // Build the DFA compiler
+  console.log('Building DFA compiler...');
+  const buildResult = await execAsync('yarn build', { cwd: DFA_WORKTREE_PATH });
   if (!buildResult.ok) {
-    await cleanupV1Worktree();
+    await cleanupDfaWorktree();
     return buildResult;
   }
 
-  console.log('v1 worktree ready');
-  return ok(V1_WORKTREE_PATH);
+  console.log('DFA worktree ready');
+  return ok(DFA_WORKTREE_PATH);
 }
 
 /**
- * Get the path to the v1 worktree.
+ * Get the path to the DFA worktree.
  */
-export function getV1WorktreePath(): string {
-  return V1_WORKTREE_PATH;
+export function getDfaWorktreePath(): string {
+  return DFA_WORKTREE_PATH;
 }
 
 /**
- * Get the path to a v1 circuit file.
+ * Get the path to a DFA circuit file.
  */
-export function getV1CircuitPath(circuitName: string): string {
+export function getDfaCircuitPath(circuitName: string): string {
   return path.join(
-    V1_WORKTREE_PATH,
+    DFA_WORKTREE_PATH,
     'packages',
     'circom',
     'circuits',
@@ -166,12 +166,12 @@ export function getV1CircuitPath(circuitName: string): string {
 }
 
 /**
- * Clean up the v1 worktree.
+ * Clean up the DFA worktree.
  */
-export async function cleanupV1Worktree(): Promise<void> {
+export async function cleanupDfaWorktree(): Promise<void> {
   if (await worktreeExists()) {
-    console.log('Cleaning up v1 worktree...');
-    await execAsync(`git worktree remove --force "${V1_WORKTREE_PATH}"`);
+    console.log('Cleaning up DFA worktree...');
+    await execAsync(`git worktree remove --force "${DFA_WORKTREE_PATH}"`);
   }
   await execAsync('git worktree prune');
 }

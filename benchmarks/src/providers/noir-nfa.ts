@@ -1,5 +1,5 @@
 /**
- * Noir v2 (NFA-based) benchmark provider.
+ * Noir NFA benchmark provider.
  *
  * This provider benchmarks the Noir backend, which uses sparse array
  * encoding for O(1) transition lookup (~14.5 gates per lookup).
@@ -15,6 +15,7 @@ import type {
   TimingStats,
   PhaseMemory,
   MemoryStats,
+  ToolVersions,
 } from '../types.js';
 import type { Result } from '../errors.js';
 import { ok, err, errors } from '../errors.js';
@@ -24,6 +25,9 @@ import { runHyperfine } from '../utils/hyperfine.js';
 import { measureAsync, calculateStats } from '../utils/timing.js';
 import { runWithMemoryTracking, defaultMemoryStats } from '../utils/memory.js';
 import { generateScaledInput } from '../utils/input-scaling.js';
+
+// Import compiler for input generation
+import { genCircuitInputs, ProvingFramework } from '../../../compiler/pkg/zk_regex_compiler.js';
 
 /** Parsed nargo info output */
 interface NargoInfo {
@@ -70,12 +74,26 @@ function getProjectRoot(): string {
   return path.resolve(import.meta.dir, '..', '..', '..');
 }
 
-export class NoirV2Provider extends BaseBenchmarkProvider {
-  readonly name = 'noir-v2';
+/**
+ * Get the current git commit hash.
+ */
+function getGitCommitHash(): string {
+  try {
+    const result = Bun.spawnSync(['git', 'rev-parse', 'HEAD']);
+    return result.stdout.toString().trim() || 'unknown';
+  } catch {
+    console.warn('Warning: Could not determine git commit hash');
+    return 'unknown';
+  }
+}
+
+export class NoirNFAProvider extends BaseBenchmarkProvider {
+  readonly name = 'noir-nfa';
   private buildDir: string;
   private projectRoot: string;
   private nargoVersion: string | null = null;
   private bbVersion: string | null = null;
+  private commitHash: string = 'unknown';
 
   constructor() {
     super();
@@ -83,10 +101,26 @@ export class NoirV2Provider extends BaseBenchmarkProvider {
     this.projectRoot = getProjectRoot();
   }
 
-  async setup(): Promise<Result<void>> {
-    console.log('Setting up Noir v2 provider...');
+  getCommitHash(): string {
+    return this.commitHash;
+  }
 
-    // 1. Verify nargo is installed
+  getToolVersions(): ToolVersions {
+    return {
+      nargo: this.nargoVersion ?? undefined,
+      barretenberg: this.bbVersion ?? undefined,
+      bun: Bun.version,
+      node: process.version,
+    };
+  }
+
+  async setup(): Promise<Result<void>> {
+    console.log('Setting up Noir NFA provider...');
+
+    // 1. Get current git commit hash
+    this.commitHash = getGitCommitHash();
+
+    // 2. Verify nargo is installed
     const nargoResult = await execAsync('nargo --version');
     if (!nargoResult.ok) {
       return err(
@@ -99,7 +133,7 @@ export class NoirV2Provider extends BaseBenchmarkProvider {
     this.nargoVersion = nargoResult.value;
     console.log(`  Nargo version: ${this.nargoVersion}`);
 
-    // 2. Verify barretenberg (bb) is installed
+    // 3. Verify barretenberg (bb) is installed
     const bbResult = await execAsync('bb --version');
     if (!bbResult.ok) {
       return err(
@@ -109,14 +143,14 @@ export class NoirV2Provider extends BaseBenchmarkProvider {
     this.bbVersion = bbResult.value;
     console.log(`  Barretenberg version: ${this.bbVersion}`);
 
-    // 3. Create build directory
+    // 4. Create build directory
     try {
       await fs.mkdir(this.buildDir, { recursive: true });
     } catch {
       // Directory might already exist
     }
 
-    console.log('  Noir v2 provider setup complete');
+    console.log('  Noir NFA provider setup complete');
     return ok(undefined);
   }
 
@@ -203,18 +237,18 @@ export class NoirV2Provider extends BaseBenchmarkProvider {
   }
 
   supportsPattern(_pattern: PatternDefinition): boolean {
-    // v2 Noir supports all patterns
+    // NFA Noir supports all patterns
     return true;
   }
 
   async cleanup(): Promise<void> {
-    console.log('Cleaning up Noir v2 provider...');
+    console.log('Cleaning up Noir NFA provider...');
     try {
       await fs.rm(this.buildDir, { recursive: true, force: true });
     } catch {
       // Ignore cleanup errors
     }
-    console.log('  Noir v2 cleanup complete');
+    console.log('  Noir NFA cleanup complete');
   }
 
   /**

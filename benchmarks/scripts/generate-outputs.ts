@@ -216,8 +216,8 @@ function generateMarkdown(
     for (const level of COMPLEXITY_ORDER) {
       const entries = grouped.get(level)!;
       // Only show patterns that have DFA data for comparison sections
-      const withV1 = entries.filter(([, data]) => data.v1Circom != null);
-      if (withV1.length === 0 && level !== 'NFA-only') continue;
+      const withDfa = entries.filter(([, data]) => data.dfaCircom != null);
+      if (withDfa.length === 0 && level !== 'NFA-only') continue;
       if (level === 'NFA-only') continue; // NFA-only gets its own section
 
       lines.push(`### ${level.charAt(0).toUpperCase() + level.slice(1)} Patterns`);
@@ -225,12 +225,12 @@ function generateMarkdown(
       lines.push('| Pattern | DFA Constraints | NFA Constraints | Reduction | DFA Prove (ms) | NFA Prove (ms) |');
       lines.push('|---------|-----------------|-----------------|-----------|----------------|----------------|');
 
-      for (const [key, data] of withV1) {
+      for (const [key, data] of withDfa) {
         const name = getPatternName(key);
-        const v1c = data.v1Circom!.constraints;
-        const v2c = data.v2Circom.constraints;
+        const dfaC = data.dfaCircom!.constraints;
+        const nfaC = data.nfaCircom.constraints;
         lines.push(
-          `| ${name} | ${v1c} | ${v2c} | ${reductionPct(v1c, v2c)} | ${formatTimingMarkdown(data.v1Circom!.proveMs)} | ${formatTimingMarkdown(data.v2Circom.proveMs)} |`
+          `| ${name} | ${dfaC} | ${nfaC} | ${reductionPct(dfaC, nfaC)} | ${formatTimingMarkdown(data.dfaCircom!.proveMs)} | ${formatTimingMarkdown(data.nfaCircom.proveMs)} |`
         );
       }
       lines.push('');
@@ -257,19 +257,19 @@ function generateMarkdown(
   }
 
   // NFA-Only Patterns (those without DFA data)
-  const v2OnlyPatterns = defaultPatterns.filter(([, data]) => data.v1Circom == null);
-  if (v2OnlyPatterns.length > 0) {
+  const nfaOnlyPatterns = defaultPatterns.filter(([, data]) => data.dfaCircom == null);
+  if (nfaOnlyPatterns.length > 0) {
     lines.push('## NFA-Only Patterns');
     lines.push('');
     lines.push('| Pattern | Circom NFA Constraints | Circom NFA Prove (ms) | Noir NFA Gates | Features |');
     lines.push('|---------|------------------------|------------------------|----------------|----------|');
 
-    for (const [key, data] of v2OnlyPatterns) {
+    for (const [key, data] of nfaOnlyPatterns) {
       const name = getPatternName(key);
       const def = patternDefs[name];
       const features = def?.features.join(', ') ?? '';
       lines.push(
-        `| ${name} | ${data.v2Circom.constraints} | ${formatTimingMarkdown(data.v2Circom.proveMs)} | ${data.v2Noir.backendGates || '—'} | ${features} |`
+        `| ${name} | ${data.nfaCircom.constraints} | ${formatTimingMarkdown(data.nfaCircom.proveMs)} | ${data.nfaNoir.backendGates || '—'} | ${features} |`
       );
     }
     lines.push('');
@@ -326,11 +326,11 @@ function generateMarkdown(
     for (const point of results.scaling) {
       const def = patternDefs[point.pattern];
       const complexity = def?.complexity ?? '?';
-      const v1R1CS = point.circomV1Constraints ?? '—';
-      const v2R1CS = point.circomV2Constraints || '—';
-      const noirGates = point.noirGates || '—';
+      const dfaR1CS = point.circomDfaConstraints ?? '—';
+      const nfaR1CS = point.circomNfaConstraints || '—';
+      const nfaGates = point.noirNfaGates || '—';
       lines.push(
-        `| ${point.pattern} | ${complexity} | ${point.inputLengthBytes} | ${point.actualContentLength} | ${v1R1CS} | ${v2R1CS} | ${noirGates} |`
+        `| ${point.pattern} | ${complexity} | ${point.inputLengthBytes} | ${point.actualContentLength} | ${dfaR1CS} | ${nfaR1CS} | ${nfaGates} |`
       );
     }
     lines.push('');
@@ -343,11 +343,11 @@ function generateMarkdown(
     for (const point of results.scaling) {
       const def = patternDefs[point.pattern];
       const complexity = def?.complexity ?? '?';
-      const v1Prove = point.circomV1ProveMs && point.circomV1ProveMs > 0 ? point.circomV1ProveMs.toFixed(0) : '—';
-      const v2Prove = point.circomV2ProveMs > 0 ? point.circomV2ProveMs.toFixed(0) : '—';
-      const noirProve = point.noirProveMs > 0 ? point.noirProveMs.toFixed(0) : '—';
+      const dfaProve = point.circomDfaProveMs && point.circomDfaProveMs > 0 ? point.circomDfaProveMs.toFixed(0) : '—';
+      const nfaProve = point.circomNfaProveMs > 0 ? point.circomNfaProveMs.toFixed(0) : '—';
+      const noirProve = point.noirNfaProveMs > 0 ? point.noirNfaProveMs.toFixed(0) : '—';
       lines.push(
-        `| ${point.pattern} | ${complexity} | ${point.inputLengthBytes} | ${point.actualContentLength} | ${v1Prove} | ${v2Prove} | ${noirProve} |`
+        `| ${point.pattern} | ${complexity} | ${point.inputLengthBytes} | ${point.actualContentLength} | ${dfaProve} | ${nfaProve} | ${noirProve} |`
       );
     }
     lines.push('');
@@ -363,23 +363,23 @@ function generateMarkdown(
     for (const level of COMPLEXITY_ORDER) {
       const entries = grouped.get(level)!;
       if (entries.length === 0) continue;
-      const withV1 = entries.filter(([, d]) => d.v1Circom != null);
-      const avgV1 = withV1.length > 0
-        ? Math.round(withV1.reduce((s, [, d]) => s + d.v1Circom!.constraints, 0) / withV1.length)
+      const withDfa = entries.filter(([, d]) => d.dfaCircom != null);
+      const avgDfa = withDfa.length > 0
+        ? Math.round(withDfa.reduce((s, [, d]) => s + d.dfaCircom!.constraints, 0) / withDfa.length)
         : '—';
-      const avgV2 = Math.round(entries.reduce((s, [, d]) => s + d.v2Circom.constraints, 0) / entries.length);
-      const avgReduction = withV1.length > 0
-        ? ((1 - entries.reduce((s, [, d]) => s + d.v2Circom.constraints, 0) / withV1.reduce((s, [, d]) => s + d.v1Circom!.constraints, 0)) * 100).toFixed(1) + '%'
+      const avgNfa = Math.round(entries.reduce((s, [, d]) => s + d.nfaCircom.constraints, 0) / entries.length);
+      const avgReduction = withDfa.length > 0
+        ? ((1 - entries.reduce((s, [, d]) => s + d.nfaCircom.constraints, 0) / withDfa.reduce((s, [, d]) => s + d.dfaCircom!.constraints, 0)) * 100).toFixed(1) + '%'
         : '—';
-      const v2Only = entries.length - withV1.length;
-      const notes = v2Only > 0 ? `${v2Only} v2-only` : `${withV1.length} compared`;
-      lines.push(`| ${level} | ${entries.length} | ${avgV1} | ${avgV2} | ${avgReduction} | ${notes} |`);
+      const nfaOnly = entries.length - withDfa.length;
+      const notes = nfaOnly > 0 ? `${nfaOnly} NFA-only` : `${withDfa.length} compared`;
+      lines.push(`| ${level} | ${entries.length} | ${avgDfa} | ${avgNfa} | ${avgReduction} | ${notes} |`);
     }
     lines.push('');
   }
 
   // Noir v2 Details (separate section)
-  const patternsWithNoir = defaultPatterns.filter(([, data]) => data.v2Noir.backendGates > 0);
+  const patternsWithNoir = defaultPatterns.filter(([, data]) => data.nfaNoir.backendGates > 0);
   if (patternsWithNoir.length > 0) {
     lines.push('## Noir NFA (UltraHonk) Backend Details (64-byte input)');
     lines.push('');
@@ -390,7 +390,7 @@ function generateMarkdown(
       const name = getPatternName(key);
       const def = patternDefs[name];
       const complexity = def?.complexity ?? '?';
-      const noir = data.v2Noir;
+      const noir = data.nfaNoir;
       lines.push(
         `| ${name} | ${complexity} | ${noir.acirOpcodes} | ${noir.backendGates} | ${noir.gatesPerByte.toFixed(1)} | ${formatTimingMarkdown(noir.proveMs)} | ${formatTimingMarkdown(noir.verifyMs)} | ${formatBytes(noir.proofSizeBytes)} |`
       );
@@ -401,7 +401,7 @@ function generateMarkdown(
   // Memory Usage - Circom v1
   if (defaultPatterns.length > 0) {
     const patternsWithMemory = defaultPatterns.filter(([, data]) => {
-      const mem = data.v1Circom?.memoryByPhase;
+      const mem = data.dfaCircom?.memoryByPhase;
       return mem?.compile?.measured || mem?.witnessGen?.measured ||
              mem?.prove?.measured || mem?.verify?.measured;
     });
@@ -413,7 +413,7 @@ function generateMarkdown(
 
       for (const [key, data] of patternsWithMemory) {
         const name = getPatternName(key);
-        const mem = data.v1Circom!.memoryByPhase;
+        const mem = data.dfaCircom!.memoryByPhase;
         lines.push(
           `| ${name} | ${formatMemoryMarkdown(mem?.compile)} | ${formatMemoryMarkdown(mem?.witnessGen)} | ${formatMemoryMarkdown(mem?.prove)} | ${formatMemoryMarkdown(mem?.verify)} |`
         );
@@ -425,7 +425,7 @@ function generateMarkdown(
   // Memory Usage - Circom v2
   if (defaultPatterns.length > 0) {
     const patternsWithMemory = defaultPatterns.filter(([, data]) => {
-      const mem = data.v2Circom.memoryByPhase;
+      const mem = data.nfaCircom.memoryByPhase;
       return mem?.compile?.measured || mem?.witnessGen?.measured ||
              mem?.prove?.measured || mem?.verify?.measured;
     });
@@ -437,7 +437,7 @@ function generateMarkdown(
 
       for (const [key, data] of patternsWithMemory) {
         const name = getPatternName(key);
-        const mem = data.v2Circom.memoryByPhase;
+        const mem = data.nfaCircom.memoryByPhase;
         lines.push(
           `| ${name} | ${formatMemoryMarkdown(mem?.compile)} | ${formatMemoryMarkdown(mem?.witnessGen)} | ${formatMemoryMarkdown(mem?.prove)} | ${formatMemoryMarkdown(mem?.verify)} |`
         );
@@ -449,7 +449,7 @@ function generateMarkdown(
   // Memory Usage - Noir v2
   if (defaultPatterns.length > 0) {
     const patternsWithMemory = defaultPatterns.filter(([, data]) => {
-      const mem = data.v2Noir.memoryByPhase;
+      const mem = data.nfaNoir.memoryByPhase;
       return mem?.compile?.measured || mem?.witnessGen?.measured ||
              mem?.prove?.measured || mem?.verify?.measured;
     });
@@ -461,7 +461,7 @@ function generateMarkdown(
 
       for (const [key, data] of patternsWithMemory) {
         const name = getPatternName(key);
-        const mem = data.v2Noir.memoryByPhase;
+        const mem = data.nfaNoir.memoryByPhase;
         lines.push(
           `| ${name} | ${formatMemoryMarkdown(mem?.compile)} | ${formatMemoryMarkdown(mem?.witnessGen)} | ${formatMemoryMarkdown(mem?.prove)} | ${formatMemoryMarkdown(mem?.verify)} |`
         );
@@ -536,17 +536,17 @@ function generateLatex(
 
     for (const level of COMPLEXITY_ORDER) {
       if (level === 'NFA-only') continue;
-      const entries = grouped.get(level)!.filter(([, d]) => d.v1Circom != null);
+      const entries = grouped.get(level)!.filter(([, d]) => d.dfaCircom != null);
       if (entries.length === 0) continue;
 
       for (let i = 0; i < entries.length; i++) {
         const [key, data] = entries[i];
         const name = getPatternName(key);
         const levelCol = i === 0 ? level : '';
-        const v1c = data.v1Circom!.constraints;
-        const v2c = data.v2Circom.constraints;
-        const red = v1c > 0 ? ((1 - v2c / v1c) * 100).toFixed(1) : '{---}';
-        lines.push(`${levelCol} & ${escapeLatex(name)} & ${v1c} & ${v2c} & ${red} & ${formatTimingLatex(data.v1Circom!.proveMs)} & ${formatTimingLatex(data.v2Circom.proveMs)} \\\\`);
+        const dfaC = data.dfaCircom!.constraints;
+        const nfaC = data.nfaCircom.constraints;
+        const red = dfaC > 0 ? ((1 - nfaC / dfaC) * 100).toFixed(1) : '{---}';
+        lines.push(`${levelCol} & ${escapeLatex(name)} & ${dfaC} & ${nfaC} & ${red} & ${formatTimingLatex(data.dfaCircom!.proveMs)} & ${formatTimingLatex(data.nfaCircom.proveMs)} \\\\`);
       }
       lines.push('\\addlinespace');
     }
@@ -586,8 +586,8 @@ function generateLatex(
   }
 
   // Table 3: V2-Only patterns
-  const v2OnlyPatterns = defaultPatterns.filter(([, d]) => d.v1Circom == null);
-  if (v2OnlyPatterns.length > 0) {
+  const nfaOnlyPatterns = defaultPatterns.filter(([, d]) => d.dfaCircom == null);
+  if (nfaOnlyPatterns.length > 0) {
     lines.push('% Table 3: NFA-Only Patterns');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
@@ -599,9 +599,9 @@ function generateLatex(
     lines.push('Pattern & {Circom NFA R1CS} & {Circom NFA Prove (ms)} & {Noir NFA Gates} \\\\');
     lines.push('\\midrule');
 
-    for (const [key, data] of v2OnlyPatterns) {
+    for (const [key, data] of nfaOnlyPatterns) {
       const name = getPatternName(key);
-      lines.push(`${escapeLatex(name)} & ${data.v2Circom.constraints} & ${formatTimingLatex(data.v2Circom.proveMs)} & ${data.v2Noir.backendGates || '{---}'} \\\\`);
+      lines.push(`${escapeLatex(name)} & ${data.nfaCircom.constraints} & ${formatTimingLatex(data.nfaCircom.proveMs)} & ${data.nfaNoir.backendGates || '{---}'} \\\\`);
     }
 
     lines.push('\\bottomrule');
@@ -641,7 +641,7 @@ function generateLatex(
         const point = points[i];
         const complexCol = i === 0 ? complexity : '';
         const patternCol = i === 0 ? escapeLatex(pattern) : '';
-        lines.push(`${complexCol} & ${patternCol} & ${point.inputLengthBytes} & ${point.actualContentLength} & ${point.circomV1Constraints ?? '{---}'} & ${point.circomV2Constraints || '{---}'} & ${point.noirGates || '{---}'} \\\\`);
+        lines.push(`${complexCol} & ${patternCol} & ${point.inputLengthBytes} & ${point.actualContentLength} & ${point.circomDfaConstraints ?? '{---}'} & ${point.circomNfaConstraints || '{---}'} & ${point.noirNfaGates || '{---}'} \\\\`);
       }
       lines.push('\\addlinespace');
     }
@@ -672,10 +672,10 @@ function generateLatex(
         const point = points[i];
         const complexCol = i === 0 ? complexity : '';
         const patternCol = i === 0 ? escapeLatex(pattern) : '';
-        const v1Prove = point.circomV1ProveMs && point.circomV1ProveMs > 0 ? point.circomV1ProveMs.toFixed(0) : '{---}';
-        const v2Prove = point.circomV2ProveMs > 0 ? point.circomV2ProveMs.toFixed(0) : '{---}';
-        const noirProve = point.noirProveMs > 0 ? point.noirProveMs.toFixed(0) : '{---}';
-        lines.push(`${complexCol} & ${patternCol} & ${point.inputLengthBytes} & ${point.actualContentLength} & ${v1Prove} & ${v2Prove} & ${noirProve} \\\\`);
+        const dfaProve = point.circomDfaProveMs && point.circomDfaProveMs > 0 ? point.circomDfaProveMs.toFixed(0) : '{---}';
+        const nfaProve = point.circomNfaProveMs > 0 ? point.circomNfaProveMs.toFixed(0) : '{---}';
+        const noirProve = point.noirNfaProveMs > 0 ? point.noirNfaProveMs.toFixed(0) : '{---}';
+        lines.push(`${complexCol} & ${patternCol} & ${point.inputLengthBytes} & ${point.actualContentLength} & ${dfaProve} & ${nfaProve} & ${noirProve} \\\\`);
       }
       lines.push('\\addlinespace');
     }
@@ -703,15 +703,15 @@ function generateLatex(
     for (const level of COMPLEXITY_ORDER) {
       const entries = grouped.get(level)!;
       if (entries.length === 0) continue;
-      const withV1 = entries.filter(([, d]) => d.v1Circom != null);
-      const avgV1 = withV1.length > 0
-        ? Math.round(withV1.reduce((s, [, d]) => s + d.v1Circom!.constraints, 0) / withV1.length)
+      const withDfa = entries.filter(([, d]) => d.dfaCircom != null);
+      const avgDfa = withDfa.length > 0
+        ? Math.round(withDfa.reduce((s, [, d]) => s + d.dfaCircom!.constraints, 0) / withDfa.length)
         : '{---}';
-      const avgV2 = Math.round(entries.reduce((s, [, d]) => s + d.v2Circom.constraints, 0) / entries.length);
-      const avgReduction = withV1.length > 0 && typeof avgV1 === 'number'
-        ? ((1 - avgV2 / avgV1) * 100).toFixed(1)
+      const avgNfa = Math.round(entries.reduce((s, [, d]) => s + d.nfaCircom.constraints, 0) / entries.length);
+      const avgReduction = withDfa.length > 0 && typeof avgDfa === 'number'
+        ? ((1 - avgNfa / avgDfa) * 100).toFixed(1)
         : '{---}';
-      lines.push(`${level} & ${entries.length} & ${avgV1} & ${avgV2} & ${avgReduction} \\\\`);
+      lines.push(`${level} & ${entries.length} & ${avgDfa} & ${avgNfa} & ${avgReduction} \\\\`);
     }
 
     lines.push('\\bottomrule');
@@ -721,7 +721,7 @@ function generateLatex(
   }
 
   // Table 6: Noir v2 Details (separate section)
-  const patternsWithNoir = defaultPatterns.filter(([, data]) => data.v2Noir.backendGates > 0);
+  const patternsWithNoir = defaultPatterns.filter(([, data]) => data.nfaNoir.backendGates > 0);
   if (patternsWithNoir.length > 0) {
     lines.push('% Table 6: Noir NFA Backend Details');
     lines.push('\\begin{table}[htbp]');
@@ -744,7 +744,7 @@ function generateLatex(
       const name = getPatternName(key);
       const def = patternDefs[name];
       const complexity = def?.complexity ?? '?';
-      const noir = data.v2Noir;
+      const noir = data.nfaNoir;
       lines.push(`${complexity} & ${escapeLatex(name)} & ${noir.acirOpcodes} & ${noir.backendGates} & ${noir.gatesPerByte.toFixed(1)} & ${formatTimingLatex(noir.proveMs)} & ${formatTimingLatex(noir.verifyMs)} & ${noir.proofSizeBytes} \\\\`);
     }
 
@@ -754,13 +754,13 @@ function generateLatex(
     lines.push('');
   }
 
-  // Table 7: Memory Usage - Circom v1
-  const patternsWithCircomV1Memory = defaultPatterns.filter(([, data]) => {
-    const mem = data.v1Circom?.memoryByPhase;
+  // Table 7: Memory Usage - Circom DFA
+  const patternsWithCircomDfaMemory = defaultPatterns.filter(([, data]) => {
+    const mem = data.dfaCircom?.memoryByPhase;
     return mem?.compile?.measured || mem?.witnessGen?.measured ||
            mem?.prove?.measured || mem?.verify?.measured;
   });
-  if (patternsWithCircomV1Memory.length > 0) {
+  if (patternsWithCircomDfaMemory.length > 0) {
     lines.push('% Table 7: Memory Usage - Circom DFA');
     lines.push('\\begin{table}[htbp]');
     lines.push('\\centering');
@@ -772,9 +772,9 @@ function generateLatex(
     lines.push('Pattern & {Compile} & {WitnessGen} & {Prove} & {Verify} \\\\');
     lines.push('\\midrule');
 
-    for (const [key, data] of patternsWithCircomV1Memory) {
+    for (const [key, data] of patternsWithCircomDfaMemory) {
       const name = getPatternName(key);
-      const mem = data.v1Circom!.memoryByPhase;
+      const mem = data.dfaCircom!.memoryByPhase;
       lines.push(`${escapeLatex(name)} & ${formatMemoryLatex(mem?.compile)} & ${formatMemoryLatex(mem?.witnessGen)} & ${formatMemoryLatex(mem?.prove)} & ${formatMemoryLatex(mem?.verify)} \\\\`);
     }
 
@@ -786,7 +786,7 @@ function generateLatex(
 
   // Table 8: Memory Usage - Circom v2
   const patternsWithCircomMemory = defaultPatterns.filter(([, data]) => {
-    const mem = data.v2Circom.memoryByPhase;
+    const mem = data.nfaCircom.memoryByPhase;
     return mem?.compile?.measured || mem?.witnessGen?.measured ||
            mem?.prove?.measured || mem?.verify?.measured;
   });
@@ -804,7 +804,7 @@ function generateLatex(
 
     for (const [key, data] of patternsWithCircomMemory) {
       const name = getPatternName(key);
-      const mem = data.v2Circom.memoryByPhase;
+      const mem = data.nfaCircom.memoryByPhase;
       lines.push(`${escapeLatex(name)} & ${formatMemoryLatex(mem?.compile)} & ${formatMemoryLatex(mem?.witnessGen)} & ${formatMemoryLatex(mem?.prove)} & ${formatMemoryLatex(mem?.verify)} \\\\`);
     }
 
@@ -815,7 +815,7 @@ function generateLatex(
 
   // Table 9: Memory Usage - Noir v2
   const patternsWithNoirMemory = defaultPatterns.filter(([, data]) => {
-    const mem = data.v2Noir.memoryByPhase;
+    const mem = data.nfaNoir.memoryByPhase;
     return mem?.compile?.measured || mem?.witnessGen?.measured ||
            mem?.prove?.measured || mem?.verify?.measured;
   });
@@ -834,7 +834,7 @@ function generateLatex(
 
     for (const [key, data] of patternsWithNoirMemory) {
       const name = getPatternName(key);
-      const mem = data.v2Noir.memoryByPhase;
+      const mem = data.nfaNoir.memoryByPhase;
       lines.push(`${escapeLatex(name)} & ${formatMemoryLatex(mem?.compile)} & ${formatMemoryLatex(mem?.witnessGen)} & ${formatMemoryLatex(mem?.prove)} & ${formatMemoryLatex(mem?.verify)} \\\\`);
     }
 

@@ -2,7 +2,7 @@
  * TypeScript interfaces for ZK-Regex benchmark results.
  *
  * These types define the structure of benchmark data collected from
- * Circom (v1 and v2) and Noir (v2 only) backends.
+ * Circom (DFA and NFA) and Noir (NFA only) backends.
  */
 
 /**
@@ -83,15 +83,15 @@ export interface CircomMetrics {
 }
 
 /**
- * Extended metrics for v2 Circom, including NFA complexity.
+ * Extended metrics for NFA Circom, including NFA complexity.
  */
-export interface CircomV2Metrics extends CircomMetrics {
+export interface CircomNFAMetrics extends CircomMetrics {
   readonly states: number;
   readonly transitions: number;
 }
 
 /**
- * Noir backend metrics (v2 only).
+ * Noir backend metrics (NFA only).
  */
 export interface NoirMetrics {
   readonly acirOpcodes: number;
@@ -111,9 +111,9 @@ export interface NoirMetrics {
 export interface PatternBenchmark {
   readonly pattern: string;
   readonly inputLengthBytes: number;
-  readonly v1Circom?: CircomMetrics;
-  readonly v2Circom: CircomV2Metrics;
-  readonly v2Noir: NoirMetrics;
+  readonly dfaCircom?: CircomMetrics;
+  readonly nfaCircom: CircomNFAMetrics;
+  readonly nfaNoir: NoirMetrics;
 }
 
 /**
@@ -125,12 +125,12 @@ export interface ScalingDataPoint {
   readonly inputLengthBytes: number;
   readonly actualContentLength: number;
   readonly scalingStrategy?: ScalingStrategy;
-  readonly circomV1Constraints?: number;
-  readonly circomV2Constraints: number;
-  readonly noirGates: number;
-  readonly circomV1ProveMs?: number;
-  readonly circomV2ProveMs: number;
-  readonly noirProveMs: number;
+  readonly circomDfaConstraints?: number;
+  readonly circomNfaConstraints: number;
+  readonly noirNfaGates: number;
+  readonly circomDfaProveMs?: number;
+  readonly circomNfaProveMs: number;
+  readonly noirNfaProveMs: number;
 }
 
 /**
@@ -143,12 +143,27 @@ export interface PatternMetadataEntry {
 }
 
 /**
+ * Result for a single benchmark run, saved as individual JSON file.
+ */
+export interface BenchmarkResult {
+  readonly provider: ProviderType;
+  readonly pattern: string;
+  readonly inputLengthBytes: number;
+  readonly actualContentLength?: number;
+  readonly timestamp: string;
+  readonly compilerCommitHash: string;
+  readonly toolVersions: ToolVersions;
+  readonly metrics: CircomMetrics | CircomNFAMetrics | NoirMetrics;
+}
+
+/**
  * Complete benchmark results with metadata.
  */
 export interface BenchmarkResults {
   readonly version: '1.0.0';
   readonly hardware: HardwareSpec;
   readonly toolVersions: ToolVersions;
+  readonly compilerVersions?: Record<ProviderType, string>;
   readonly patterns: Record<string, PatternBenchmark>;
   readonly scaling: ScalingDataPoint[];
   readonly patternMetadata?: Record<string, PatternMetadataEntry>;
@@ -226,7 +241,7 @@ export interface PatternDefinition {
 /**
  * Provider type for benchmark execution.
  */
-export type ProviderType = 'circom-v1' | 'circom-v2' | 'noir-v2';
+export type ProviderType = 'circom-dfa' | 'circom-nfa' | 'noir-nfa';
 
 /**
  * Powers of Tau file configuration.

@@ -11,8 +11,9 @@ import type {
   BenchmarkResults,
   PatternBenchmark,
   PatternDefinition,
+  ProviderType,
   CircomMetrics,
-  CircomV2Metrics,
+  CircomNFAMetrics,
   NoirMetrics,
   PatternMetadataEntry,
   ScalingDataPoint,
@@ -20,6 +21,7 @@ import type {
   TimingStats,
   PhaseMemory,
   MemoryStats,
+  ToolVersions,
 } from '../src/types.js';
 import { getHardwareSpec, getToolVersions } from '../src/utils/hardware.js';
 
@@ -42,11 +44,13 @@ interface PatternMetadata {
  * Raw result file structure from providers.
  */
 interface RawResultFile {
-  provider: 'circom-v1' | 'circom-v2' | 'noir-v2';
+  provider: 'circom-dfa' | 'circom-nfa' | 'noir-nfa';
   pattern: string;
   inputLengthBytes: number;
   actualContentLength?: number;
   timestamp: string;
+  compilerCommitHash?: string;
+  toolVersions?: ToolVersions;
   metrics: Record<string, unknown>;
 }
 
@@ -55,7 +59,7 @@ interface RawResultFile {
  * Format: {provider}_{pattern}_{inputLength}.json
  */
 function parseFilename(filename: string): { provider: string; pattern: string; inputLength: number } | null {
-  const match = filename.match(/^(circom-v1|circom-v2|noir-v2)_(.+)_(\d+)\.json$/);
+  const match = filename.match(/^(circom-dfa|circom-nfa|noir-nfa)_(.+)_(\d+)\.json$/);
   if (!match) return null;
   return {
     provider: match[1],
@@ -122,9 +126,9 @@ function defaultNoirMetrics(): NoirMetrics {
 }
 
 /**
- * Create a default CircomV2Metrics for missing data.
+ * Create a default CircomNFAMetrics for missing data.
  */
-function defaultCircomV2Metrics(): CircomV2Metrics {
+function defaultCircomNFAMetrics(): CircomNFAMetrics {
   return {
     constraints: 0,
     states: 0,
@@ -242,9 +246,9 @@ function displayResultsSummary(
     console.log('Circuit Compilation:');
     const compilationRows = benchmarks.map((b) => ({
       'Input (bytes)': b.inputLengthBytes,
-      'Circom v1 R1CS': formatNumber(b.v1Circom?.constraints),
-      'Circom v2 R1CS': formatNumber(b.v2Circom.constraints),
-      'Noir v2 Gates': formatNumber(b.v2Noir.backendGates),
+      'Circom DFA R1CS': formatNumber(b.dfaCircom?.constraints),
+      'Circom NFA R1CS': formatNumber(b.nfaCircom.constraints),
+      'Noir NFA Gates': formatNumber(b.nfaNoir.backendGates),
     }));
     console.table(compilationRows);
 
@@ -252,9 +256,9 @@ function displayResultsSummary(
     console.log('\nProof Generation:');
     const provingRows = benchmarks.map((b) => ({
       'Input (bytes)': b.inputLengthBytes,
-      'Circom v1 (ms)': formatNumber(b.v1Circom?.proveMs.mean),
-      'Circom v2 (ms)': formatNumber(b.v2Circom.proveMs.mean),
-      'Noir v2 (ms)': formatNumber(b.v2Noir.proveMs.mean),
+      'Circom DFA (ms)': formatNumber(b.dfaCircom?.proveMs.mean),
+      'Circom NFA (ms)': formatNumber(b.nfaCircom.proveMs.mean),
+      'Noir NFA (ms)': formatNumber(b.nfaNoir.proveMs.mean),
     }));
     console.table(provingRows);
   }
@@ -326,9 +330,9 @@ async function main() {
   const grouped = new Map<string, {
     pattern: string;
     inputLength: number;
-    circomV1?: RawResultFile;
-    circomV2?: RawResultFile;
-    noirV2?: RawResultFile;
+    circomDfa?: RawResultFile;
+    circomNfa?: RawResultFile;
+    noirNfa?: RawResultFile;
   }>();
 
   for (const result of rawResults) {
@@ -342,20 +346,28 @@ async function main() {
 
     const entry = grouped.get(key)!;
     switch (result.provider) {
-      case 'circom-v1':
-        entry.circomV1 = result;
+      case 'circom-dfa':
+        entry.circomDfa = result;
         break;
-      case 'circom-v2':
-        entry.circomV2 = result;
+      case 'circom-nfa':
+        entry.circomNfa = result;
         break;
-      case 'noir-v2':
-        entry.noirV2 = result;
+      case 'noir-nfa':
+        entry.noirNfa = result;
         break;
     }
   }
 
   // Load pattern definitions for scaling metadata
   const patternDefs = await loadPatternDefs();
+
+  // Collect compiler versions from individual results
+  const compilerVersions: Partial<Record<ProviderType, string>> = {};
+  for (const result of rawResults) {
+    if (result.compilerCommitHash && !compilerVersions[result.provider]) {
+      compilerVersions[result.provider] = result.compilerCommitHash;
+    }
+  }
 
   // Build PatternBenchmark entries
   // For the patterns record, we use a composite key: "{pattern}@{inputLength}"
@@ -366,17 +378,17 @@ async function main() {
   for (const [key, entry] of grouped) {
     const patternKey = `${entry.pattern}@${entry.inputLength}`;
 
-    // Parse Circom v1 metrics
-    let v1Circom: CircomMetrics | undefined;
-    if (entry.circomV1) {
-      const m = entry.circomV1.metrics as {
+    // Parse Circom DFA metrics
+    let dfaCircom: CircomMetrics | undefined;
+    if (entry.circomDfa) {
+      const m = entry.circomDfa.metrics as {
         constraints: number;
         witnessGenMs: TimingStats;
         proveMs: TimingStats;
         verifyMs: TimingStats;
         memoryByPhase?: PhaseMemory;
       };
-      v1Circom = {
+      dfaCircom = {
         constraints: m.constraints,
         witnessGenMs: m.witnessGenMs,
         proveMs: m.proveMs,
@@ -385,10 +397,10 @@ async function main() {
       };
     }
 
-    // Parse Circom v2 metrics
-    let v2Circom: CircomV2Metrics;
-    if (entry.circomV2) {
-      const m = entry.circomV2.metrics as {
+    // Parse Circom NFA metrics
+    let nfaCircom: CircomNFAMetrics;
+    if (entry.circomNfa) {
+      const m = entry.circomNfa.metrics as {
         constraints: number;
         states: number;
         transitions: number;
@@ -397,7 +409,7 @@ async function main() {
         verifyMs: TimingStats;
         memoryByPhase?: PhaseMemory;
       };
-      v2Circom = {
+      nfaCircom = {
         constraints: m.constraints,
         states: m.states,
         transitions: m.transitions,
@@ -407,13 +419,13 @@ async function main() {
         memoryByPhase: m.memoryByPhase ?? defaultPhaseMemory(),
       };
     } else {
-      v2Circom = defaultCircomV2Metrics();
+      nfaCircom = defaultCircomNFAMetrics();
     }
 
-    // Parse Noir v2 metrics
-    let v2Noir: NoirMetrics;
-    if (entry.noirV2) {
-      const m = entry.noirV2.metrics as {
+    // Parse Noir NFA metrics
+    let nfaNoir: NoirMetrics;
+    if (entry.noirNfa) {
+      const m = entry.noirNfa.metrics as {
         acirOpcodes: number;
         backendGates: number;
         gatesPerByte: number;
@@ -424,7 +436,7 @@ async function main() {
         proofSizeBytes: number;
         memoryByPhase?: PhaseMemory;
       };
-      v2Noir = {
+      nfaNoir = {
         acirOpcodes: m.acirOpcodes,
         backendGates: m.backendGates,
         gatesPerByte: m.gatesPerByte,
@@ -436,21 +448,21 @@ async function main() {
         memoryByPhase: m.memoryByPhase ?? defaultPhaseMemory(),
       };
     } else {
-      v2Noir = defaultNoirMetrics();
+      nfaNoir = defaultNoirMetrics();
     }
 
     patterns[patternKey] = {
       pattern: entry.pattern,
       inputLengthBytes: entry.inputLength,
-      v1Circom,
-      v2Circom,
-      v2Noir,
+      dfaCircom,
+      nfaCircom,
+      nfaNoir,
     };
 
     // Add scaling data point if we have enough data
-    if (v2Circom.constraints > 0 || v2Noir.backendGates > 0 || v1Circom) {
+    if (nfaCircom.constraints > 0 || nfaNoir.backendGates > 0 || dfaCircom) {
       // Get actual content length from raw results or pattern definition
-      const anyResult = entry.circomV2 ?? entry.noirV2 ?? entry.circomV1;
+      const anyResult = entry.circomNfa ?? entry.noirNfa ?? entry.circomDfa;
       const def = patternDefs.get(entry.pattern);
       const hasScaling = def?.inputTemplate && def?.scalingStrategy;
       const actualContentLength = anyResult?.actualContentLength
@@ -461,12 +473,12 @@ async function main() {
         inputLengthBytes: entry.inputLength,
         actualContentLength,
         scalingStrategy: def?.scalingStrategy as ScalingStrategy | undefined,
-        circomV1Constraints: v1Circom?.constraints,
-        circomV2Constraints: v2Circom.constraints,
-        noirGates: v2Noir.backendGates,
-        circomV1ProveMs: v1Circom?.proveMs.mean,
-        circomV2ProveMs: v2Circom.proveMs.mean,
-        noirProveMs: v2Noir.proveMs.mean,
+        circomDfaConstraints: dfaCircom?.constraints,
+        circomNfaConstraints: nfaCircom.constraints,
+        noirNfaGates: nfaNoir.backendGates,
+        circomDfaProveMs: dfaCircom?.proveMs.mean,
+        circomNfaProveMs: nfaCircom.proveMs.mean,
+        noirNfaProveMs: nfaNoir.proveMs.mean,
       });
     }
   }
@@ -508,6 +520,9 @@ async function main() {
     version: '1.0.0',
     hardware,
     toolVersions,
+    compilerVersions: Object.keys(compilerVersions).length > 0
+      ? compilerVersions as Record<ProviderType, string>
+      : undefined,
     patterns,
     scaling,
     patternMetadata,

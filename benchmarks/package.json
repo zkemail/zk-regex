@@ -6,9 +6,9 @@
   "main": "src/index.ts",
   "scripts": {
     "bench": "bun scripts/bench.ts",
-    "bench:circom-v1": "bun scripts/bench.ts --provider circom-v1",
-    "bench:circom-v2": "bun scripts/bench.ts --provider circom-v2",
-    "bench:noir": "bun scripts/bench.ts --provider noir-v2",
+    "bench:circom-dfa": "bun scripts/bench.ts --provider circom-dfa",
+    "bench:circom-nfa": "bun scripts/bench.ts --provider circom-nfa",
+    "bench:noir-nfa": "bun scripts/bench.ts --provider noir-nfa",
     "collect": "bun scripts/collect-results.ts",
     "outputs": "bun scripts/generate-outputs.ts",
     "clean": "rm -rf results/* outputs/*",

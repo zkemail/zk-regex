@@ -1,8 +1,8 @@
 /**
- * Circom v1 (DFA-based) benchmark provider.
+ * Circom DFA benchmark provider.
  *
  * This provider creates a git worktree of the main branch to benchmark
- * the v1 DFA-based compiler against the current v2 implementation.
+ * the DFA-based compiler against the current NFA implementation.
  */
 
 import * as path from 'path';
@@ -15,16 +15,17 @@ import type {
   TimingStats,
   PhaseMemory,
   MemoryStats,
+  ToolVersions,
 } from '../types.js';
 import type { Result } from '../errors.js';
 import { ok, err, errors } from '../errors.js';
 import { BaseBenchmarkProvider, type BenchmarkMetrics } from './base.js';
 import { getAbortSignal } from '../utils/abort.js';
 import {
-  setupV1Worktree,
-  cleanupV1Worktree,
-  getV1WorktreePath,
-  getV1CircuitPath,
+  setupDfaWorktree,
+  cleanupDfaWorktree,
+  getDfaWorktreePath,
+  getDfaCircuitPath,
 } from '../utils/worktree.js';
 import { ensurePtauFile, getMaxConstraints } from '../utils/ptau.js';
 import { getConstraintCount, groth16Setup, generateWitness, prove, verify, exportVkey } from '../utils/snarkjs.js';
@@ -32,6 +33,8 @@ import { runHyperfine } from '../utils/hyperfine.js';
 import { measureAsync, calculateStats } from '../utils/timing.js';
 import { runWithMemoryTracking, defaultMemoryStats } from '../utils/memory.js';
 import { generateScaledInput } from '../utils/input-scaling.js';
+
+const BENCHMARK_CONFIG_PATH = path.join(import.meta.dir, '..', '..', 'config', 'benchmark.json');
 
 /**
  * Execute a shell command and return result.
@@ -65,29 +68,68 @@ async function execAsync(
   }
 }
 
-export class CircomV1Provider extends BaseBenchmarkProvider {
-  readonly name = 'circom-v1';
+export class CircomDFAProvider extends BaseBenchmarkProvider {
+  readonly name = 'circom-dfa';
   private worktreePath: string | null = null;
   private ptauPath: string | null = null;
   private buildDir: string;
+  private commitHash: string = 'unknown';
 
   constructor() {
     super();
-    this.buildDir = path.join(os.tmpdir(), 'zk-regex-v1-build');
+    this.buildDir = path.join(os.tmpdir(), 'zk-regex-dfa-build');
+  }
+
+  getCommitHash(): string {
+    return this.commitHash;
+  }
+
+  getToolVersions(): ToolVersions {
+    const circomVersion = (() => {
+      try {
+        const result = Bun.spawnSync(['circom', '--version']);
+        return result.stdout.toString().trim() || undefined;
+      } catch {
+        return undefined;
+      }
+    })();
+    const snarkjsVersion = (() => {
+      try {
+        const result = Bun.spawnSync(['sh', '-c', 'snarkjs --version 2>/dev/null']);
+        return result.stdout.toString().trim() || undefined;
+      } catch {
+        return undefined;
+      }
+    })();
+    return {
+      circom: circomVersion,
+      snarkjs: snarkjsVersion,
+      bun: Bun.version,
+      node: process.version,
+    };
   }
 
   async setup(): Promise<Result<void>> {
-    console.log('Setting up Circom v1 provider...');
+    console.log('Setting up Circom DFA provider...');
 
-    // 1. Set up worktree from main branch
-    const worktreeResult = await setupV1Worktree();
+    // 1. Read commit hash from config
+    try {
+      const content = await fs.readFile(BENCHMARK_CONFIG_PATH, 'utf-8');
+      const config = JSON.parse(content);
+      this.commitHash = config?.providers?.['circom-dfa']?.commitHash ?? 'unknown';
+    } catch {
+      this.commitHash = 'unknown';
+    }
+
+    // 2. Set up worktree from main branch
+    const worktreeResult = await setupDfaWorktree();
     if (!worktreeResult.ok) {
       return err(worktreeResult.error);
     }
     this.worktreePath = worktreeResult.value;
     console.log(`  Worktree ready at: ${this.worktreePath}`);
 
-    // 2. Download/cache Powers of Tau
+    // 3. Download/cache Powers of Tau
     const ptauResult = await ensurePtauFile();
     if (!ptauResult.ok) {
       return err(ptauResult.error);
@@ -95,14 +137,14 @@ export class CircomV1Provider extends BaseBenchmarkProvider {
     this.ptauPath = ptauResult.value;
     console.log(`  Powers of Tau ready: ${this.ptauPath}`);
 
-    // 3. Create build directory
+    // 4. Create build directory
     try {
       await fs.mkdir(this.buildDir, { recursive: true });
     } catch {
       // Directory might already exist
     }
 
-    console.log('  Circom v1 provider setup complete');
+    console.log('  Circom DFA provider setup complete');
     return ok(undefined);
   }
 
@@ -112,14 +154,14 @@ export class CircomV1Provider extends BaseBenchmarkProvider {
     config: BenchmarkConfig
   ): Promise<Result<BenchmarkMetrics>> {
     if (!this.supportsPattern(pattern)) {
-      return err(errors.compilationFailed(pattern.name, 'Pattern not available in v1'));
+      return err(errors.compilationFailed(pattern.name, 'Pattern not available in DFA'));
     }
 
     if (!this.worktreePath || !this.ptauPath) {
       return err(errors.compilationFailed(pattern.name, 'Provider not initialized'));
     }
 
-    const circuitPath = getV1CircuitPath(pattern.circuitName);
+    const circuitPath = getDfaCircuitPath(pattern.circuitName);
 
     // Check if circuit exists
     try {
@@ -133,7 +175,7 @@ export class CircomV1Provider extends BaseBenchmarkProvider {
     await fs.mkdir(patternBuildDir, { recursive: true });
 
     // 1. Create wrapper circuit that instantiates the template as main
-    // The v1 templates don't have a main component, just a template definition
+    // The DFA templates don't have a main component, just a template definition
     const templateName = pattern.circuitName
       .split('_')
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -142,7 +184,7 @@ export class CircomV1Provider extends BaseBenchmarkProvider {
     const wrapperName = `${pattern.circuitName}_wrapper`;
     const wrapperPath = path.join(patternBuildDir, `${wrapperName}.circom`);
 
-    // v1 circuits use msg_bytes parameter and msg input
+    // DFA circuits use msg_bytes parameter and msg input
     const wrapperCode = `pragma circom 2.1.5;
 
 include "${circuitPath}";
@@ -339,10 +381,10 @@ component main {public [msg]} = ${templateName}(${inputLengthBytes});
   }
 
   async cleanup(): Promise<void> {
-    console.log('Cleaning up Circom v1 provider...');
+    console.log('Cleaning up Circom DFA provider...');
 
     // Clean up worktree
-    await cleanupV1Worktree();
+    await cleanupDfaWorktree();
     this.worktreePath = null;
 
     // Clean up build directory
@@ -352,14 +394,14 @@ component main {public [msg]} = ${templateName}(${inputLengthBytes});
       // Ignore cleanup errors
     }
 
-    console.log('  Circom v1 cleanup complete');
+    console.log('  Circom DFA cleanup complete');
   }
 
   /**
    * Generate test input for a pattern at a specific length.
    */
   private generateTestInput(pattern: PatternDefinition, inputLengthBytes: number): Record<string, unknown> {
-    // For v1 circuits, we need to generate circuit-specific inputs
+    // For DFA circuits, we need to generate circuit-specific inputs
     // This is a simplified version - real implementation would use the compiler
     const paddedInput = this.createPaddedInput(pattern, inputLengthBytes);
 

@@ -1,7 +1,7 @@
 /**
- * Circom v2 (NFA-based) benchmark provider.
+ * Circom NFA benchmark provider.
  *
- * This provider benchmarks the current v2 implementation using
+ * This provider benchmarks the current NFA implementation using
  * the NFA-based compiler with modular helper templates.
  */
 
@@ -9,12 +9,13 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import type {
-  CircomV2Metrics,
+  CircomNFAMetrics,
   PatternDefinition,
   BenchmarkConfig,
   TimingStats,
   PhaseMemory,
   MemoryStats,
+  ToolVersions,
 } from '../types.js';
 import type { Result } from '../errors.js';
 import { ok, err, errors } from '../errors.js';
@@ -83,22 +84,68 @@ function getProjectRoot(): string {
   return path.resolve(import.meta.dir, '..', '..', '..');
 }
 
-export class CircomV2Provider extends BaseBenchmarkProvider {
-  readonly name = 'circom-v2';
+/**
+ * Get the current git commit hash.
+ */
+function getGitCommitHash(): string {
+  try {
+    const result = Bun.spawnSync(['git', 'rev-parse', 'HEAD']);
+    return result.stdout.toString().trim() || 'unknown';
+  } catch {
+    console.warn('Warning: Could not determine git commit hash');
+    return 'unknown';
+  }
+}
+
+export class CircomNFAProvider extends BaseBenchmarkProvider {
+  readonly name = 'circom-nfa';
   private ptauPath: string | null = null;
   private buildDir: string;
   private projectRoot: string;
+  private commitHash: string = 'unknown';
 
   constructor() {
     super();
-    this.buildDir = path.join(os.tmpdir(), 'zk-regex-v2-build');
+    this.buildDir = path.join(os.tmpdir(), 'zk-regex-nfa-build');
     this.projectRoot = getProjectRoot();
   }
 
-  async setup(): Promise<Result<void>> {
-    console.log('Setting up Circom v2 provider...');
+  getCommitHash(): string {
+    return this.commitHash;
+  }
 
-    // 1. Verify circom is installed and check version
+  getToolVersions(): ToolVersions {
+    const circomVersion = (() => {
+      try {
+        const result = Bun.spawnSync(['circom', '--version']);
+        return result.stdout.toString().trim() || undefined;
+      } catch {
+        return undefined;
+      }
+    })();
+    const snarkjsVersion = (() => {
+      try {
+        const result = Bun.spawnSync(['sh', '-c', 'snarkjs --version 2>/dev/null']);
+        return result.stdout.toString().trim() || undefined;
+      } catch {
+        return undefined;
+      }
+    })();
+    return {
+      circom: circomVersion,
+      snarkjs: snarkjsVersion,
+      bun: Bun.version,
+      node: process.version,
+    };
+  }
+
+  async setup(): Promise<Result<void>> {
+    console.log('Setting up Circom NFA provider...');
+
+    // 1. Get current git commit hash
+    this.commitHash = getGitCommitHash();
+
+    // 2. Verify circom is installed and check version
     const versionResult = await execAsync('circom --version');
     if (!versionResult.ok) {
       return err(errors.missingBinary('circom', 'cargo install circom'));
@@ -119,7 +166,7 @@ export class CircomV2Provider extends BaseBenchmarkProvider {
       }
     }
 
-    // 2. Download/cache Powers of Tau
+    // 3. Download/cache Powers of Tau
     const ptauResult = await ensurePtauFile();
     if (!ptauResult.ok) {
       return err(ptauResult.error);
@@ -127,14 +174,14 @@ export class CircomV2Provider extends BaseBenchmarkProvider {
     this.ptauPath = ptauResult.value;
     console.log(`  Powers of Tau ready: ${this.ptauPath}`);
 
-    // 3. Create build directory
+    // 4. Create build directory
     try {
       await fs.mkdir(this.buildDir, { recursive: true });
     } catch {
       // Directory might already exist
     }
 
-    console.log('  Circom v2 provider setup complete');
+    console.log('  Circom NFA provider setup complete');
     return ok(undefined);
   }
 
@@ -147,7 +194,7 @@ export class CircomV2Provider extends BaseBenchmarkProvider {
       return err(errors.compilationFailed(pattern.name, 'Provider not initialized'));
     }
 
-    // Get circuit path in v2 layout
+    // Get circuit path in NFA layout
     const circuitDir = path.join(this.projectRoot, 'circom', 'circuits', 'common');
     const circuitPath = path.join(circuitDir, `${pattern.circuitName}.circom`);
     const graphPath = path.join(circuitDir, `${pattern.circuitName.replace('_regex', '')}_graph.json`);
@@ -385,7 +432,7 @@ component main {public [inHaystack]} = ${templateName}(${maxHaystackBytes}, ${ma
       verify: verifyMemory,
     };
 
-    const metrics: CircomV2Metrics = {
+    const metrics: CircomNFAMetrics = {
       constraints,
       states,
       transitions,
@@ -399,18 +446,18 @@ component main {public [inHaystack]} = ${templateName}(${maxHaystackBytes}, ${ma
   }
 
   supportsPattern(_pattern: PatternDefinition): boolean {
-    // v2 supports all patterns
+    // NFA supports all patterns
     return true;
   }
 
   async cleanup(): Promise<void> {
-    console.log('Cleaning up Circom v2 provider...');
+    console.log('Cleaning up Circom NFA provider...');
     try {
       await fs.rm(this.buildDir, { recursive: true, force: true });
     } catch {
       // Ignore cleanup errors
     }
-    console.log('  Circom v2 cleanup complete');
+    console.log('  Circom NFA cleanup complete');
   }
 
   /**

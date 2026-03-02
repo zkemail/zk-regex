@@ -19,16 +19,16 @@
     "filename": "pot21.ptau"
   },
   "providers": {
-    "circom-v1": {
+    "circom-dfa": {
       "enabled": true,
       "commitHash": "783b94f704edc920be827dc2942138099559c796",
       "circuitPath": "packages/circom/circuits/common"
     },
-    "circom-v2": {
+    "circom-nfa": {
       "enabled": true,
       "circuitPath": "circom/circuits/common"
     },
-    "noir-v2": {
+    "noir-nfa": {
       "enabled": true,
       "templatePath": "noir/src/templates"
     }

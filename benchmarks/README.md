@@ -1,6 +1,6 @@
 # ZK-Regex Benchmarks
 
-Benchmarking suite for comparing zk-regex v1 (DFA-based) vs v2 (NFA-based) across Circom and Noir backends.
+Benchmarking suite for comparing zk-regex DFA-based vs NFA-based backends across Circom and Noir.
 
 ## Overview
 
@@ -59,14 +59,14 @@ bun scripts/bench.ts
 ### Filter by Provider
 
 ```bash
-# Run only Circom v2 (NFA-based, current implementation)
-bun run bench:circom-v2
+# Run only Circom NFA (NFA-based, current implementation)
+bun run bench:circom-nfa
 
-# Run only Circom v1 (DFA-based, main branch via worktree)
-bun run bench:circom-v1
+# Run only Circom DFA (DFA-based, main branch via worktree)
+bun run bench:circom-dfa
 
-# Run only Noir v2
-bun run bench:noir
+# Run only Noir NFA
+bun run bench:noir-nfa
 ```
 
 ### Filter by Pattern
@@ -79,12 +79,12 @@ bun scripts/bench.ts --pattern email_addr
 bun scripts/bench.ts --pattern subject_all
 
 # Combine provider and pattern filters
-bun scripts/bench.ts --provider circom-v2 --pattern simple_regex
+bun scripts/bench.ts --provider circom-nfa --pattern simple_regex
 ```
 
 ### Available Patterns
 
-| Pattern | Name in CLI | Description | Capture Groups | v1 Support |
+| Pattern | Name in CLI | Description | Capture Groups | DFA Support |
 |---------|-------------|-------------|:--------------:|:----------:|
 | `simple` | `simple` or `simple_regex` | `a*b` baseline | No | No |
 | `body_hash` | `body_hash` | DKIM body hash extraction | Yes | Yes |
@@ -160,13 +160,13 @@ Currently outputs to console. Example output:
 
 ## Providers
 
-### circom-v2 (default)
-Benchmarks the current NFA-based v2 implementation in `circom/circuits/common/`.
+### circom-nfa (default)
+Benchmarks the current NFA-based implementation in `circom/circuits/common/`.
 
-### circom-v1
+### circom-dfa
 Sets up a git worktree from the `main` branch to benchmark the legacy DFA-based implementation. Requires the pattern to have `availableInV1: true` in `config/patterns.json`.
 
-### noir-v2
+### noir-nfa
 Benchmarks Noir circuits in `noir/src/templates/` using nargo and Barretenberg's UltraHonk prover.
 
 ## Troubleshooting
@@ -194,14 +194,14 @@ benchmarks/
     errors.ts          # Error handling (Result type)
     providers/
       base.ts          # BenchmarkProvider interface
-      circom-v1.ts     # v1 DFA-based metrics
-      circom-v2.ts     # v2 NFA-based metrics
-      noir-v2.ts       # v2 Noir metrics
+      circom-dfa.ts    # DFA-based metrics
+      circom-nfa.ts    # NFA-based metrics
+      noir-nfa.ts      # Noir NFA metrics
     utils/
       timing.ts        # In-process timing utilities
       hardware.ts      # System info collection
       hyperfine.ts     # Hyperfine CLI wrapper
-      worktree.ts      # Git worktree for v1
+      worktree.ts      # Git worktree for DFA
       snarkjs.ts       # snarkjs CLI wrapper
       ptau.ts          # Powers of Tau download/cache
   scripts/
@@ -219,9 +219,9 @@ The benchmark suite measures peak memory (RSS) for each phase using `/usr/bin/ti
 
 | Provider | Phases |
 |----------|--------|
-| Circom v1 | compile, witnessGen, prove, verify |
-| Circom v2 | compile, witnessGen, prove, verify |
-| Noir v2 | compile, witnessGen, prove, verify |
+| Circom DFA | compile, witnessGen, prove, verify |
+| Circom NFA | compile, witnessGen, prove, verify |
+| Noir NFA | compile, witnessGen, prove, verify |
 
 Note: Noir's `nargo execute` command is labeled as `witnessGen` for cross-framework consistency, as it performs the same function as Circom's witness generation step.
 
