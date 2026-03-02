@@ -3,6 +3,15 @@
  *
  * Measures actual peak memory (RSS) using /usr/bin/time wrapper.
  * Supports macOS (BSD time) and Linux (GNU time).
+ *
+ * **Limitation: shell overhead in RSS measurements**
+ *
+ * Commands are executed via `sh -c` wrapping, so the reported peak RSS includes
+ * the memory footprint of the shell process and any runtime setup (e.g. NVM/Node.js
+ * interpreter for JS-based tools). This overhead is typically 30-80 MB and is consistent
+ * across runs, so it does not affect relative comparisons between providers. However,
+ * absolute RSS values should not be treated as the exact memory usage of the target
+ * program alone.
  */
 
 import * as fs from 'fs/promises';
@@ -241,7 +250,9 @@ export function calculateMemoryStats(measurements: number[], measured: boolean =
 
   const n = measurements.length;
   const mean = measurements.reduce((a, b) => a + b, 0) / n;
-  const variance = measurements.reduce((sum, m) => sum + Math.pow(m - mean, 2), 0) / n;
+  const variance = n > 1
+    ? measurements.reduce((sum, m) => sum + Math.pow(m - mean, 2), 0) / (n - 1)
+    : 0;
   const stddev = Math.sqrt(variance);
   const min = Math.min(...measurements);
   const max = Math.max(...measurements);

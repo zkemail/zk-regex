@@ -47,7 +47,9 @@ export function calculateStats(times: number[]): TimingStats {
 
   const n = times.length;
   const mean = times.reduce((a, b) => a + b, 0) / n;
-  const variance = times.reduce((sum, t) => sum + Math.pow(t - mean, 2), 0) / n;
+  const variance = n > 1
+    ? times.reduce((sum, t) => sum + Math.pow(t - mean, 2), 0) / (n - 1)
+    : 0;
   const stddev = Math.sqrt(variance);
   const min = Math.min(...times);
   const max = Math.max(...times);

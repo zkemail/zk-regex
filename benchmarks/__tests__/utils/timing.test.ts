@@ -11,7 +11,7 @@ describe('timing utilities', () => {
       expect(stats.min).toBe(90);
       expect(stats.max).toBe(110);
       expect(stats.runs).toBe(5);
-      expect(stats.stddev).toBeCloseTo(7.07, 1);
+      expect(stats.stddev).toBeCloseTo(7.91, 1);
     });
 
     it('handles empty array', () => {
