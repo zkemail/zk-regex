@@ -34,6 +34,14 @@ async function worktreeExists(): Promise<boolean> {
 }
 
 /**
+ * Validate a string is a safe git ref (commit hash or branch name).
+ * Allows: hex SHAs, or simple branch names (alphanumeric, -, _, /, .).
+ */
+function isValidGitRef(ref: string): boolean {
+  return /^[a-zA-Z0-9._\/-]+$/.test(ref) && ref.length <= 255;
+}
+
+/**
  * Read the DFA compiler commit hash from benchmark config.
  * Falls back to 'main' if no commit hash is configured.
  */
@@ -42,8 +50,11 @@ async function getDfaCommitRef(): Promise<string> {
     const content = await fs.readFile(BENCHMARK_CONFIG_PATH, 'utf-8');
     const config = JSON.parse(content);
     const commitHash = config?.providers?.['circom-dfa']?.commitHash;
-    if (commitHash) {
+    if (commitHash && isValidGitRef(commitHash)) {
       return commitHash;
+    }
+    if (commitHash) {
+      console.error(`Invalid DFA commit hash in benchmark.json: ${commitHash}`);
     }
   } catch {
     // Fall back to main if config cannot be read
@@ -76,7 +87,7 @@ export async function setupDfaWorktree(): Promise<Result<string>> {
   // Create worktree with detached HEAD
   console.log(`Creating DFA worktree at ${DFA_WORKTREE_PATH}...`);
   const addResult = await execAsync(
-    `git worktree add --detach "${DFA_WORKTREE_PATH}" ${commitRef}`,
+    `git worktree add --detach "${DFA_WORKTREE_PATH}" "${commitRef}"`,
     worktreeExecOptions
   );
   if (!addResult.ok) {
