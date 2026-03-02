@@ -20,7 +20,8 @@ import type {
 import type { Result } from '../errors.js';
 import { ok, err, errors } from '../errors.js';
 import { BaseBenchmarkProvider, type BenchmarkMetrics } from './base.js';
-import { getAbortSignal } from '../utils/abort.js';
+import { execAsync } from '../utils/exec.js';
+import { getProjectRoot, getGitCommitHash } from '../utils/project.js';
 import { runHyperfine } from '../utils/hyperfine.js';
 import { measureAsync, calculateStats } from '../utils/timing.js';
 import { runWithMemoryTracking, defaultMemoryStats } from '../utils/memory.js';
@@ -33,58 +34,6 @@ import { genCircuitInputs, ProvingFramework } from '../../../compiler/pkg/zk_reg
 interface NargoInfo {
   acirOpcodes: number;
   backendGates: number;
-}
-
-/**
- * Execute a shell command and return result.
- */
-async function execAsync(
-  command: string,
-  options: { cwd?: string; timeout?: number } = {}
-): Promise<Result<string>> {
-  try {
-    const proc = Bun.spawn(['sh', '-c', command], {
-      cwd: options.cwd,
-      stdout: 'pipe',
-      stderr: 'pipe',
-      signal: getAbortSignal(),
-    });
-
-    const stdout = await new Response(proc.stdout).text();
-    const stderr = await new Response(proc.stderr).text();
-    const exitCode = await proc.exited;
-
-    if (exitCode !== 0) {
-      return err(errors.compilationFailed(command, stderr || stdout));
-    }
-
-    return ok(stdout.trim());
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      return err(errors.compilationFailed(command, 'Aborted'));
-    }
-    return err(errors.compilationFailed(command, String(error)));
-  }
-}
-
-/**
- * Get the project root directory.
- */
-function getProjectRoot(): string {
-  return path.resolve(import.meta.dir, '..', '..', '..');
-}
-
-/**
- * Get the current git commit hash.
- */
-function getGitCommitHash(): string {
-  try {
-    const result = Bun.spawnSync(['git', 'rev-parse', 'HEAD']);
-    return result.stdout.toString().trim() || 'unknown';
-  } catch {
-    console.warn('Warning: Could not determine git commit hash');
-    return 'unknown';
-  }
 }
 
 export class NoirNFAProvider extends BaseBenchmarkProvider {

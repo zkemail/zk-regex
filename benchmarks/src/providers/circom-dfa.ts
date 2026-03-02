@@ -20,7 +20,7 @@ import type {
 import type { Result } from '../errors.js';
 import { ok, err, errors } from '../errors.js';
 import { BaseBenchmarkProvider, type BenchmarkMetrics } from './base.js';
-import { getAbortSignal } from '../utils/abort.js';
+import { execAsync, wrapCommandWithNvm } from '../utils/exec.js';
 import {
   setupDfaWorktree,
   cleanupDfaWorktree,
@@ -28,45 +28,14 @@ import {
   getDfaCircuitPath,
 } from '../utils/worktree.js';
 import { ensurePtauFile, getMaxConstraints } from '../utils/ptau.js';
-import { getConstraintCount, groth16Setup, generateWitness, prove, verify, exportVkey } from '../utils/snarkjs.js';
+import { getConstraintCount, groth16Setup, prove, verify, exportVkey, measureWitnessGeneration } from '../utils/snarkjs.js';
+import { getCircomToolVersions } from '../utils/hardware.js';
 import { runHyperfine } from '../utils/hyperfine.js';
-import { measureAsync, calculateStats } from '../utils/timing.js';
+import { measureAsync } from '../utils/timing.js';
 import { runWithMemoryTracking, defaultMemoryStats } from '../utils/memory.js';
 import { generateScaledInput } from '../utils/input-scaling.js';
 
 const BENCHMARK_CONFIG_PATH = path.join(import.meta.dir, '..', '..', 'config', 'benchmark.json');
-
-/**
- * Execute a shell command and return result.
- */
-async function execAsync(
-  command: string,
-  options: { cwd?: string; timeout?: number } = {}
-): Promise<Result<string>> {
-  try {
-    const proc = Bun.spawn(['sh', '-c', command], {
-      cwd: options.cwd,
-      stdout: 'pipe',
-      stderr: 'pipe',
-      signal: getAbortSignal(),
-    });
-
-    const stdout = await new Response(proc.stdout).text();
-    const stderr = await new Response(proc.stderr).text();
-    const exitCode = await proc.exited;
-
-    if (exitCode !== 0) {
-      return err(errors.compilationFailed(command, stderr || stdout));
-    }
-
-    return ok(stdout.trim());
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      return err(errors.compilationFailed(command, 'Aborted'));
-    }
-    return err(errors.compilationFailed(command, String(error)));
-  }
-}
 
 export class CircomDFAProvider extends BaseBenchmarkProvider {
   readonly name = 'circom-dfa';
@@ -85,28 +54,7 @@ export class CircomDFAProvider extends BaseBenchmarkProvider {
   }
 
   getToolVersions(): ToolVersions {
-    const circomVersion = (() => {
-      try {
-        const result = Bun.spawnSync(['circom', '--version']);
-        return result.stdout.toString().trim() || undefined;
-      } catch {
-        return undefined;
-      }
-    })();
-    const snarkjsVersion = (() => {
-      try {
-        const result = Bun.spawnSync(['sh', '-c', 'snarkjs --version 2>/dev/null']);
-        return result.stdout.toString().trim() || undefined;
-      } catch {
-        return undefined;
-      }
-    })();
-    return {
-      circom: circomVersion,
-      snarkjs: snarkjsVersion,
-      bun: Bun.version,
-      node: process.version,
-    };
+    return getCircomToolVersions();
   }
 
   async setup(): Promise<Result<void>> {
@@ -268,8 +216,9 @@ component main {public [msg]} = ${templateName}(${inputLengthBytes});
     // 6. Measure witness generation with memory tracking
     console.log(`    Measuring witness generation (${config.minRuns} runs)...`);
     const witnessPath = path.join(patternBuildDir, 'witness.wtns');
-    const witnessCommand = this.getNvmWrappedCommand(
-      `npx snarkjs wtns calculate "${wasmPath}" "${inputPath}" "${witnessPath}"`
+    const witnessCommand = wrapCommandWithNvm(
+      `npx snarkjs wtns calculate "${wasmPath}" "${inputPath}" "${witnessPath}"`,
+      { bashWrap: true }
     );
     const witnessResult = await runWithMemoryTracking(witnessCommand, {
       cwd: patternBuildDir,
@@ -282,14 +231,15 @@ component main {public [msg]} = ${templateName}(${inputLengthBytes});
       witnessMemory = witnessResult.memory;
     } else {
       // Fallback to legacy measurement without memory
-      witnessStats = await this.measureWitnessGeneration(wasmPath, inputPath, witnessPath, config.minRuns);
+      witnessStats = await measureWitnessGeneration(wasmPath, inputPath, witnessPath, config.minRuns);
       witnessMemory = defaultMemoryStats();
     }
 
     // 7. Measure proof generation with memory tracking
     console.log(`    Measuring proof generation (${config.minRuns} runs)...`);
-    const proveCommand = this.getNvmWrappedCommand(
-      `npx snarkjs groth16 prove "${zkeyPath}" "${witnessPath}" proof.json public.json`
+    const proveCommand = wrapCommandWithNvm(
+      `npx snarkjs groth16 prove "${zkeyPath}" "${witnessPath}" proof.json public.json`,
+      { bashWrap: true }
     );
     const proveResult = await runWithMemoryTracking(proveCommand, {
       cwd: patternBuildDir,
@@ -331,8 +281,9 @@ component main {public [msg]} = ${templateName}(${inputLengthBytes});
     await fs.writeFile(tempProofPath, JSON.stringify(proveOutput.value.proof, null, 2));
     await fs.writeFile(tempPublicPath, JSON.stringify(proveOutput.value.publicSignals, null, 2));
 
-    const verifyCommand = this.getNvmWrappedCommand(
-      `npx snarkjs groth16 verify "${vkeyPath}" "${tempPublicPath}" "${tempProofPath}"`
+    const verifyCommand = wrapCommandWithNvm(
+      `npx snarkjs groth16 verify "${vkeyPath}" "${tempPublicPath}" "${tempProofPath}"`,
+      { bashWrap: true }
     );
     const verifyResult = await runWithMemoryTracking(verifyCommand, {
       cwd: patternBuildDir,
@@ -441,35 +392,4 @@ component main {public [msg]} = ${templateName}(${inputLengthBytes});
     return input;
   }
 
-  /**
-   * Measure witness generation timing.
-   */
-  private async measureWitnessGeneration(
-    wasmPath: string,
-    inputPath: string,
-    witnessPath: string,
-    runs: number
-  ): Promise<TimingStats> {
-    const times: number[] = [];
-
-    for (let i = 0; i < runs; i++) {
-      const start = performance.now();
-      const result = await generateWitness(wasmPath, inputPath, witnessPath);
-      const end = performance.now();
-
-      if (result.ok) {
-        times.push(end - start);
-      }
-    }
-
-    return calculateStats(times);
-  }
-
-  /**
-   * Get a command wrapped with nvm sourcing for npx availability.
-   * Filters out Bun's node shim paths to avoid conflicts.
-   */
-  private getNvmWrappedCommand(command: string): string {
-    return `bash -c 'export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"; ${command.replace(/'/g, "'\\''")} '`;
-  }
 }

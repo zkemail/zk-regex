@@ -2,6 +2,8 @@
  * Utility exports.
  */
 
+export * from './exec.js';
+export * from './project.js';
 export * from './timing.js';
 export * from './hardware.js';
 export * from './hyperfine.js';

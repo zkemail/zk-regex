@@ -6,6 +6,7 @@ import * as os from 'os';
 import type { HardwareSpec, ToolVersions } from '../types.js';
 import type { Result } from '../errors.js';
 import { ok, err, errors } from '../errors.js';
+import { execAsync } from './exec.js';
 
 /**
  * Collect hardware specifications.
@@ -23,35 +24,15 @@ export function getHardwareSpec(): HardwareSpec {
   };
 }
 
-/**
- * Execute a command and capture output.
- */
-async function execCommand(command: string): Promise<Result<string>> {
-  try {
-    const proc = Bun.spawn(['sh', '-c', command], {
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-
-    const output = await new Response(proc.stdout).text();
-    const exitCode = await proc.exited;
-
-    if (exitCode !== 0) {
-      const stderr = await new Response(proc.stderr).text();
-      return err(errors.invalidOutput(command, stderr));
-    }
-
-    return ok(output.trim());
-  } catch (error) {
-    return err(errors.invalidOutput(command, String(error)));
-  }
-}
+const hardwareExecOptions = {
+  errorFactory: errors.invalidOutput,
+} as const;
 
 /**
  * Get version of a tool.
  */
 async function getVersion(command: string): Promise<string | undefined> {
-  const result = await execCommand(command);
+  const result = await execAsync(command, hardwareExecOptions);
   return result.ok ? result.value : undefined;
 }
 
@@ -77,10 +58,35 @@ export async function getToolVersions(): Promise<ToolVersions> {
 }
 
 /**
+ * Get a tool version synchronously using Bun.spawnSync.
+ */
+function getVersionSync(command: string, args: string[]): string | undefined {
+  try {
+    const result = Bun.spawnSync(args);
+    return result.stdout.toString().trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Get Circom-specific tool versions synchronously.
+ * Used by Circom providers that need sync getToolVersions().
+ */
+export function getCircomToolVersions(): ToolVersions {
+  return {
+    circom: getVersionSync('circom', ['circom', '--version']),
+    snarkjs: getVersionSync('snarkjs', ['sh', '-c', 'snarkjs --version 2>/dev/null']),
+    bun: Bun.version,
+    node: process.version,
+  };
+}
+
+/**
  * Check if a binary is available.
  */
 export async function checkBinaryExists(binary: string): Promise<boolean> {
-  const result = await execCommand(`which ${binary}`);
+  const result = await execAsync(`which ${binary}`, hardwareExecOptions);
   return result.ok;
 }
 

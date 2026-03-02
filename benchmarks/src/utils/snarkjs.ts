@@ -7,9 +7,13 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import type { TimingStats } from '../types.js';
 import type { Result } from '../errors.js';
 import { ok, err, errors } from '../errors.js';
-import { getAbortSignal } from './abort.js';
+import { execAsync } from './exec.js';
+import { calculateStats } from './timing.js';
+
+const snarkjsExecOptions = { useNvm: true } as const;
 
 /**
  * Get the constraint count from an R1CS file using CLI.
@@ -24,7 +28,7 @@ export async function getConstraintCount(r1csPath: string): Promise<Result<numbe
     return err(errors.fileNotFound(r1csPath));
   }
 
-  const result = await execCommand(`npx snarkjs r1cs info "${r1csPath}"`);
+  const result = await execAsync(`npx snarkjs r1cs info "${r1csPath}"`, snarkjsExecOptions);
   if (!result.ok) {
     return result;
   }
@@ -39,55 +43,6 @@ export async function getConstraintCount(r1csPath: string): Promise<Result<numbe
 }
 
 /**
- * Execute a CLI command and return result.
- * Sources nvm to ensure npx is available, then runs the command.
- */
-async function execCommand(
-  command: string,
-  options: { cwd?: string } = {}
-): Promise<Result<string>> {
-  try {
-    // Source nvm to get npx/node in PATH, then run the command
-    // IMPORTANT: Filter out Bun's node shim paths from PATH to avoid conflicts with npm/npx
-    const nvmCommand = `
-      export NVM_DIR="$HOME/.nvm"
-      [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-      ${command}
-    `;
-
-    // Filter out Bun's node shim paths (like /tmp/bun-node-*) that would
-    // override nvm's node and cause npm/npx to fail
-    const cleanPath = (process.env.PATH || '')
-      .split(':')
-      .filter(p => !p.includes('bun-node'))
-      .join(':');
-
-    const proc = Bun.spawn(['bash', '-c', nvmCommand], {
-      cwd: options.cwd,
-      stdout: 'pipe',
-      stderr: 'pipe',
-      env: { ...process.env, PATH: cleanPath },
-      signal: getAbortSignal(),
-    });
-
-    const stdout = await new Response(proc.stdout).text();
-    const stderr = await new Response(proc.stderr).text();
-    const exitCode = await proc.exited;
-
-    if (exitCode !== 0) {
-      return err(errors.compilationFailed(command, stderr || stdout));
-    }
-
-    return ok(stdout.trim());
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      return err(errors.compilationFailed(command, 'Aborted'));
-    }
-    return err(errors.compilationFailed(command, String(error)));
-  }
-}
-
-/**
  * Full Groth16 setup (create zkey from R1CS and Powers of Tau) using CLI.
  *
  * This is expensive (30s-5min). Cache the result.
@@ -99,16 +54,18 @@ export async function groth16Setup(
 ): Promise<Result<void>> {
   // Phase 1: Create zkey (initial ceremony)
   const zkeyInitPath = zkeyPath.replace('.zkey', '_init.zkey');
-  const result1 = await execCommand(
-    `npx snarkjs groth16 setup "${r1csPath}" "${ptauPath}" "${zkeyInitPath}"`
+  const result1 = await execAsync(
+    `npx snarkjs groth16 setup "${r1csPath}" "${ptauPath}" "${zkeyInitPath}"`,
+    snarkjsExecOptions
   );
   if (!result1.ok) {
     return result1;
   }
 
   // Phase 2: Contribute entropy
-  const result2 = await execCommand(
-    `npx snarkjs zkey contribute "${zkeyInitPath}" "${zkeyPath}" --name=benchmark -e=random_entropy`
+  const result2 = await execAsync(
+    `npx snarkjs zkey contribute "${zkeyInitPath}" "${zkeyPath}" --name=benchmark -e=random_entropy`,
+    snarkjsExecOptions
   );
   if (!result2.ok) {
     return result2;
@@ -127,8 +84,9 @@ export async function exportVkey(
   zkeyPath: string,
   vkeyPath: string
 ): Promise<Result<void>> {
-  const result = await execCommand(
-    `npx snarkjs zkey export verificationkey "${zkeyPath}" "${vkeyPath}"`
+  const result = await execAsync(
+    `npx snarkjs zkey export verificationkey "${zkeyPath}" "${vkeyPath}"`,
+    snarkjsExecOptions
   );
   if (!result.ok) {
     return result;
@@ -146,8 +104,9 @@ export async function generateWitness(
   inputPath: string,
   witnessPath: string
 ): Promise<Result<void>> {
-  const result = await execCommand(
-    `npx snarkjs wtns calculate "${wasmPath}" "${inputPath}" "${witnessPath}"`
+  const result = await execAsync(
+    `npx snarkjs wtns calculate "${wasmPath}" "${inputPath}" "${witnessPath}"`,
+    snarkjsExecOptions
   );
   if (!result.ok) {
     return result;
@@ -170,8 +129,9 @@ export async function prove(
   const finalProofPath = proofPath ?? path.join(dir, 'proof.json');
   const finalPublicPath = publicPath ?? path.join(dir, 'public.json');
 
-  const result = await execCommand(
-    `npx snarkjs groth16 prove "${zkeyPath}" "${witnessPath}" "${finalProofPath}" "${finalPublicPath}"`
+  const result = await execAsync(
+    `npx snarkjs groth16 prove "${zkeyPath}" "${witnessPath}" "${finalProofPath}" "${finalPublicPath}"`,
+    snarkjsExecOptions
   );
 
   if (!result.ok) {
@@ -204,8 +164,9 @@ export async function verify(
     await fs.writeFile(tempProofPath, JSON.stringify(proof, null, 2));
     await fs.writeFile(tempPublicPath, JSON.stringify(publicSignals, null, 2));
 
-    const result = await execCommand(
-      `npx snarkjs groth16 verify "${vkeyPath}" "${tempPublicPath}" "${tempProofPath}"`
+    const result = await execAsync(
+      `npx snarkjs groth16 verify "${vkeyPath}" "${tempPublicPath}" "${tempProofPath}"`,
+      snarkjsExecOptions
     );
 
     // Clean up temp files
@@ -222,4 +183,40 @@ export async function verify(
   } catch (error) {
     return err(errors.invalidOutput('snarkjs verify', String(error)));
   }
+}
+
+/**
+ * Measure witness generation timing over multiple runs.
+ *
+ * Fallback path used when runWithMemoryTracking() returns null.
+ * Logs first failure to aid debugging and returns zero stats if all runs fail.
+ */
+export async function measureWitnessGeneration(
+  wasmPath: string,
+  inputPath: string,
+  witnessPath: string,
+  runs: number
+): Promise<TimingStats> {
+  const times: number[] = [];
+
+  for (let i = 0; i < runs; i++) {
+    const start = performance.now();
+    const result = await generateWitness(wasmPath, inputPath, witnessPath);
+    const end = performance.now();
+
+    if (result.ok) {
+      times.push(end - start);
+    } else if (i === 0) {
+      console.log(`      Warning: Witness generation failed`);
+      if (result.error.kind === 'compilation_failed') {
+        console.log(`        ${result.error.stderr.split('\n')[0]}`);
+      }
+    }
+  }
+
+  if (times.length === 0) {
+    return { mean: 0, stddev: 0, min: 0, max: 0, runs: 0, coefficientOfVariation: 0 };
+  }
+
+  return calculateStats(times);
 }

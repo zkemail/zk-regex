@@ -9,59 +9,17 @@ import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs/promises';
 import type { Result } from '../errors.js';
-import { ok, err, errors } from '../errors.js';
-import { getAbortSignal } from './abort.js';
+import { ok, errors } from '../errors.js';
+import { execAsync } from './exec.js';
 
 const BENCHMARK_CONFIG_PATH = path.join(import.meta.dir, '..', '..', 'config', 'benchmark.json');
 
 const DFA_WORKTREE_PATH = path.join(os.tmpdir(), 'zk-regex-dfa-bench');
 
-/**
- * Execute a command and return stdout.
- */
-async function execAsync(
-  command: string,
-  options: { cwd?: string } = {}
-): Promise<Result<string>> {
-  try {
-    // Source nvm to get yarn/npm/node in PATH
-    const nvmCommand = `
-      export NVM_DIR="$HOME/.nvm"
-      [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-      ${command}
-    `;
-
-    // Filter out Bun's node shim paths (like /tmp/bun-node-*) that would
-    // override nvm's node and cause npm/yarn commands to fail
-    const cleanPath = (process.env.PATH || '')
-      .split(':')
-      .filter(p => !p.includes('bun-node'))
-      .join(':');
-
-    const proc = Bun.spawn(['bash', '-c', nvmCommand], {
-      cwd: options.cwd,
-      stdout: 'pipe',
-      stderr: 'pipe',
-      env: { ...process.env, PATH: cleanPath },
-      signal: getAbortSignal(),
-    });
-
-    const stdout = await new Response(proc.stdout).text();
-    const stderr = await new Response(proc.stderr).text();
-    const exitCode = await proc.exited;
-
-    if (exitCode !== 0) {
-      return err(errors.worktreeFailed('main', stderr));
-    }
-
-    return ok(stdout.trim());
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      return err(errors.worktreeFailed('main', 'Aborted'));
-    }
-    return err(errors.worktreeFailed('main', String(error)));
-  }
-}
+const worktreeExecOptions = {
+  useNvm: true,
+  errorFactory: (_cmd: string, stderr: string) => errors.worktreeFailed('main', stderr),
+} as const;
 
 /**
  * Check if the worktree already exists.
@@ -106,7 +64,7 @@ export async function setupDfaWorktree(): Promise<Result<string>> {
   await cleanupDfaWorktree();
 
   // Prune stale worktrees
-  const pruneResult = await execAsync('git worktree prune');
+  const pruneResult = await execAsync('git worktree prune', worktreeExecOptions);
   if (!pruneResult.ok) {
     console.warn('Warning: Failed to prune worktrees');
   }
@@ -118,7 +76,8 @@ export async function setupDfaWorktree(): Promise<Result<string>> {
   // Create worktree with detached HEAD
   console.log(`Creating DFA worktree at ${DFA_WORKTREE_PATH}...`);
   const addResult = await execAsync(
-    `git worktree add --detach "${DFA_WORKTREE_PATH}" ${commitRef}`
+    `git worktree add --detach "${DFA_WORKTREE_PATH}" ${commitRef}`,
+    worktreeExecOptions
   );
   if (!addResult.ok) {
     return addResult;
@@ -126,7 +85,7 @@ export async function setupDfaWorktree(): Promise<Result<string>> {
 
   // Install dependencies with Yarn (DFA codebase uses Yarn, not Bun)
   console.log('Installing DFA dependencies with Yarn...');
-  const yarnResult = await execAsync('yarn install', { cwd: DFA_WORKTREE_PATH });
+  const yarnResult = await execAsync('yarn install', { ...worktreeExecOptions, cwd: DFA_WORKTREE_PATH });
   if (!yarnResult.ok) {
     await cleanupDfaWorktree();
     return yarnResult;
@@ -134,7 +93,7 @@ export async function setupDfaWorktree(): Promise<Result<string>> {
 
   // Build the DFA compiler
   console.log('Building DFA compiler...');
-  const buildResult = await execAsync('yarn build', { cwd: DFA_WORKTREE_PATH });
+  const buildResult = await execAsync('yarn build', { ...worktreeExecOptions, cwd: DFA_WORKTREE_PATH });
   if (!buildResult.ok) {
     await cleanupDfaWorktree();
     return buildResult;
@@ -171,8 +130,8 @@ export function getDfaCircuitPath(circuitName: string): string {
 export async function cleanupDfaWorktree(): Promise<void> {
   if (await worktreeExists()) {
     console.log('Cleaning up DFA worktree...');
-    await execAsync(`git worktree remove --force "${DFA_WORKTREE_PATH}"`);
+    await execAsync(`git worktree remove --force "${DFA_WORKTREE_PATH}"`, worktreeExecOptions);
   }
-  await execAsync('git worktree prune');
+  await execAsync('git worktree prune', worktreeExecOptions);
 }
 

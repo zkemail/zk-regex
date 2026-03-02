@@ -24,6 +24,7 @@ import type {
   ToolVersions,
 } from '../src/types.js';
 import { getHardwareSpec, getToolVersions } from '../src/utils/hardware.js';
+import { defaultMemoryStats } from '../src/utils/memory.js';
 
 const RESULTS_DIR = path.join(import.meta.dir, '..', 'results');
 const OUTPUT_FILE = path.join(RESULTS_DIR, 'comparison.json');
@@ -79,20 +80,6 @@ function defaultTimingStats(): TimingStats {
     max: 0,
     runs: 0,
     coefficientOfVariation: 0,
-  };
-}
-
-/**
- * Create a default MemoryStats for missing data.
- */
-function defaultMemoryStats(): MemoryStats {
-  return {
-    mean: 0,
-    stddev: 0,
-    min: 0,
-    max: 0,
-    runs: 0,
-    measured: false,
   };
 }
 

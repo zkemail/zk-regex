@@ -12,6 +12,7 @@ import type { TimingStats, HyperfineOutput } from '../types.js';
 import type { Result } from '../errors.js';
 import { ok, err, errors } from '../errors.js';
 import { getAbortSignal } from './abort.js';
+import { wrapCommandWithNvm } from './exec.js';
 
 /**
  * Options for hyperfine benchmarks.
@@ -49,15 +50,6 @@ async function isHyperfineAvailable(): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-/**
- * Wrap a command to source nvm before execution.
- * This ensures snarkjs and other node tools are available.
- */
-function wrapCommandWithNvm(command: string): string {
-  // Source nvm and then run the command
-  return `export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"; ${command}`;
 }
 
 /**
