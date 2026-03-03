@@ -11,7 +11,8 @@
   "workspaces": [
     "scripts",
     "circom",
-    "compiler"
+    "compiler",
+    "benchmarks"
   ],
   "engines": {
     "node": ">=18.0.0",
@@ -19,15 +20,23 @@
   },
   "scripts": {
     "test": "bun test --timeout 30000",
-    "test:scripts": "cd scripts && bun test", 
+    "test:scripts": "cd scripts && bun test",
     "test:circom": "cd circom && bun test",
+    "test:benchmarks": "cd benchmarks && bun test",
     "gen-regex:circom": "cd scripts && bun run gen-regex:circom",
-    "gen-regex:noir": "cd scripts && bun run gen-regex:noir", 
+    "gen-regex:noir": "cd scripts && bun run gen-regex:noir",
     "gen-inputs:noir": "cd scripts && bun run gen-inputs:noir",
     "build": "cd compiler && bun run build",
     "build-release": "cd compiler && bun run build-release",
     "install-hooks": "cp git-hooks/pre-push .git/hooks/ && chmod +x .git/hooks/pre-push",
-    "postinstall": "bun run install-hooks"
+    "postinstall": "bun run install-hooks",
+    "bench": "bun run bench:circom-nfa && bun run bench:noir-nfa && bun run bench:circom-dfa && bun run bench:collect && bun run bench:outputs",
+    "bench:circom-dfa": "bun benchmarks/scripts/bench.ts --provider circom-dfa",
+    "bench:circom-nfa": "bun benchmarks/scripts/bench.ts --provider circom-nfa",
+    "bench:noir-nfa": "bun benchmarks/scripts/bench.ts --provider noir-nfa",
+    "bench:collect": "bun benchmarks/scripts/collect-results.ts",
+    "bench:outputs": "bun benchmarks/scripts/generate-outputs.ts",
+    "bench:clean": "rm -rf benchmarks/results/* benchmarks/outputs/*"
   },
   "devDependencies": {
     "bun-types": "latest"

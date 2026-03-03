@@ -1,0 +1,10 @@
+{
+    "pass": [
+        "abd",
+        "acd",
+        "abdacd",
+        "abdabdacd",
+        "xabdy"
+    ],
+    "fail": ["ad", "aed", "abc", "bda", ""]
+}

@@ -1,3 +1,4 @@
+.DS_Store
 nfa.json
 target
 /compiler/pkg
@@ -17,3 +18,4 @@ scripts/dist/
 
 .claude
 thoughts/
+docs/
