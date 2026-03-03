@@ -1,0 +1,23 @@
+{
+    "pass": [
+        "dkim-signature:v=1; a=rsa-sha256; t=1678886400;",
+        "\r\ndkim-signature:s=selector; d=example.com; t=1234567890;",
+        "dkim-signature:h=from:to:subject; bh=bodyhash; t=01;",
+        "dkim-signature:version=1; another=tag; more=data; t=98765;",
+        "dkim-signature:v=1; t=1234567890; extra",
+        "header: value\r\ndkim-signature:v=1; t=13;\r\nnextheader: value"
+    ],
+    "fail": [
+        "DKIM-Signature:v=1; t=1678886400;",
+        "dkim-signature:t=1678886400;",
+        "dkim-signature:v=1; t=1678886400",
+        "dkim-signature:v=1; t=notadigit;",
+        "dkim-signature:v=1; T=1678886400;",
+        "dkim-signature:v=1 t=1678886400;",
+        "dkim-signature:v=; t=1678886400;",
+        "dkim-signature:v=1; t=;",
+        " dkim-signature:v=1; t=1678886400;",
+        "dkim-signature:v=1 t=12345;",
+        "dkim-signature:v1; t=12345;"
+    ]
+}

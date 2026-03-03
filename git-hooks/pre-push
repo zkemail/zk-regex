@@ -1,0 +1,135 @@
+#!/bin/bash
+set -e
+
+# Pre-push hook to ensure templates are regenerated when compiler changes
+# This hook prevents pushing compiler changes without updating circom/noir templates
+
+echo "🔧 Pre-push hook: Checking if compiler changes require template regeneration..."
+
+# Get the range of commits being pushed
+# Format: <local ref> <local sha1> <remote ref> <remote sha1>
+while read local_ref local_sha remote_ref remote_sha; do
+    # Skip if deleting a branch
+    if [ "$local_sha" = "0000000000000000000000000000000000000000" ]; then
+        continue
+    fi
+    
+    # For new branches, compare against main
+    if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+        # Try to find common ancestor with main branch
+        if git rev-parse --verify origin/main >/dev/null 2>&1; then
+            range="origin/main..$local_sha"
+        elif git rev-parse --verify main >/dev/null 2>&1; then
+            range="main..$local_sha"
+        else
+            # Fallback to checking last 10 commits if no main branch found
+            range="$local_sha~10..$local_sha"
+        fi
+    else
+        range="$remote_sha..$local_sha"
+    fi
+    
+    echo "📋 Checking commits in range: $range"
+    
+    # Check if any commits in the range modified compiler source files
+    if git diff --name-only "$range" | grep -q "^compiler/src/"; then
+        echo "📦 Compiler source changes detected in push range"
+        
+        # Check if we're in the project root
+        if [ ! -f "package.json" ] || [ ! -d "compiler" ]; then
+            echo "❌ Error: Must run from project root directory"
+            exit 1
+        fi
+        
+        # Store whether we have uncommitted changes in template directories
+        STASH_CREATED=false
+        if ! git diff --quiet --exit-code circom/circuits/ noir/src/templates/ 2>/dev/null || \
+           ! git diff --cached --quiet --exit-code circom/circuits/ noir/src/templates/ 2>/dev/null; then
+            echo "💾 Stashing uncommitted template changes (including manual tests)..."
+            # Create a stash with a specific message so we can identify it
+            git stash push -u -m "pre-push-hook-temp-stash-$(date +%s)" -- \
+                circom/circuits/ noir/src/templates/
+            STASH_CREATED=true
+            echo "✅ Stashed changes (will be restored after check)"
+        fi
+        
+        echo "🏗️  Building release compiler binary..."
+        if ! bun run build-release; then
+            echo "❌ Error: Failed to build compiler"
+            # Restore stash if we created one
+            if [ "$STASH_CREATED" = true ]; then
+                echo "🔄 Restoring stashed changes..."
+                git stash pop
+            fi
+            exit 1
+        fi
+        
+        echo "🎯 Regenerating Circom templates..."
+        if ! bun run gen-regex:circom; then
+            echo "❌ Error: Failed to generate Circom templates"
+            # Restore stash if we created one
+            if [ "$STASH_CREATED" = true ]; then
+                echo "🔄 Restoring stashed changes..."
+                git stash pop
+            fi
+            exit 1
+        fi
+        
+        echo "🎯 Regenerating Noir templates..."
+        if ! bun run gen-regex:noir; then
+            echo "❌ Error: Failed to generate Noir templates"
+            # Restore stash if we created one
+            if [ "$STASH_CREATED" = true ]; then
+                echo "🔄 Restoring stashed changes..."
+                git stash pop
+            fi
+            exit 1
+        fi
+        
+        # Check if template generation created any changes
+        if ! git diff --quiet --exit-code circom/circuits/ noir/src/templates/ 2>/dev/null; then
+            echo ""
+            echo "❌ PUSH BLOCKED: Template changes detected but not committed"
+            echo ""
+            echo "   The compiler changes require template regeneration."
+            echo "   Generated templates don't match committed versions."
+            echo ""
+            echo "   To fix this:"
+            echo "   1. Review the generated changes:"
+            echo "      git diff circom/circuits/ noir/src/templates/"
+            echo ""
+            echo "   2. Add and commit the changes:"
+            echo "      git add circom/circuits/ noir/src/templates/"
+            echo "      git commit -m \"chore: regenerate templates after compiler changes\""
+            echo ""
+            echo "   3. Push again:"
+            echo "      git push"
+            echo ""
+            # Restore stash if we created one
+            if [ "$STASH_CREATED" = true ]; then
+                echo "🔄 Restoring your stashed changes (manual tests)..."
+                git stash pop
+            fi
+            exit 1
+        fi
+        
+        echo "✅ Templates are up to date with compiler changes"
+        
+        # Restore stashed changes if we created a stash
+        if [ "$STASH_CREATED" = true ]; then
+            echo "🔄 Restoring your manual changes (tests, etc.)..."
+            if ! git stash pop; then
+                echo "⚠️  Warning: Could not automatically restore stashed changes."
+                echo "   Your changes are in the stash. Use 'git stash list' to see them."
+                echo "   Use 'git stash pop' to restore them manually."
+            else
+                echo "✅ Manual changes restored successfully"
+            fi
+        fi
+        
+    else
+        echo "ℹ️  No compiler source changes detected in this push"
+    fi
+done
+
+echo "✅ Pre-push check completed successfully"

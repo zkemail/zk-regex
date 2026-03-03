@@ -1,0 +1,10 @@
+{
+    "pass": [
+        "abc",
+        "abcdef",
+        "abcdefghij",
+        "xyz",
+        "a abc z"
+    ],
+    "fail": ["ab", "a", "12", "AB", ""]
+}

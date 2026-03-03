@@ -1,0 +1,21 @@
+{
+    "pass": [
+        "to:recipient@example.com\r\n",
+        "from: sender@example.com\r\nto:another_recipient@domain.co\r\nsubject: Meeting\r\n",
+        "\r\nto:user@host.org\r\n",
+        "to:Test User <test.user@example.net>\r\n",
+        "to:ab\r\n",
+        "some text\r\nto:person@example.com\r\nmore text",
+        "to:user@example.com\r\nno newline after this part of to",
+        "to: line1\r\nline2@example.com\r\n"
+    ],
+    "fail": [
+        "To:recipient@example.com\r\n",
+        "to:recipient@example.com",
+        "cc: carboncopy@example.com\r\n to:indented@example.com\r\n",
+        "to:\r\n",
+        "hello to:someone@example.com\r\n",
+        "notolinehere",
+        "to: no_trailing_newline"
+    ]
+}

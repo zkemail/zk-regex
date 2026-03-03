@@ -1,0 +1,26 @@
+{
+    "pass": [
+        "valid@example.com",
+        "test.user@sub-domain.example.co.uk",
+        "user+tag@example.com",
+        "!#$%&'*+=?^_`{|}~.@weird.example.com",
+        "a@b.c",
+        "name@domain.with.at@symbol.allowed.by.regex",
+        "user.slash/ok@example.com",
+        "another_user@123.domain.com",
+        "contact@email-provider.net",
+        "customer.support@online-store.biz",
+        "user space@example.com",
+        "user@domain space.com",
+        "user@domain<invalid>.com",
+        " leadingwhitespace@example.com",
+        "user@trailingwhitespace.com "
+    ],
+    "fail": [
+        "",
+        "noatsymbol",
+        "@example.com",
+        "user@",
+        "user<invalid>@example.com"
+    ]
+}

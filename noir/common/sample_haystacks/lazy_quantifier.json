@@ -1,0 +1,10 @@
+{
+    "pass": [
+        "<>",
+        "<a>",
+        "<tag>",
+        "<tag>content</tag>",
+        "before <b> after"
+    ],
+    "fail": ["no tags", "", "abc", ">><<"]
+}

@@ -1,0 +1,7 @@
+{
+    "parts": [
+        { "Pattern": ">" },
+        { "PublicPattern": ["[^<>]+", 64] },
+        { "Pattern": "<.*" }
+    ]
+}
