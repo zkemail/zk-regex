@@ -29,6 +29,49 @@ fn create_dfa_config() -> Config {
         .accelerate(true)
 }
 
+fn validate_raw_regex_anchors(regex: &str) -> Result<(), CompilerError> {
+    let mut escaped = false;
+    let mut in_char_class = false;
+    let mut char_class_start = false;
+
+    for (idx, ch) in regex.char_indices() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+
+        match ch {
+            '\\' => escaped = true,
+            '[' if !in_char_class => {
+                in_char_class = true;
+                char_class_start = true;
+            }
+            ']' if in_char_class && char_class_start => {
+                char_class_start = false;
+            }
+            ']' if in_char_class => in_char_class = false,
+            '^' if in_char_class && char_class_start => {}
+            _ if in_char_class => {
+                char_class_start = false;
+            }
+            '^' if !in_char_class && idx != 0 => {
+                return Err(CompilerError::GenericError(
+                    "Invalid raw regex: ^ is only supported at the start of the pattern"
+                        .to_string(),
+                ));
+            }
+            '$' if !in_char_class && idx + ch.len_utf8() != regex.len() => {
+                return Err(CompilerError::GenericError(
+                    "Invalid raw regex: $ is only supported at the end of the pattern".to_string(),
+                ));
+            }
+            _ => {}
+        }
+    }
+
+    Ok(())
+}
+
 /// Finds the index of the first caret (^) in a regex string that is not inside parentheses.
 ///
 /// # Arguments
@@ -1006,6 +1049,8 @@ pub(crate) fn get_regex_and_dfa(
 ///
 /// A `Result` containing a `DFAGraph` or a `CompilerError`.
 fn create_dfa_graph_from_regex(regex: &str) -> Result<DFAGraph, CompilerError> {
+    validate_raw_regex_anchors(regex)?;
+
     let config = DFA::config()
         .minimize(true)
         .start_kind(StartKind::Anchored)
@@ -1132,8 +1177,11 @@ pub(crate) fn get_max_state(dfa: &DFAGraph) -> usize {
         .unwrap_or_default()
 }
 
+#[cfg(test)]
 mod dfa_test {
-    use crate::regex::{create_dfa_graph_from_regex, match_string_with_dfa_graph};
+    use crate::regex::{
+        create_dfa_graph_from_regex, match_string_with_dfa_graph, validate_raw_regex_anchors,
+    };
     use serde::{Deserialize, Serialize};
     use std::{env, fs::File, io::BufReader, path::PathBuf};
 
@@ -1182,5 +1230,22 @@ mod dfa_test {
                 );
             }
         }
+    }
+
+    #[test]
+    fn invalid_raw_regex_anchor_returns_error() {
+        let invalid_pattern =
+            r#"(\r\n|^)to:([^\r\n]+<)?[a-zA-Z0-9!#$%&\*\+-/=\?\^_`{|}~.]+@[a-zA-Z0-9_.-]+>?\r\n"#;
+
+        assert!(create_dfa_graph_from_regex(invalid_pattern).is_err());
+    }
+
+    #[test]
+    fn valid_raw_regex_anchors_are_allowed() {
+        assert!(validate_raw_regex_anchors(r"^[a-z]+$").is_ok());
+        assert!(validate_raw_regex_anchors(r"a\^b\$").is_ok());
+        assert!(validate_raw_regex_anchors(r"[\^$]+").is_ok());
+        assert!(validate_raw_regex_anchors(r"[]^$]+").is_ok());
+        assert!(validate_raw_regex_anchors(r"[^]$]+").is_ok());
     }
 }
