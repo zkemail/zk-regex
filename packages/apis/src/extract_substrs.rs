@@ -60,7 +60,7 @@ pub fn extract_substr_idxes(
     }
 
     // Compile the entire regex
-    // This should be impossible to fail, since we tested the seperate regex parts before.
+    // This should be impossible to fail, since we tested the separate regex parts before.
     let entire_regex = Regex::new(&entire_regex_str).unwrap();
 
     // Find the match for the entire regex
