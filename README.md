@@ -7,6 +7,8 @@
 
 This allows developers to build ZK applications that can verifiably process or validate text based on complex patterns without revealing the text itself.
 
+> **Upgrading from 2.x?** The circuit interface, CLI and APIs changed. See the [migration guide](./MIGRATION.md). The 2.x line is maintained on the [`release/2.x`](https://github.com/zkemail/zk-regex/tree/release/2.x) branch.
+
 ## Key Features
 
 -   **Regex Compilation:** Converts standard regular expression syntax into NFAs optimized for ZK circuits.
@@ -229,4 +231,4 @@ bun run test:circom   # Circom circuit tests only
 
 ## License
 
-This project is licensed under the [Specify License Here - e.g., MIT License or Apache 2.0].
+This project is licensed under the [MIT License](./LICENSE).
