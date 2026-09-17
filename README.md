@@ -2,6 +2,15 @@
 
 # zk-regex
 
+> [!IMPORTANT]
+> **This is the `release/2.x` maintenance branch (DFA compiler, npm `2.3.x`).**
+> It receives critical fixes only. New development happens on `main`, which ships the
+> NFA compiler as `3.x` with a different circuit interface and Noir support.
+> To upgrade, follow the [migration guide](https://github.com/zkemail/zk-regex/blob/main/MIGRATION.md).
+> Rust users who depend on `zk-regex-apis` or the 2.x `zk-regex-compiler` from git should pin
+> `tag = "2.3.2"` (or `branch = "release/2.x"`) instead of tracking `main`.
+
+
 A library to compile regex verification in circom. Explained on [our blog post](https://zk.email/blog/zkregex).  You can use regex to specify how to parse an email in a ZK Email proof when defining a new patterm on [the ZK Email SDK registry](https://registry.zk.email/). Noir coming soon.
 
 <!-- We've forked [min-dfa into a UI here](https://mindfa.onrender.com/min_dfa) to create a UI that converts existing regexes with [] support, as well as escapes \_, and the character classes a-z, A-Z, and 0-9. It also shows the DFA states very clearly so you can choose accept states easily. This should make converting regexes into DFA form way cleaner. -->
