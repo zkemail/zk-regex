@@ -6,7 +6,9 @@ edition = "2024"
 
 [workspace.dependencies]
 clap = "4.2.1"
-comptime = { git = "https://github.com/jp4g/sparse_array", branch = "feat/comptime-codegen" }
+# Pinned to an exact commit: the upstream ref is a feature branch on a personal fork, so a
+# force-push or rebase there must not be able to change (or break) our builds.
+comptime = { git = "https://github.com/jp4g/sparse_array", rev = "36d5251606d1044759de79b941b0d5d0600c695d" }
 heck = "0.5.0"
 regex-automata = "0.4.7"
 regex-syntax = "0.8.5"

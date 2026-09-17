@@ -173,8 +173,9 @@ pub fn generate_circom_code(
     code.push_str("    signal isValidRegex[maxMatchBytes];\n");
     code.push_str("    signal isValidRegexTemp[maxMatchBytes];\n");
     code.push_str("    signal isWithinPathLength[maxMatchBytes];\n");
-    code.push_str("    signal isWithinPathLengthMinusOne[maxMatchBytes-2];\n");
-    code.push_str("    signal isTransitionLinked[maxMatchBytes];\n");
+    // One linkage check per pair of adjacent steps: (0,1) ... (maxMatchBytes-2, maxMatchBytes-1)
+    code.push_str("    signal isWithinPathLengthMinusOne[maxMatchBytes-1];\n");
+    code.push_str("    signal isTransitionLinked[maxMatchBytes-1];\n");
 
     if start_states.len() > 1 {
         code.push_str("\n    component isValidStartState;\n");
@@ -214,7 +215,10 @@ pub fn generate_circom_code(
     );
 
     code.push_str("        // Check if the traversal is a valid path\n");
-    code.push_str("        if (i < maxMatchBytes-2) {\n");
+    // The bound must be maxMatchBytes-1 so the link into the last slot is enforced too. With
+    // maxMatchBytes-2 the final transition is unlinked whenever matchLength == maxMatchBytes,
+    // letting a prover jump straight into an accept state.
+    code.push_str("        if (i < maxMatchBytes-1) {\n");
     code.push_str(
         "            isWithinPathLengthMinusOne[i] <== LessThan(log2Ceil(maxMatchBytes))([i, matchLength-1]);\n"
     );

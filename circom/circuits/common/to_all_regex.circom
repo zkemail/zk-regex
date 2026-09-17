@@ -31,8 +31,8 @@ template ToAllRegex(maxHaystackBytes, maxMatchBytes) {
     signal isValidRegex[maxMatchBytes];
     signal isValidRegexTemp[maxMatchBytes];
     signal isWithinPathLength[maxMatchBytes];
-    signal isWithinPathLengthMinusOne[maxMatchBytes-2];
-    signal isTransitionLinked[maxMatchBytes];
+    signal isWithinPathLengthMinusOne[maxMatchBytes-1];
+    signal isTransitionLinked[maxMatchBytes-1];
 
     component isValidStartState;
 
@@ -54,7 +54,7 @@ template ToAllRegex(maxHaystackBytes, maxMatchBytes) {
         isWithinPathLength[i] <== LessThan(log2Ceil(maxMatchBytes))([i, matchLength]);
 
         // Check if the traversal is a valid path
-        if (i < maxMatchBytes-2) {
+        if (i < maxMatchBytes-1) {
             isWithinPathLengthMinusOne[i] <== LessThan(log2Ceil(maxMatchBytes))([i, matchLength-1]);
             isTransitionLinked[i] <== IsEqual()([nextStates[i], currStates[i+1]]);
             isTransitionLinked[i] * isWithinPathLengthMinusOne[i] === isWithinPathLengthMinusOne[i];

@@ -26,6 +26,62 @@ pub struct NoirInputs {
 
 // From implementation moved to shared.rs
 
+/// Radix used to pack `(state, byte, next_state)` into one lookup key. Must match `R` in
+/// `noir/src/utils/transitions.nr`. State ids have to stay below this value.
+const NOIR_KEY_RADIX: usize = 257;
+
+/// Transition lookup keys are packed as `state + byte * R + next_state * R^2` with `R = 257`
+/// (see `noir/src/utils/transitions.nr`). The packing is only injective while state ids are a
+/// single base-R digit. Once an automaton has more than `R` states, `(state = s + R, byte = b)`
+/// and `(state = s, byte = b + 1)` share a key, so the circuit would accept byte `b + 1` in state
+/// `s` even when the regex does not allow it.
+///
+/// Large automata are common (a single `\w` expands to a few hundred UTF-8 states), so instead of
+/// rejecting on size alone this checks for the actual aliasing: every other `(state, byte)` pair
+/// that maps onto a valid key must itself be a valid transition with the same capture data.
+fn ensure_unambiguous_transition_keys(
+    transitions: &Vec<(usize, u8, u8, usize, Option<BTreeSet<(usize, bool)>>)>,
+) -> NFAResult<()> {
+    let num_states = transitions
+        .iter()
+        .map(|(src, _, _, dst, _)| (*src).max(*dst) + 1)
+        .max()
+        .unwrap_or(0);
+    if num_states <= NOIR_KEY_RADIX {
+        return Ok(());
+    }
+
+    let mut valid: std::collections::BTreeMap<(usize, usize, usize), &Option<BTreeSet<(usize, bool)>>> =
+        std::collections::BTreeMap::new();
+    for (src, start, end, dst, captures) in transitions {
+        for byte in *start..=*end {
+            valid.insert((*src, byte as usize, *dst), captures);
+        }
+    }
+
+    for (&(src, byte, dst), captures) in &valid {
+        // Same key <=> src' = src - j*R and byte' = byte + j for some non-zero integer j.
+        // (byte and next_state cannot trade off: that would need a byte difference of R.)
+        let max_up = (255 - byte).min(src / NOIR_KEY_RADIX);
+        let max_down = byte.min((num_states - 1 - src) / NOIR_KEY_RADIX);
+        let aliases = (1..=max_up)
+            .map(|j| (src - j * NOIR_KEY_RADIX, byte + j))
+            .chain((1..=max_down).map(|j| (src + j * NOIR_KEY_RADIX, byte - j)));
+        for (alias_src, alias_byte) in aliases {
+            if valid.get(&(alias_src, alias_byte, dst)) != Some(captures) {
+                return Err(NFAError::TemplateError(format!(
+                    "Regex is too large for the Noir backend: the automaton has {} states and the \
+                     transition {} -[{}]-> {} shares a lookup key with {} -[{}]-> {}, which the \
+                     regex does not allow. The generated circuit would be unsound. Simplify the \
+                     pattern (for example replace \\w or . with explicit ASCII classes).",
+                    num_states, src, byte, dst, alias_src, alias_byte, dst
+                )));
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Generate Noir code for the NFA
 pub fn generate_noir_code(
     nfa: &NFAGraph,
@@ -35,6 +91,8 @@ pub fn generate_noir_code(
 ) -> NFAResult<String> {
     // get nfa graph data
     let (start_states, accept_states, transitions) = generate_circuit_data(nfa)?;
+
+    ensure_unambiguous_transition_keys(&transitions)?;
 
     if nfa.num_capture_groups > 0 {
         if let Some(max_bytes) = max_substring_bytes.as_ref() {
@@ -424,7 +482,7 @@ fn transition_sparse_array(
     transitions: &Vec<(usize, u8, u8, usize, Option<BTreeSet<(usize, bool)>>)>,
 ) -> SparseArray<FieldElement> {
     // let r = 256 * transitions.len();
-    let r = 257;
+    let r = NOIR_KEY_RADIX;
     let mut entries = Vec::new();
     for (state_idx, start, end, dest, _) in transitions {
         let bytes = (*start..=*end).collect::<Vec<u8>>();
@@ -451,7 +509,7 @@ fn packed_transition_sparse_array(
     transitions: &Vec<(usize, u8, u8, usize, Option<BTreeSet<(usize, bool)>>)>,
     num_capture_groups: usize,
 ) -> SparseArray<FieldElement> {
-    let r = 257; // Multiplier for constructing unique keys
+    let r = NOIR_KEY_RADIX; // Multiplier for constructing unique keys
     let mut keys = Vec::new();
     let mut values = Vec::new();
 
@@ -501,4 +559,24 @@ fn packed_transition_sparse_array(
     let max_size = FieldElement::from(estimated_max_key_val + 1); // +1 because keys can be 0 up to estimated_max_key_val
 
     SparseArray::create(&keys, &values, max_size)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rejects_automata_too_large_for_key_encoding() {
+        // 300 sequential states, well past the 257 the key packing can represent.
+        let nfa = NFAGraph::build("a{300}").expect("pattern should compile to an NFA");
+        let err = generate_noir_code(&nfa, "TooLarge", "a{300}", None)
+            .expect_err("oversized automaton must be rejected");
+        assert!(matches!(err, NFAError::TemplateError(_)), "got {err:?}");
+    }
+
+    #[test]
+    fn accepts_automata_within_key_encoding() {
+        let nfa = NFAGraph::build("a{10}b+").expect("pattern should compile to an NFA");
+        generate_noir_code(&nfa, "Small", "a{10}b+", None).expect("small automaton is fine");
+    }
 }
