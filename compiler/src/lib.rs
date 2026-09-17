@@ -106,7 +106,7 @@ pub fn gen_from_raw(
 /// let config = DecomposedRegexConfig {
 ///     parts: vec![
 ///         RegexPart::Pattern("prefix:".to_string()),
-///         RegexPart::PublicPattern(("\\w+".to_string(), 20)),
+///         RegexPart::PublicPattern(("[a-zA-Z0-9_]+".to_string(), 20)),
 ///     ]
 /// };
 /// let (nfa, code) = gen_from_decomposed(config, "PrefixRegex", ProvingFramework::Noir).unwrap();
