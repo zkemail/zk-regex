@@ -132,7 +132,7 @@ checksum = "5b63caa9aa9397e2d9480a9b13673856c78d8ac123288526c37d7839f2a86990"
 [[package]]
 name = "comptime"
 version = "0.1.0"
-source = "git+https://github.com/jp4g/sparse_array?branch=feat%2Fcomptime-codegen#36d5251606d1044759de79b941b0d5d0600c695d"
+source = "git+https://github.com/jp4g/sparse_array?rev=36d5251606d1044759de79b941b0d5d0600c695d#36d5251606d1044759de79b941b0d5d0600c695d"
 dependencies = [
  "hex",
  "lazy_static",
@@ -699,7 +699,7 @@ checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
 
 [[package]]
 name = "zk-regex-compiler"
-version = "2.2.2-alpha.1"
+version = "3.0.0-alpha.1"
 dependencies = [
  "clap",
  "comptime",

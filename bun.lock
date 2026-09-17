@@ -9,11 +9,10 @@
     },
     "circom": {
       "name": "@zk-email/zk-regex-circom",
-      "version": "2.2.2-alpha.0",
+      "version": "3.0.0-alpha.1",
       "dependencies": {
         "@zk-email/circuits": "6.4.1-alpha.0",
         "circomlib": "^2.0.5",
-        "prettier": "",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -28,7 +27,7 @@
     },
     "compiler": {
       "name": "@zk-email/zk-regex-compiler",
-      "version": "2.2.2-alpha.0",
+      "version": "3.0.0-alpha.1",
     },
     "scripts": {
       "name": "@zk-regex/scripts",
@@ -710,8 +709,6 @@
     "possible-typed-array-names": ["possible-typed-array-names@1.1.0", "", {}, "sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg=="],
 
     "prelude-ls": ["prelude-ls@1.1.2", "", {}, "sha512-ESF23V4SKG6lVSGZgYNpbsiaAkdab6ZgOxe52p7+Kid3W3u3bxR4Vfd/o21dmN7jSt0IwgZ4v5MUd26FEtXE9w=="],
-
-    "prettier": ["prettier@3.6.2", "", { "bin": { "prettier": "bin/prettier.cjs" } }, "sha512-I7AIg5boAr5R0FFtJ6rCfD+LFsWHp81dolrFD8S79U9tb8Az2nGrJncnMSnys+bpQJfRUzqs9hnA81OAA3hCuQ=="],
 
     "pretty-format": ["pretty-format@29.7.0", "", { "dependencies": { "@jest/schemas": "^29.6.3", "ansi-styles": "^5.0.0", "react-is": "^18.0.0" } }, "sha512-Pdlw/oPxN+aXdmM9R00JVC9WVFoCLTKJvDVLgmJ+qAffBMxsV85l/Lu7sNx4zSzPyoL2euImuEwHhOXdEgNFZQ=="],
 
