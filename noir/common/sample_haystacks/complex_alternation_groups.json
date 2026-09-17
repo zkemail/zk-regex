@@ -1,0 +1,10 @@
+{
+    "pass": [
+        "https://example.com",
+        "http://www.example.com",
+        "ftp://files.server.org",
+        "https://www.test.co",
+        "visit https://www.example.com today"
+    ],
+    "fail": ["example.com", "htp://bad.com", "://no-proto.com", "", "just text"]
+}

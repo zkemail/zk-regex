@@ -1,0 +1,7 @@
+{
+    "parts": [
+        { "Pattern": "(?:\r\n|^)message-id:" },
+        { "PublicPattern": ["<[A-Za-z0-9=@\\.\\+_-]+>", 128] },
+        { "Pattern": "\r\n" }
+    ]
+}

@@ -1,0 +1,27 @@
+{
+  "name": "@zk-regex/scripts",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "TypeScript scripts for ZK Regex compilation and processing",
+  "license": "MIT",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "gen-regex:circom": "bun run ../circom/scripts/gen-regex.ts",
+    "gen-regex:noir": "bun run ../noir/scripts/gen-regex.ts",
+    "gen-inputs:noir": "bun run ../noir/scripts/gen-inputs.ts"
+  },
+  "dependencies": {
+    "@types/node": "^20.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.4",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "bun": ">=1.0.0"
+  }
+}

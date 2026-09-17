@@ -1,0 +1,267 @@
+#!/usr/bin/env bun
+/**
+ * Main benchmark entry point.
+ *
+ * Usage:
+ *   bun scripts/bench.ts                              # Run all providers, all patterns
+ *   bun scripts/bench.ts --provider circom-nfa         # Run specific provider
+ *   bun scripts/bench.ts --pattern simple_regex       # Run specific pattern
+ *   bun scripts/bench.ts --provider circom-nfa --pattern simple_regex  # Both
+ */
+
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import type {
+  ProviderType,
+  PatternDefinition,
+  BenchmarkConfig,
+  BenchmarkResult,
+  NoirMetrics,
+  CircomMetrics,
+  CircomNFAMetrics,
+} from '../src/types.js';
+import type { BenchmarkProvider, BenchmarkMetrics } from '../src/providers/base.js';
+import { CircomDFAProvider } from '../src/providers/circom-dfa.js';
+import { CircomNFAProvider } from '../src/providers/circom-nfa.js';
+import { NoirNFAProvider } from '../src/providers/noir-nfa.js';
+import { getHardwareSpec, getToolVersions, verifyDependencies } from '../src/utils/hardware.js';
+import { cleanupDfaWorktree } from '../src/utils/worktree.js';
+import { registerAbortHandler, isAborted } from '../src/utils/abort.js';
+import { formatError } from '../src/errors.js';
+
+// Parse command line arguments
+function parseArgs(): { providers: ProviderType[]; patternFilter: string | null; noMemory: boolean } {
+  const args = process.argv.slice(2);
+
+  let providers: ProviderType[] = ['circom-nfa', 'noir-nfa', 'circom-dfa'];
+  let patternFilter: string | null = null;
+  const noMemory = args.includes('--no-memory');
+
+  const providerIndex = args.indexOf('--provider');
+  if (providerIndex !== -1 && args[providerIndex + 1]) {
+    providers = [args[providerIndex + 1] as ProviderType];
+  }
+
+  const patternIndex = args.indexOf('--pattern');
+  if (patternIndex !== -1 && args[patternIndex + 1]) {
+    patternFilter = args[patternIndex + 1];
+  }
+
+  return { providers, patternFilter, noMemory };
+}
+
+// Load patterns from config
+async function loadPatterns(): Promise<PatternDefinition[]> {
+  const configPath = path.join(import.meta.dir, '..', 'config', 'patterns.json');
+  const config = JSON.parse(await fs.readFile(configPath, 'utf-8'));
+  return config.patterns;
+}
+
+// Load benchmark config
+async function loadBenchmarkConfig(): Promise<BenchmarkConfig> {
+  const configPath = path.join(import.meta.dir, '..', 'config', 'benchmark.json');
+  const config = JSON.parse(await fs.readFile(configPath, 'utf-8'));
+  return config.config;
+}
+
+// Create provider instance
+function createProvider(type: ProviderType): BenchmarkProvider {
+  switch (type) {
+    case 'circom-dfa':
+      return new CircomDFAProvider();
+    case 'circom-nfa':
+      return new CircomNFAProvider();
+    case 'noir-nfa':
+      return new NoirNFAProvider();
+    default:
+      throw new Error(`Unknown provider: ${type}`);
+  }
+}
+
+// Get required binaries for a provider
+function getRequiredBinaries(type: ProviderType): string[] {
+  switch (type) {
+    case 'circom-dfa':
+    case 'circom-nfa':
+      return ['circom', 'hyperfine'];
+    case 'noir-nfa':
+      return ['nargo', 'bb', 'hyperfine'];
+  }
+}
+
+// Save a benchmark result to file
+async function saveResult(result: BenchmarkResult): Promise<void> {
+  const resultsDir = path.join(import.meta.dir, '..', 'results');
+  await fs.mkdir(resultsDir, { recursive: true });
+
+  const filename = `${result.provider}_${result.pattern}_${result.inputLengthBytes}.json`;
+  const filepath = path.join(resultsDir, filename);
+
+  await fs.writeFile(filepath, JSON.stringify(result, null, 2));
+}
+
+// Format memory stats for display
+function formatMemory(stats: { mean: number; stddev: number; measured: boolean } | undefined): string {
+  if (!stats || !stats.measured || stats.mean === 0) return 'N/A';
+  return `${stats.mean.toFixed(0)}MB (±${stats.stddev.toFixed(0)})`;
+}
+
+// Format metrics for console output
+function formatMetrics(metrics: BenchmarkMetrics, provider: ProviderType): string {
+  const lines: string[] = [];
+
+  if (provider === 'noir-nfa') {
+    const m = metrics as NoirMetrics;
+    lines.push(`ACIR opcodes: ${m.acirOpcodes}, Backend gates: ${m.backendGates}`);
+    lines.push(`Compile: ${m.compileMs.mean.toFixed(0)}ms (±${m.compileMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.compile)}`);
+    lines.push(`Witness gen: ${m.witnessGenMs.mean.toFixed(0)}ms (±${m.witnessGenMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.witnessGen)}`);
+    lines.push(`Prove: ${m.proveMs.mean.toFixed(0)}ms (±${m.proveMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.prove)}`);
+    lines.push(`Verify: ${m.verifyMs.mean.toFixed(0)}ms (±${m.verifyMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.verify)}`);
+    lines.push(`Proof size: ${m.proofSizeBytes} bytes`);
+  } else if (provider === 'circom-nfa') {
+    const m = metrics as CircomNFAMetrics;
+    lines.push(`Constraints: ${m.constraints}, States: ${m.states}, Transitions: ${m.transitions}`);
+    lines.push(`Compile: Memory: ${formatMemory(m.memoryByPhase?.compile)}`);
+    lines.push(`Witness gen: ${m.witnessGenMs.mean.toFixed(0)}ms (±${m.witnessGenMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.witnessGen)}`);
+    lines.push(`Prove: ${m.proveMs.mean.toFixed(0)}ms (±${m.proveMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.prove)}`);
+    lines.push(`Verify: ${m.verifyMs.mean.toFixed(0)}ms (±${m.verifyMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.verify)}`);
+  } else {
+    const m = metrics as CircomMetrics;
+    lines.push(`Constraints: ${m.constraints}`);
+    lines.push(`Compile: Memory: ${formatMemory(m.memoryByPhase?.compile)}`);
+    lines.push(`Witness gen: ${m.witnessGenMs.mean.toFixed(0)}ms (±${m.witnessGenMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.witnessGen)}`);
+    lines.push(`Prove: ${m.proveMs.mean.toFixed(0)}ms (±${m.proveMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.prove)}`);
+    lines.push(`Verify: ${m.verifyMs.mean.toFixed(0)}ms (±${m.verifyMs.stddev.toFixed(0)}) | Memory: ${formatMemory(m.memoryByPhase?.verify)}`);
+  }
+
+  return lines.map(l => `        ${l}`).join('\n');
+}
+
+async function main() {
+  console.log('ZK-Regex Benchmark Suite');
+  console.log('========================\n');
+
+  // Register abort handler for graceful shutdown
+  registerAbortHandler(async () => {
+    await cleanupDfaWorktree();
+  });
+
+  // Parse arguments
+  const { providers, patternFilter, noMemory } = parseArgs();
+  if (noMemory) {
+    process.env.BENCH_NO_MEMORY = '1';
+  }
+  console.log(`Providers: ${providers.join(', ')}`);
+  if (patternFilter) {
+    console.log(`Pattern filter: ${patternFilter}`);
+  }
+  console.log(`Memory profiling: ${noMemory ? 'disabled' : 'enabled'}`);
+  console.log();
+
+  // Collect hardware info
+  console.log('Collecting system information...');
+  const hardware = getHardwareSpec();
+  const toolVersions = await getToolVersions();
+  console.log(`  Platform: ${hardware.platform}`);
+  console.log(`  CPU: ${hardware.cpu}`);
+  console.log(`  Cores: ${hardware.cores}`);
+  console.log(`  Memory: ${hardware.memoryGB}GB`);
+  console.log(`  Bun: ${toolVersions.bun}`);
+  console.log(`  Circom: ${toolVersions.circom ?? 'not installed'}`);
+  console.log(`  Nargo: ${toolVersions.nargo ?? 'not installed'}`);
+  console.log();
+
+  // Load configurations
+  let patterns = await loadPatterns();
+  const config = await loadBenchmarkConfig();
+
+  // Filter patterns if --pattern flag was provided
+  if (patternFilter) {
+    patterns = patterns.filter(p =>
+      p.name.includes(patternFilter) ||
+      p.circuitName.includes(patternFilter)
+    );
+    if (patterns.length === 0) {
+      console.error(`No patterns found matching "${patternFilter}"`);
+      process.exit(1);
+    }
+  }
+
+  console.log(`Loaded ${patterns.length} pattern(s) to benchmark`);
+  console.log(`Input lengths: ${config.inputLengths.join(', ')} bytes`);
+  console.log();
+
+  // Run benchmarks for each provider
+  for (const providerType of providers) {
+    if (isAborted()) break;
+    console.log(`\n--- Provider: ${providerType} ---\n`);
+
+    // Check dependencies
+    const binaries = getRequiredBinaries(providerType);
+    const depsResult = await verifyDependencies(binaries);
+    if (!depsResult.ok) {
+      console.error(formatError(depsResult.error));
+      continue;
+    }
+
+    // Create and set up provider
+    const provider = createProvider(providerType);
+    const setupResult = await provider.setup();
+    if (!setupResult.ok) {
+      console.error(`Setup failed: ${formatError(setupResult.error)}`);
+      continue;
+    }
+
+    try {
+      // Benchmark each pattern
+      for (const pattern of patterns) {
+        if (isAborted()) break;
+        if (!provider.supportsPattern(pattern)) {
+          console.log(`  Skipping ${pattern.name} (not supported)`);
+          continue;
+        }
+
+        console.log(`  Benchmarking ${pattern.name}...`);
+
+        for (const inputLength of config.inputLengths) {
+          if (isAborted()) break;
+          console.log(`    Input length: ${inputLength} bytes`);
+
+          const result = await provider.benchmarkPattern(pattern, inputLength, config);
+          if (!result.ok) {
+            console.error(`      Error: ${formatError(result.error)}`);
+            continue;
+          }
+
+          // Save result to file
+          const benchResult: BenchmarkResult = {
+            provider: providerType,
+            pattern: pattern.circuitName,
+            inputLengthBytes: inputLength,
+            actualContentLength: pattern.inputTemplate ? inputLength : undefined,
+            timestamp: new Date().toISOString(),
+            compilerCommitHash: provider.getCommitHash(),
+            toolVersions: provider.getToolVersions(),
+            metrics: result.value,
+          };
+          await saveResult(benchResult);
+
+          // Display metrics summary
+          console.log(formatMetrics(result.value, providerType));
+        }
+      }
+    } finally {
+      // Always clean up
+      await provider.cleanup();
+    }
+  }
+
+  console.log('\n========================');
+  console.log('Benchmarks complete!');
+  console.log('Run `bun run collect` to aggregate results.');
+}
+
+main().catch((error) => {
+  console.error('Fatal error:', error);
+  process.exit(1);
+});

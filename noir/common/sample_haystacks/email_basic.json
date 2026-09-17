@@ -1,0 +1,10 @@
+{
+    "pass": [
+        "test@example.com",
+        "user.name@domain.org",
+        "a+b@test.co",
+        "hello@world.info",
+        "contact test@example.com for info"
+    ],
+    "fail": ["@example.com", "user@", "user@.com", "", "no-at-sign"]
+}

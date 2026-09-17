@@ -1,0 +1,10 @@
+{
+    "pass": [
+        "foo",
+        "bar",
+        "baz",
+        "choose foo or bar",
+        "a baz b"
+    ],
+    "fail": ["fo", "ba", "fob", "BOO", ""]
+}

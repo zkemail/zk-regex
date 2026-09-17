@@ -1,0 +1,10 @@
+{
+    "pass": [
+        "hello",
+        "say hello world",
+        "hello there",
+        "well hello!",
+        "ahelloworld"
+    ],
+    "fail": ["helo", "HELLO", "hell", "h e l l o", ""]
+}

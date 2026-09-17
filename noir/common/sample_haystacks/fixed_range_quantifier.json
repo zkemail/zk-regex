@@ -1,0 +1,10 @@
+{
+    "pass": [
+        "abc12X",
+        "abc12XY",
+        "xyz1234A",
+        "abc1234XY",
+        "def99Z"
+    ],
+    "fail": ["ab12X", "abc1X", "ABC12x", "abc12345X", ""]
+}

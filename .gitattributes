@@ -1,0 +1,6 @@
+# Mark auto-generated circuit files so GitHub collapses them in PR diffs
+circom/circuits/common/*_regex.circom linguist-generated=true
+circom/circuits/common/*_graph.json linguist-generated=true
+noir/src/templates/circuits/*_regex.nr linguist-generated=true
+noir/src/templates/graphs/*_graph.json linguist-generated=true
+noir/common/sample_haystacks/circuit_inputs/*.json linguist-generated=true

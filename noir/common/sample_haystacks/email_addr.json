@@ -1,0 +1,10 @@
+{
+    "pass": [
+        "\r\nto:example <example@example.com>\r\n",
+        "to:example <example@example.com>\r\n",
+        "to:example@example.com\r\n"
+    ],
+    "fail": [
+        "to: example@example.com\r\n"
+    ]
+}

@@ -1,0 +1,108 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ZK-Regex Benchmark Patterns",
+  "description": "Pattern definitions for benchmarking zk-regex DFA vs NFA backends",
+  "type": "object",
+  "required": ["description", "patterns"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "description": { "type": "string" },
+    "patterns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "circuitName",
+          "availableInV1",
+          "complexity",
+          "features",
+          "category",
+          "regex",
+          "sampleInput"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Unique pattern identifier"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable pattern description"
+          },
+          "circuitName": {
+            "type": "string",
+            "description": "Generated circuit template name (e.g., body_hash_regex)"
+          },
+          "availableInV1": {
+            "type": "boolean",
+            "description": "Whether this pattern compiles successfully with the v1 DFA compiler"
+          },
+          "complexity": {
+            "type": "string",
+            "enum": ["simple", "medium", "complex", "NFA-only"],
+            "description": "Complexity classification for academic analysis"
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "literals",
+                "character_classes",
+                "alternation",
+                "quantifiers_plus",
+                "quantifiers_star",
+                "quantifiers_fixed",
+                "quantifiers_range",
+                "quantifiers_lazy",
+                "quantifiers_unbounded",
+                "nested_groups",
+                "capture_groups"
+              ]
+            },
+            "description": "Regex features used by this pattern"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["synthetic", "real-world"],
+            "description": "Whether pattern is synthetic benchmark or real-world usage"
+          },
+          "regex": {
+            "type": "string",
+            "description": "The actual regex pattern"
+          },
+          "sampleInput": {
+            "type": "string",
+            "description": "Sample input string that matches the regex"
+          },
+          "purpose": {
+            "type": "string",
+            "description": "Optional purpose/rationale for including this pattern"
+          },
+          "inputTemplate": {
+            "type": "string",
+            "description": "Short string that matches the regex and can be scaled to fill target input lengths"
+          },
+          "scalingStrategy": {
+            "type": "string",
+            "enum": ["repeat", "extend", "pad-with-match"],
+            "description": "Strategy for scaling inputTemplate to target length: repeat (tile), extend (grow match), pad-with-match (template + filler)"
+          },
+          "extendChar": {
+            "type": "string",
+            "description": "Character to repeat when using 'extend' strategy"
+          },
+          "extendPosition": {
+            "type": "string",
+            "enum": ["before-last", "end"],
+            "description": "Where to insert extension characters: before-last (insert before final char) or end (append)"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

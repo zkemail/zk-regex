@@ -1,0 +1,22 @@
+{
+    "pass": [
+        "subject:hello\r\n",
+        "from: test@example.com\r\nsubject:world\r\n",
+        "\r\nsubject:test\r\n",
+        "subject:ab\r\n",
+        "some content before\r\nsubject:meeting\r\nand some content after"
+    ],
+    "fail": [
+        "Subject:hello\r\n",
+        "subject:Hello\r\n",
+        "subject:hello world\r\n",
+        "subject:hello123\r\n",
+        "subject:hello",
+        " subject:indented\r\n",
+        "subject:\r\n",
+        "subject: withspace\r\n",
+        "subject:ends \r\n",
+        "nosubjectline",
+        "another line\r\nsubject:noendnewline"
+    ]
+}
