@@ -1,0 +1,107 @@
+name: Release 2.x
+
+# Publishes maintenance releases of the DFA compiler line from the release/2.x branch.
+#
+# Usage:
+#   1. Bump the version in the package(s) you want to ship and merge to release/2.x.
+#   2. Run this workflow manually (Actions > Release 2.x > Run workflow), choosing the package.
+#      Use dry_run first to see what would be published.
+#
+# Requires the NPM_TOKEN repository secret (automation token with publish rights on @zk-email).
+# Releases are published under the `release-2.x` dist-tag unless `move_latest` is set, so that
+# `latest` can be owned by the 3.x line once it is stable.
+
+on:
+    workflow_dispatch:
+        inputs:
+            package:
+                description: Package to publish
+                type: choice
+                required: true
+                options:
+                    - circom
+                    - compiler
+                    - apis
+            move_latest:
+                description: Also move the npm `latest` dist-tag to this version
+                type: boolean
+                default: false
+            dry_run:
+                description: Do everything except the actual publish
+                type: boolean
+                default: true
+
+permissions:
+    contents: write
+
+jobs:
+    publish:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Refuse to run outside release/2.x
+              if: github.ref != 'refs/heads/release/2.x'
+              run: |
+                  echo "This workflow only publishes from release/2.x (got $GITHUB_REF)" >&2
+                  exit 1
+
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 18
+                  registry-url: https://registry.npmjs.org
+
+            - name: Resolve package directory and version
+              id: meta
+              run: |
+                  DIR="packages/${{ inputs.package }}"
+                  NAME=$(node -p "require('./$DIR/package.json').name")
+                  VERSION=$(node -p "require('./$DIR/package.json').version")
+                  case "$VERSION" in
+                      2.*) ;;
+                      *) echo "Refusing to publish non-2.x version $VERSION from release/2.x" >&2; exit 1 ;;
+                  esac
+                  if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
+                      echo "$NAME@$VERSION is already on npm. Bump the version first." >&2
+                      exit 1
+                  fi
+                  echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+                  echo "name=$NAME" >> "$GITHUB_OUTPUT"
+                  echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+            - name: Setup Rust
+              if: inputs.package != 'circom'
+              uses: dtolnay/rust-toolchain@stable
+
+            - name: Install wasm-pack
+              if: inputs.package != 'circom'
+              run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+            - name: Build wasm package
+              if: inputs.package != 'circom'
+              working-directory: ${{ steps.meta.outputs.dir }}
+              run: wasm-pack build --release --target nodejs --out-dir ./pkg/ --scope zk-email
+
+            - name: Publish
+              working-directory: ${{ inputs.package == 'circom' && steps.meta.outputs.dir || format('{0}/pkg', steps.meta.outputs.dir) }}
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+              run: |
+                  ARGS="--access public --tag release-2.x"
+                  if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+                  npm publish $ARGS
+
+            - name: Move latest dist-tag
+              if: inputs.move_latest && !inputs.dry_run
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+              run: npm dist-tag add "${{ steps.meta.outputs.name }}@${{ steps.meta.outputs.version }}" latest
+
+            - name: Tag the release
+              if: ${{ !inputs.dry_run }}
+              run: |
+                  TAG="${{ inputs.package }}-${{ steps.meta.outputs.version }}"
+                  git tag "$TAG"
+                  git push origin "$TAG"

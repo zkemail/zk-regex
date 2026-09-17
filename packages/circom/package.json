@@ -1,7 +1,12 @@
 {
     "name": "@zk-email/zk-regex-circom",
-    "version": "2.3.2",
+    "version": "2.3.3",
     "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/zkemail/zk-regex.git",
+        "directory": "packages/circom"
+    },
     "description": "regex verification circuits in circom for common regexes, generated with the compiler in [zk-regex](https://github.com/zkemail/zk-regex/tree/main).",
     "contributors": [
         "Javier Su <javier.su.weijie@gmail.com>",
