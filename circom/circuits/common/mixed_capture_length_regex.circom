@@ -47,6 +47,7 @@ template MixedCaptureLengthRegex(maxHaystackBytes, maxMatchBytes) {
 
     // Check if the first state in the haystack is a valid start state
     isValidStartState <== IsEqual()([startStates[0], currStates[0]]);
+    isValidStartState === 1;
 
     for (var i = 0; i < maxMatchBytes; i++) {
         isWithinPathLength[i] <== LessThan(log2Ceil(maxMatchBytes))([i, matchLength]);

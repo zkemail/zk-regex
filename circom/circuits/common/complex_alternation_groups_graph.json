@@ -808,6 +808,7 @@
     1,
     6
   ],
+  "anchored_start_states": [],
   "accept_states": [
     20
   ],

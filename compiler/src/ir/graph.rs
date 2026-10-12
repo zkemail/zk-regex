@@ -141,6 +141,13 @@ impl NFAGraph {
             }
         }
 
+        // Anchored start states are start states that only apply at haystack offset 0
+        if !self.anchored_start_states.is_subset(&self.start_states) {
+            return Err(NFAError::Verification(
+                "Anchored start states must also be start states".into(),
+            ));
+        }
+
         // Check accept states validity
         for &accept in &self.accept_states {
             if accept >= self.nodes.len() {
@@ -165,8 +172,12 @@ impl NFAGraph {
         let matched_bytes = &haystack[mat.range()];
         let mut paths: HashMap<usize, TraversalPath> = HashMap::new();
 
-        // Start with all defined start states
+        // Start with all defined start states. Anchored ones only apply when the match begins at
+        // the start of the haystack.
         for &start_state in &self.start_states {
+            if mat.start() != 0 && self.anchored_start_states.contains(&start_state) {
+                continue;
+            }
             paths.insert(start_state, Vec::new());
         }
 

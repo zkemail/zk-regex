@@ -165,6 +165,10 @@ pub fn generate_noir_code(
 
     // add check for valid start states
     code.push_str(start_state_fn(&start_states).as_str());
+    let anchored_start_states: Vec<usize> = nfa.anchored_start_states.iter().copied().collect();
+    if !anchored_start_states.is_empty() {
+        code.push_str(start_anchor_fn(&anchored_start_states).as_str());
+    }
     code.push_str(accept_state_fn(&accept_states).as_str());
 
     // regex match function doc
@@ -235,6 +239,9 @@ pub fn generate_noir_code(
 
     // check start & range
     code.push_str("    check_start_state(current_states[0]);\n");
+    if !anchored_start_states.is_empty() {
+        code.push_str("    check_start_anchor(current_states[0], match_start);\n");
+    }
     code.push_str("    for i in 0..MAX_MATCH_LEN-1 {\n");
     code.push_str("        // match length - 1 since current states should be 1 less than next states\n");
     code.push_str("        let in_range = (i < match_length - 1) as Field;\n");
@@ -429,6 +436,35 @@ fn check_start_state(start_state: Field) {{
 }
 
 /**
+ * Forms the check that paths beginning in an anchored start state begin at haystack offset 0
+ * @param anchored_start_states - The start states reached through a start anchor (`^`)
+ * @returns The function constraining anchored start states to match_start == 0
+ */
+fn start_anchor_fn(anchored_start_states: &Vec<usize>) -> String {
+    let expression = anchored_start_states
+        .iter()
+        .map(|state| format!("(start_state == {state})"))
+        .collect::<Vec<String>>()
+        .join(" | ");
+    format!(
+        r#"
+/**
+ * Constrains paths that begin in an anchored start state to begin at the start of the haystack
+ * @dev anchored start states are hardcoded in this function. They are entered by crossing a
+ *      start anchor (`^`), which only holds at haystack offset 0.
+ *
+ * @param start_state - The start state of the NFA
+ * @param match_start - The start index of the match in the haystack
+ */
+fn check_start_anchor(start_state: Field, match_start: u32) {{
+    let is_anchored_start = {expression};
+    assert(!is_anchored_start | (match_start == 0), "Start anchor requires match_start == 0");
+}}
+"#
+    )
+}
+
+/**
  * Forms an expression to determine if any of the accept states are matched
  * @param start_states - The accept states of the NFA
  * @returns The expression determining if any of the accept states are matched
@@ -572,6 +608,20 @@ mod tests {
         let err = generate_noir_code(&nfa, "TooLarge", "a{300}", None)
             .expect_err("oversized automaton must be rejected");
         assert!(matches!(err, NFAError::TemplateError(_)), "got {err:?}");
+    }
+
+    #[test]
+    fn anchored_start_states_require_match_start_zero() {
+        let nfa = NFAGraph::build("(?:\r\n|^)from:").expect("pattern should compile");
+        let anchored = *nfa.anchored_start_states.first().expect("one anchored start state");
+        let code = generate_noir_code(&nfa, "From", "(?:\r\n|^)from:", None).unwrap();
+
+        assert!(code.contains(&format!("let is_anchored_start = (start_state == {anchored});")));
+        assert!(code.contains("check_start_anchor(current_states[0], match_start);"));
+
+        let nfa = NFAGraph::build("(?:\r\n|x)from:").expect("pattern should compile");
+        let code = generate_noir_code(&nfa, "From", "(?:\r\n|x)from:", None).unwrap();
+        assert!(!code.contains("check_start_anchor"));
     }
 
     #[test]

@@ -9,6 +9,8 @@ pub enum NFAError {
     // Regex compilation errors
     #[error("Failed to compile regex pattern: {0}")]
     RegexCompilation(String),
+    #[error("Unsupported regex feature: {feature}")]
+    UnsupportedFeature { pattern: String, feature: String },
     #[error("No match found in input: {0}")]
     NoMatch(String),
     // State errors
@@ -55,6 +57,10 @@ impl From<NFAError> for crate::error::CompilerError {
 
         match nfa_error {
             NFAError::RegexCompilation(msg) => CompilerError::nfa_construction_failed(&msg),
+
+            NFAError::UnsupportedFeature { pattern, feature } => {
+                CompilerError::unsupported_feature(&pattern, &feature)
+            }
 
             NFAError::InvalidStateId(msg) => CompilerError::NFAConstruction {
                 code: ErrorCode::E2004,

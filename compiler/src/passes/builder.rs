@@ -5,7 +5,10 @@ use crate::ir::{IntermediateNFA, IntermediateNFANode, NFAGraph};
 
 use regex_automata::{
     nfa::thompson::{NFA, State, Transition, pikevm::PikeVM},
-    util::primitives::{SmallIndex, StateID},
+    util::{
+        look::Look,
+        primitives::{SmallIndex, StateID},
+    },
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -59,6 +62,7 @@ impl IntermediateNFA {
                 state_id: id,
                 byte_transitions: BTreeMap::new(),
                 epsilon_transitions: BTreeSet::new(),
+                start_anchor_transitions: BTreeSet::new(),
                 capture_groups: BTreeMap::new(),
             })
             .collect();
@@ -118,8 +122,8 @@ impl IntermediateNFA {
                 self.add_capture_transition(logical_id, next, group_index, slot, start_offset)?;
                 self.num_capture_groups = self.num_capture_groups.max(group_index.as_usize());
             }
-            State::Look { next, .. } => {
-                self.add_look_transition(logical_id, next, start_offset)?;
+            State::Look { look, next } => {
+                self.add_look_transition(logical_id, *look, next, start_offset)?;
             }
             State::Fail => {
                 // No transitions needed for fail states
@@ -229,14 +233,34 @@ impl IntermediateNFA {
         Ok(())
     }
 
+    /// Look-around assertions are not plain epsilon transitions: each one only holds at certain
+    /// haystack positions, and the circuit has to enforce that.
+    ///
+    /// Only `Look::Start` (`^` without the `m` flag, or `\A`) is supported. It is kept as a
+    /// separate kind of epsilon edge so that epsilon elimination can route it through an anchored
+    /// start state, which the generated circuits restrict to `matchStart == 0`. Every other
+    /// assertion depends on bytes or positions outside the matched window (`$` needs the real
+    /// haystack length, `(?m)^` and `\b` need the preceding byte), which the circuits do not see,
+    /// so they are rejected instead of being silently dropped.
     fn add_look_transition(
         &mut self,
         state_id: usize,
+        look: Look,
         next: &StateID,
         start_offset: usize,
     ) -> NFAResult<()> {
+        if look != Look::Start {
+            return Err(NFAError::UnsupportedFeature {
+                pattern: self.regex.clone(),
+                feature: format!(
+                    "look-around assertion {look:?} (only a non-multiline `^` at the start of the \
+                     pattern is supported)"
+                ),
+            });
+        }
+
         let target = self.thompson_to_logical(next.as_usize(), start_offset)?;
-        self.nodes[state_id].epsilon_transitions.insert(target);
+        self.nodes[state_id].start_anchor_transitions.insert(target);
         Ok(())
     }
 

@@ -51,6 +51,11 @@ pub struct NFAGraph {
     /// Set of start state indices
     pub start_states: BTreeSet<usize>,
 
+    /// Start states that come from a start anchor (`^` or `\A`). A path may only begin in one of
+    /// these when the match begins at haystack offset 0. Always a subset of `start_states`.
+    #[serde(default)]
+    pub anchored_start_states: BTreeSet<usize>,
+
     /// Set of accept state indices
     pub accept_states: BTreeSet<usize>,
 
@@ -65,6 +70,7 @@ impl NFAGraph {
             regex,
             nodes: Vec::new(),
             start_states: BTreeSet::new(),
+            anchored_start_states: BTreeSet::new(),
             accept_states: BTreeSet::new(),
             num_capture_groups: 0,
         }
@@ -123,13 +129,16 @@ impl NFAGraph {
         println!("Transitions: {}", self.transition_count());
         println!("Capture Groups: {}", self.num_capture_groups);
         println!("Start states: {:?}", self.start_states);
+        println!("Anchored start states: {:?}", self.anchored_start_states);
         println!("Accept states: {:?}", self.accept_states);
         println!("\nState Details:");
 
         for (idx, node) in self.nodes.iter().enumerate() {
             println!("\nState {idx}: ");
 
-            if self.start_states.contains(&idx) {
+            if self.anchored_start_states.contains(&idx) {
+                println!("  [ANCHORED START STATE]");
+            } else if self.start_states.contains(&idx) {
                 println!("  [START STATE]");
             }
             if self.accept_states.contains(&idx) {
