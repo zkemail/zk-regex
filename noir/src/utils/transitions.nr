@@ -1,8 +1,17 @@
 use crate::utils::sparse_array::SparseArray;
 
-// separators for accessing values from byte/curr_state/next_state key in sparse array
-global R: u32 = 257;
-global R_SQUARED: u32 = R * R;
+// Transition lookup keys pack `current_state + byte * 2^16 + next_state * 2^24`. The packing is
+// only injective while every state fits in 16 bits, so both states are range-checked here: a
+// witness with a larger state id cannot satisfy the circuit. The compiler rejects automata with
+// more than 2^16 states. Must match the key layout in `compiler/src/backend/noir.rs`.
+global BYTE_SHIFT: Field = 0x10000; // 2^16
+global NEXT_STATE_SHIFT: Field = 0x1000000; // 2^24
+
+fn transition_key(current_state: Field, haystack_byte: Field, next_state: Field) -> Field {
+    current_state.assert_max_bit_size::<16>();
+    next_state.assert_max_bit_size::<16>();
+    current_state + haystack_byte * BYTE_SHIFT + next_state * NEXT_STATE_SHIFT
+}
 
 /**
  * Constrains a regex transition without captures to be valid
@@ -20,7 +29,7 @@ pub fn check_transition<let TABLE_LENGTH: u32>(
     next_state: Field,
     reached_end_state: Field,
 ) {
-    let key = current_state + haystack_byte as Field * R as Field + next_state * R_SQUARED as Field;
+    let key = transition_key(current_state, haystack_byte, next_state);
     let transition_condition = table.get(key) - 1;
     let matched_condition = transition_condition * reached_end_state;
     assert(matched_condition == 0, "Invalid Transition");
@@ -46,7 +55,7 @@ pub fn check_transition_with_captures<let TABLE_SIZE: u32, let NUM_CAPTURE_GROUP
     capture_starts: [Field; NUM_CAPTURE_GROUPS],
     reached_end_state: Field,
 ) {
-    let key = current_state + haystack_byte as Field * R as Field + next_state * R_SQUARED as Field;
+    let key = transition_key(current_state, haystack_byte, next_state);
 
     let (is_valid, capture_starts_from_table, capture_participations_from_table) =
         unpack_sparse_value::<TABLE_SIZE, NUM_CAPTURE_GROUPS>(key, table);
@@ -140,4 +149,40 @@ unconstrained fn __unpack_sparse_value<let NUM_CAPTURE_GROUPS: u32>(
     }
 
     (is_valid, is_capture_starts, capture_participations)
+}
+
+// The transitions 4 -['r']-> 5 and 6 -['s']-> 7, laid out the way the compiler emits tables:
+// keys are framed by 0 and the maximum, and values[i + 1] belongs to keys[i].
+// key(4, 'r', 5) = 4 + 114 * 2^16 + 5 * 2^24, key(6, 's', 7) = 6 + 115 * 2^16 + 7 * 2^24
+fn two_transition_table() -> SparseArray<2, Field> {
+    SparseArray {
+        keys: [0, 0x05720004, 0x07730006, 0x07730006],
+        values: [0, 0, 1, 1, 1],
+        maximum: 0x07730006,
+    }
+}
+
+#[test]
+fn accepts_a_valid_transition() {
+    assert(transition_key_unchecked(4, 114, 5) == 0x05720004);
+    assert(transition_key_unchecked(6, 115, 7) == 0x07730006);
+    check_transition(two_transition_table(), 114, 4, 5, 1);
+    check_transition(two_transition_table(), 115, 6, 7, 1);
+}
+
+#[test(should_fail_with = "Invalid Transition")]
+fn rejects_a_missing_transition() {
+    check_transition(two_transition_table(), 115, 4, 5, 1);
+}
+
+#[test(should_fail)]
+fn rejects_state_ids_beyond_16_bits() {
+    // Without the range check, state 4 + 2^16 reading 'q' (113) packs to the same key as
+    // 4 -['r']-> 5 and would be accepted.
+    assert(transition_key_unchecked(4 + 0x10000, 113, 5) == transition_key_unchecked(4, 114, 5));
+    check_transition(two_transition_table(), 113, 4 + 0x10000, 5, 1);
+}
+
+fn transition_key_unchecked(current_state: Field, haystack_byte: Field, next_state: Field) -> Field {
+    current_state + haystack_byte * BYTE_SHIFT + next_state * NEXT_STATE_SHIFT
 }

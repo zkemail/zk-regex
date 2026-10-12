@@ -1,18 +1,18 @@
 use sort::sort_advanced;
 
-unconstrained fn __sort_field_as_u32(lhs: Field, rhs: Field) -> bool {
+unconstrained fn __sort_field_as_u64(lhs: Field, rhs: Field) -> bool {
     //  lhs.lt(rhs)
-    lhs as u32 <= rhs as u32
+    lhs as u64 <= rhs as u64
 }
 pub struct SparseArray<let N: u32, T> {
     pub keys: [Field; N + 2],
     pub values: [T; N + 3],
-    pub  maximum: Field, // can be up to 2^32
+    pub  maximum: Field, // must be below 2^63
 }
 
 fn assert_sorted(lhs: Field, rhs: Field) {
     let result = (rhs - lhs - 1);
-    result.assert_max_bit_size::<32>();
+    result.assert_max_bit_size::<63>();
 }
 
 /// Note: excisting SparseArray impl has a small bug, local impl until fixed
@@ -32,7 +32,7 @@ where
         // for any valid index, we want to ensure the following is satified:
         // self.keys[X] <= index <= self.keys[X+1]
         // this requires us to sort hte keys, and insert a startpoint and endpoint
-        let sorted_keys = sort_advanced(_keys, __sort_field_as_u32, assert_sorted);
+        let sorted_keys = sort_advanced(_keys, __sort_field_as_u64, assert_sorted);
 
         // insert start and endpoints
         r.keys[0] = 0;
@@ -72,14 +72,15 @@ where
         r.values[N + 2] = final_value;
 
         // perform boundary checks!
-        // the maximum size of the sparse array is 2^32
-        // we need to check that every element in `self.keys` is less than 2^32
+        // the maximum size of the sparse array is 2^63, so `search_for_key` can compare any key
+        // as a u64. Transition keys use 40 bits (see `transitions.nr`).
+        // we need to check that every element in `self.keys` is less than 2^63
         // because `self.keys` is sorted, we can simply validate that
-        // sorted_keys.sorted[0] < 2^32
+        // sorted_keys.sorted[0] < 2^63
         // sorted_keys.sorted[N-1] < maximum
-        sorted_keys.sorted[0].assert_max_bit_size::<32>();
-        _maximum.assert_max_bit_size::<32>();
-        (_maximum - sorted_keys.sorted[N - 1]).assert_max_bit_size::<32>();
+        sorted_keys.sorted[0].assert_max_bit_size::<63>();
+        _maximum.assert_max_bit_size::<63>();
+        (_maximum - sorted_keys.sorted[N - 1]).assert_max_bit_size::<63>();
         r
     }
 
@@ -92,7 +93,7 @@ where
         let mut found_index = 0;
         let mut previous_less_than_or_equal_to_target = false;
         for i in 0..N + 2 {
-            // if target = 0xffffffff we need to be able to add 1 here, so use u64
+            // keys are below 2^63, so comparing them as u64 cannot overflow
             let current_less_than_or_equal_to_target = self.keys[i] as u64 <= target as u64;
             if (self.keys[i] == target) {
                 found = true;
@@ -130,8 +131,8 @@ where
         let rhs = self.keys[(found_index + 1 - found) as u32];
         let lhs_condition = idx - lhs - 1 + found;
         let rhs_condition = rhs - 1 + found - idx;
-        lhs_condition.assert_max_bit_size::<32>();
-        rhs_condition.assert_max_bit_size::<32>();
+        lhs_condition.assert_max_bit_size::<63>();
+        rhs_condition.assert_max_bit_size::<63>();
 
         // self.keys[i] maps to self.values[i+1]
         // however...if we did not find a non-sparse entry, we want to return self.values[0] (the default value)
