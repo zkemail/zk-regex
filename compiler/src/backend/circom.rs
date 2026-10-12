@@ -12,6 +12,7 @@
 //! - Capture group tracking
 //! - Path length verification
 //! - Start/accept state validation
+//! - Start anchors (`^`): anchored start states require `matchStart == 0`
 
 use serde::Serialize;
 
@@ -70,6 +71,7 @@ pub fn generate_circom_code(
     }
 
     let (start_states, accept_states, transitions) = generate_circuit_data(nfa)?;
+    let anchored_start_states: Vec<usize> = nfa.anchored_start_states.iter().copied().collect();
 
     if nfa.num_capture_groups > 0 {
         if let Some(max_bytes) = max_substring_bytes.as_ref() {
@@ -206,7 +208,41 @@ pub fn generate_circom_code(
         code.push_str("    }\n");
         code.push_str("    isValidStartState.out === 1;\n\n");
     } else {
-        code.push_str("    isValidStartState <== IsEqual()([startStates[0], currStates[0]]);\n\n");
+        code.push_str("    isValidStartState <== IsEqual()([startStates[0], currStates[0]]);\n");
+        code.push_str("    isValidStartState === 1;\n\n");
+    }
+
+    // A start anchor (`^`) only holds at the start of the haystack. Paths that begin in an
+    // anchored start state crossed one, so they require matchStart == 0.
+    if !anchored_start_states.is_empty() {
+        code.push_str(
+            "    // A path that begins in an anchored start state crossed a `^`, so the match must begin at offset 0\n",
+        );
+        code.push_str(
+            format!(
+                "    var numAnchoredStartStates = {};\n",
+                anchored_start_states.len()
+            )
+            .as_str(),
+        );
+        code.push_str(
+            format!(
+                "    var anchoredStartStates[numAnchoredStartStates] = [{}];\n",
+                anchored_start_states
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            )
+            .as_str(),
+        );
+        code.push_str("    signal isAnchoredStartState[numAnchoredStartStates];\n");
+        code.push_str("    for (var i = 0; i < numAnchoredStartStates; i++) {\n");
+        code.push_str(
+            "        isAnchoredStartState[i] <== IsEqual()([anchoredStartStates[i], currStates[0]]);\n",
+        );
+        code.push_str("        isAnchoredStartState[i] * matchStart === 0;\n");
+        code.push_str("    }\n\n");
     }
 
     code.push_str("    for (var i = 0; i < maxMatchBytes; i++) {\n");
@@ -433,4 +469,37 @@ pub fn generate_circom_code(
     code.push_str("}\n");
 
     Ok(code)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn anchored_start_states_require_match_start_zero() {
+        let nfa = NFAGraph::build("(?:\r\n|^)from:").expect("pattern should compile");
+        let anchored = *nfa.anchored_start_states.first().expect("one anchored start state");
+        let code = generate_circom_code(&nfa, "From", "(?:\r\n|^)from:", None).unwrap();
+
+        assert!(code.contains(&format!(
+            "var anchoredStartStates[numAnchoredStartStates] = [{anchored}];"
+        )));
+        assert!(code.contains("isAnchoredStartState[i] * matchStart === 0;"));
+    }
+
+    #[test]
+    fn unanchored_patterns_have_no_anchor_constraint() {
+        let nfa = NFAGraph::build("(?:\r\n|x)from:").expect("pattern should compile");
+        let code = generate_circom_code(&nfa, "From", "(?:\r\n|x)from:", None).unwrap();
+        assert!(!code.contains("anchoredStartStates"));
+    }
+
+    #[test]
+    fn single_start_state_is_enforced() {
+        // A capture opening at the very start leaves a single start state.
+        let nfa = NFAGraph::build("(h)ello").expect("pattern should compile");
+        assert_eq!(nfa.start_states.len(), 1);
+        let code = generate_circom_code(&nfa, "Hello", "(h)ello", Some(vec![1])).unwrap();
+        assert!(code.contains("isValidStartState === 1;"));
+    }
 }

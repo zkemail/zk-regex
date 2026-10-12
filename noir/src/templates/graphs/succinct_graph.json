@@ -404,6 +404,7 @@
   "start_states": [
     0
   ],
+  "anchored_start_states": [],
   "accept_states": [
     34
   ],

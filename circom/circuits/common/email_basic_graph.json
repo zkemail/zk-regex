@@ -1531,6 +1531,7 @@
     0,
     1
   ],
+  "anchored_start_states": [],
   "accept_states": [
     7
   ],

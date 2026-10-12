@@ -26,58 +26,26 @@ pub struct NoirInputs {
 
 // From implementation moved to shared.rs
 
-/// Radix used to pack `(state, byte, next_state)` into one lookup key. Must match `R` in
-/// `noir/src/utils/transitions.nr`. State ids have to stay below this value.
-const NOIR_KEY_RADIX: usize = 257;
+/// Transition lookup keys are packed as `state + byte * 2^16 + next_state * 2^24` (see
+/// `noir/src/utils/transitions.nr`). Bytes are `u8` and the circuit range-checks both states to
+/// 16 bits, so the packing is injective as long as every state id of the automaton fits in 16
+/// bits, which `ensure_states_fit_u16` enforces at compile time.
+const NOIR_BYTE_SHIFT: usize = 1 << 16;
+const NOIR_NEXT_STATE_SHIFT: usize = 1 << 24;
+const NOIR_MAX_STATES: usize = 1 << 16;
 
-/// Transition lookup keys are packed as `state + byte * R + next_state * R^2` with `R = 257`
-/// (see `noir/src/utils/transitions.nr`). The packing is only injective while state ids are a
-/// single base-R digit. Once an automaton has more than `R` states, `(state = s + R, byte = b)`
-/// and `(state = s, byte = b + 1)` share a key, so the circuit would accept byte `b + 1` in state
-/// `s` even when the regex does not allow it.
-///
-/// Large automata are common (a single `\w` expands to a few hundred UTF-8 states), so instead of
-/// rejecting on size alone this checks for the actual aliasing: every other `(state, byte)` pair
-/// that maps onto a valid key must itself be a valid transition with the same capture data.
-fn ensure_unambiguous_transition_keys(
-    transitions: &Vec<(usize, u8, u8, usize, Option<BTreeSet<(usize, bool)>>)>,
-) -> NFAResult<()> {
-    let num_states = transitions
-        .iter()
-        .map(|(src, _, _, dst, _)| (*src).max(*dst) + 1)
-        .max()
-        .unwrap_or(0);
-    if num_states <= NOIR_KEY_RADIX {
-        return Ok(());
-    }
+fn transition_key(state: usize, byte: u8, next_state: usize) -> usize {
+    state + byte as usize * NOIR_BYTE_SHIFT + next_state * NOIR_NEXT_STATE_SHIFT
+}
 
-    let mut valid: std::collections::BTreeMap<(usize, usize, usize), &Option<BTreeSet<(usize, bool)>>> =
-        std::collections::BTreeMap::new();
-    for (src, start, end, dst, captures) in transitions {
-        for byte in *start..=*end {
-            valid.insert((*src, byte as usize, *dst), captures);
-        }
-    }
-
-    for (&(src, byte, dst), captures) in &valid {
-        // Same key <=> src' = src - j*R and byte' = byte + j for some non-zero integer j.
-        // (byte and next_state cannot trade off: that would need a byte difference of R.)
-        let max_up = (255 - byte).min(src / NOIR_KEY_RADIX);
-        let max_down = byte.min((num_states - 1 - src) / NOIR_KEY_RADIX);
-        let aliases = (1..=max_up)
-            .map(|j| (src - j * NOIR_KEY_RADIX, byte + j))
-            .chain((1..=max_down).map(|j| (src + j * NOIR_KEY_RADIX, byte - j)));
-        for (alias_src, alias_byte) in aliases {
-            if valid.get(&(alias_src, alias_byte, dst)) != Some(captures) {
-                return Err(NFAError::TemplateError(format!(
-                    "Regex is too large for the Noir backend: the automaton has {} states and the \
-                     transition {} -[{}]-> {} shares a lookup key with {} -[{}]-> {}, which the \
-                     regex does not allow. The generated circuit would be unsound. Simplify the \
-                     pattern (for example replace \\w or . with explicit ASCII classes).",
-                    num_states, src, byte, dst, alias_src, alias_byte, dst
-                )));
-            }
-        }
+/// Reject automata whose state ids do not fit in the 16 bits the generated circuit allows.
+fn ensure_states_fit_u16(nfa: &NFAGraph) -> NFAResult<()> {
+    if nfa.nodes.len() > NOIR_MAX_STATES {
+        return Err(NFAError::TemplateError(format!(
+            "Regex is too large for the Noir backend: the automaton has {} states, but Noir \
+             circuits range-check state ids to 16 bits (at most {NOIR_MAX_STATES} states).",
+            nfa.nodes.len()
+        )));
     }
     Ok(())
 }
@@ -92,7 +60,7 @@ pub fn generate_noir_code(
     // get nfa graph data
     let (start_states, accept_states, transitions) = generate_circuit_data(nfa)?;
 
-    ensure_unambiguous_transition_keys(&transitions)?;
+    ensure_states_fit_u16(nfa)?;
 
     if nfa.num_capture_groups > 0 {
         if let Some(max_bytes) = max_substring_bytes.as_ref() {
@@ -165,6 +133,10 @@ pub fn generate_noir_code(
 
     // add check for valid start states
     code.push_str(start_state_fn(&start_states).as_str());
+    let anchored_start_states: Vec<usize> = nfa.anchored_start_states.iter().copied().collect();
+    if !anchored_start_states.is_empty() {
+        code.push_str(start_anchor_fn(&anchored_start_states).as_str());
+    }
     code.push_str(accept_state_fn(&accept_states).as_str());
 
     // regex match function doc
@@ -235,6 +207,9 @@ pub fn generate_noir_code(
 
     // check start & range
     code.push_str("    check_start_state(current_states[0]);\n");
+    if !anchored_start_states.is_empty() {
+        code.push_str("    check_start_anchor(current_states[0], match_start);\n");
+    }
     code.push_str("    for i in 0..MAX_MATCH_LEN-1 {\n");
     code.push_str("        // match length - 1 since current states should be 1 less than next states\n");
     code.push_str("        let in_range = (i < match_length - 1) as Field;\n");
@@ -429,6 +404,35 @@ fn check_start_state(start_state: Field) {{
 }
 
 /**
+ * Forms the check that paths beginning in an anchored start state begin at haystack offset 0
+ * @param anchored_start_states - The start states reached through a start anchor (`^`)
+ * @returns The function constraining anchored start states to match_start == 0
+ */
+fn start_anchor_fn(anchored_start_states: &Vec<usize>) -> String {
+    let expression = anchored_start_states
+        .iter()
+        .map(|state| format!("(start_state == {state})"))
+        .collect::<Vec<String>>()
+        .join(" | ");
+    format!(
+        r#"
+/**
+ * Constrains paths that begin in an anchored start state to begin at the start of the haystack
+ * @dev anchored start states are hardcoded in this function. They are entered by crossing a
+ *      start anchor (`^`), which only holds at haystack offset 0.
+ *
+ * @param start_state - The start state of the NFA
+ * @param match_start - The start index of the match in the haystack
+ */
+fn check_start_anchor(start_state: Field, match_start: u32) {{
+    let is_anchored_start = {expression};
+    assert(!is_anchored_start | (match_start == 0), "Start anchor requires match_start == 0");
+}}
+"#
+    )
+}
+
+/**
  * Forms an expression to determine if any of the accept states are matched
  * @param start_states - The accept states of the NFA
  * @returns The expression determining if any of the accept states are matched
@@ -481,20 +485,17 @@ fn check_accept_state(
 fn transition_sparse_array(
     transitions: &Vec<(usize, u8, u8, usize, Option<BTreeSet<(usize, bool)>>)>,
 ) -> SparseArray<FieldElement> {
-    // let r = 256 * transitions.len();
-    let r = NOIR_KEY_RADIX;
     let mut entries = Vec::new();
+    let mut max_key = 0;
     for (state_idx, start, end, dest, _) in transitions {
-        let bytes = (*start..=*end).collect::<Vec<u8>>();
-        for byte in bytes {
-            let key = state_idx + (byte as usize) * r + r * r * dest;
+        for byte in *start..=*end {
+            let key = transition_key(*state_idx, byte, *dest);
+            max_key = max_key.max(key);
             entries.push(FieldElement::from(key));
         }
     }
     let values = vec![FieldElement::from(1u32); entries.len()];
-    // assume max byte = 256 and max transitions = 200
-    let max_size = FieldElement::from(transitions.len() + 256 * r + 200 * r * r);
-    SparseArray::create(&entries, &values, max_size)
+    SparseArray::create(&entries, &values, FieldElement::from(max_key + 1))
 }
 
 /**
@@ -509,18 +510,11 @@ fn packed_transition_sparse_array(
     transitions: &Vec<(usize, u8, u8, usize, Option<BTreeSet<(usize, bool)>>)>,
     num_capture_groups: usize,
 ) -> SparseArray<FieldElement> {
-    let r = NOIR_KEY_RADIX; // Multiplier for constructing unique keys
     let mut keys = Vec::new();
     let mut values = Vec::new();
-
-    let mut current_max_state_id_in_transitions = 0; // To track the actual max state ID
+    let mut max_key = 0;
 
     for (state_idx, start_byte, end_byte, dest_state, capture_opt) in transitions {
-        // Update the actual maximum state ID encountered
-        current_max_state_id_in_transitions = current_max_state_id_in_transitions
-            .max(*state_idx)
-            .max(*dest_state);
-
         let mut participations_flags = 0u32;
         let mut starts_flags = 0u32;
 
@@ -544,21 +538,14 @@ fn packed_transition_sparse_array(
             1u32 | (starts_flags << 1) | (participations_flags << (1 + num_capture_groups));
 
         for byte_val in *start_byte..=*end_byte {
-            let key = *state_idx + (byte_val as usize) * r + *dest_state * r * r;
+            let key = transition_key(*state_idx, byte_val, *dest_state);
+            max_key = max_key.max(key);
             keys.push(FieldElement::from(key));
             values.push(FieldElement::from(packed_value));
         }
     }
 
-    let max_byte_val = 255; // Max value for a u8
-
-    let derived_max_state_id = current_max_state_id_in_transitions;
-
-    let estimated_max_key_val =
-        derived_max_state_id + max_byte_val * r + derived_max_state_id * r * r;
-    let max_size = FieldElement::from(estimated_max_key_val + 1); // +1 because keys can be 0 up to estimated_max_key_val
-
-    SparseArray::create(&keys, &values, max_size)
+    SparseArray::create(&keys, &values, FieldElement::from(max_key + 1))
 }
 
 #[cfg(test)]
@@ -566,12 +553,48 @@ mod tests {
     use super::*;
 
     #[test]
-    fn rejects_automata_too_large_for_key_encoding() {
-        // 300 sequential states, well past the 257 the key packing can represent.
-        let nfa = NFAGraph::build("a{300}").expect("pattern should compile to an NFA");
-        let err = generate_noir_code(&nfa, "TooLarge", "a{300}", None)
-            .expect_err("oversized automaton must be rejected");
+    fn accepts_automata_past_the_old_257_state_limit() {
+        // Unicode \w alone needs over 300 states.
+        let nfa = NFAGraph::build(r"\w+").expect("pattern should compile to an NFA");
+        assert!(nfa.state_count() > 257);
+        let code = generate_noir_code(&nfa, "Word", r"\w+", None).expect("16-bit states fit");
+        assert!(code.contains("transitions::check_transition"));
+    }
+
+    #[test]
+    fn rejects_automata_with_more_than_2_16_states() {
+        let mut nfa = NFAGraph::build("a").expect("pattern should compile to an NFA");
+        nfa.nodes.resize(NOIR_MAX_STATES + 1, Default::default());
+        let err = ensure_states_fit_u16(&nfa).expect_err("oversized automaton must be rejected");
         assert!(matches!(err, NFAError::TemplateError(_)), "got {err:?}");
+    }
+
+    #[test]
+    fn transition_keys_are_injective_for_16_bit_states() {
+        let corners = [0, 1, 255, 256, 257, NOIR_MAX_STATES - 1];
+        let mut seen = std::collections::BTreeMap::new();
+        for &s in &corners {
+            for b in [0u8, 1, 127, 255] {
+                for &t in &corners {
+                    assert_eq!(seen.insert(transition_key(s, b, t), (s, b, t)), None);
+                }
+            }
+        }
+        assert!(transition_key(NOIR_MAX_STATES - 1, 255, NOIR_MAX_STATES - 1) < 1 << 40);
+    }
+
+    #[test]
+    fn anchored_start_states_require_match_start_zero() {
+        let nfa = NFAGraph::build("(?:\r\n|^)from:").expect("pattern should compile");
+        let anchored = *nfa.anchored_start_states.first().expect("one anchored start state");
+        let code = generate_noir_code(&nfa, "From", "(?:\r\n|^)from:", None).unwrap();
+
+        assert!(code.contains(&format!("let is_anchored_start = (start_state == {anchored});")));
+        assert!(code.contains("check_start_anchor(current_states[0], match_start);"));
+
+        let nfa = NFAGraph::build("(?:\r\n|x)from:").expect("pattern should compile");
+        let code = generate_noir_code(&nfa, "From", "(?:\r\n|x)from:", None).unwrap();
+        assert!(!code.contains("check_start_anchor"));
     }
 
     #[test]
