@@ -368,4 +368,19 @@ describe("From Addr Regex", () => {
       }
     }
   });
+
+  it.each([
+    '"victim@gmail.com"@spam.co.kr',
+    '/victim@gmail.com/@spam.co.kr',
+  ])('keeps the complete sender address %s', async (address) => {
+    const fromStr = `from:${address}\r\n`;
+    const witness = await circuit.calculateWitness({ msg: apis.padString(fromStr, 1024) });
+    await circuit.checkConstraints(witness);
+    expect(witness[1]).toBe(1n);
+
+    const exposedAddress = String.fromCharCode(
+      ...witness.slice(2, 1026).filter((byte) => byte !== 0n).map(Number)
+    );
+    expect(exposedAddress).toBe(address);
+  });
 });
