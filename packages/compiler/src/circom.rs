@@ -479,11 +479,16 @@ fn generate_state_transition_logic(
         zero_starting_and_idxes.insert(i, vec![]);
 
         for (prev_i, chars) in rev_graph.get(&i).unwrap_or(&BTreeMap::new()) {
+            let mut k = chars.clone();
+            k.retain(|&x| x != 0);
+            // Byte zero is reserved for padding. A transition with no remaining
+            // characters cannot fire and must not create an uninitialized AND gate.
+            if k.is_empty() {
+                continue;
+            }
             if *prev_i == 0 {
                 zero_starting_states.push(i);
             }
-            let mut k = chars.clone();
-            k.retain(|&x| x != 0);
             k.sort();
 
             let mut eq_outputs = vec![];

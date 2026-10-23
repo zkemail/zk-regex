@@ -224,6 +224,26 @@ mod test {
     }
 
     #[test]
+    fn test_email_domain_rejects_embedded_addresses() {
+        for input in [
+            "\"victim@gmail.com\"@spam.co.kr",
+            "/victim@gmail.com/@spam.co.kr",
+            "user@gmail.com@spam.co.kr",
+        ] {
+            assert!(extract_email_domain_idxes(input).is_err(), "{}", input);
+        }
+    }
+
+    #[test]
+    fn test_email_addr_keeps_quoted_sender() {
+        let input = "\"victim@gmail.com\"@spam.co.kr";
+        assert_eq!(
+            extract_email_addr_idxes(input).unwrap(),
+            vec![(0, input.len())]
+        );
+    }
+
+    #[test]
     fn test_email_addr_in_subject_valid() {
         let input_str = "This is sent for suegamisora@gmail.com";
         let idxes = extract_email_addr_idxes(input_str).unwrap();
